@@ -1,0 +1,17 @@
+name: backend
+on:
+  pull_request:
+    branches: [develop, main]
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Wallet.slnx
+      - run: dotnet build Wallet.slnx -c Release --no-restore
+      - run: dotnet test Wallet.slnx -c Release --no-build

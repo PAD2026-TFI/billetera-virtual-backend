@@ -1,0 +1,77 @@
+# Compilación .NET
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+[Pp]ublish/
+
+# Visual Studio y configuración personal
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Resultados de pruebas y cobertura
+TestResults/
+coverage/
+coverage-report/
+*.trx
+*.coverage
+*.coveragexml
+coverage.cobertura.xml
+coverage.opencover.xml
+
+# Logs y archivos temporales
+[Ll]ogs/
+*.log
+*.tmp
+*.temp
+*.bak
+*.stackdump
+
+# Secretos y configuración privada local
+secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Certificados y claves privadas
+*.pfx
+*.p12
+*.key
+*.pem
+
+# Archivos físicos y respaldos de SQL Server
+*.mdf
+*.ndf
+*.ldf
+*.bak
+*.trn
+
+# Perfiles de publicación con configuración privada
+*.pubxml
+*.pubxml.user
+PublishScripts/
+
+# Paquetes generados y paquetes restaurados antiguos
+*.nupkg
+*.snupkg
+packages/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
+# Material auxiliar de la entrega
+/CODIGO_COMPLETO.md
+/TARJETAS.md
+/tarjetas.csv
+/PRUEBAS.md
+/VERIFICACION.md
+/UsuariosPrueba.txt

@@ -1,0 +1,25 @@
+@baseUrl = https://localhost:7081
+@token = REEMPLAZAR_POR_ACCESS_TOKEN
+### Vida sin Azure
+GET {{baseUrl}}/health/live
+### Dependencias; 503 mientras no esté habilitada identidad
+GET {{baseUrl}}/health/ready
+### Registro (requiere Azure y migración)
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"Frase de prueba 2026!"}
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"email":"ana@example.com","password":"Frase de prueba 2026!"}
+### Perfil propio
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{token}}
+### Reemplazar perfil editable
+PUT {{baseUrl}}/api/users/me/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"firstName":"Ana María","lastName":"Pérez"}

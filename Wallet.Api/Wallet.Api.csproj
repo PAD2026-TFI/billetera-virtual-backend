@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+<PropertyGroup><UserSecretsId>pad2026-wallet-initial</UserSecretsId></PropertyGroup>
+<ItemGroup>
+<PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.6" />
+<ProjectReference Include="../Wallet.Application/Wallet.Application.csproj" />
+<ProjectReference Include="../Wallet.Infrastructure/Wallet.Infrastructure.csproj" />
+<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.21" />
+<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.21" />
+<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.21" PrivateAssets="all" />
+</ItemGroup>
+</Project>

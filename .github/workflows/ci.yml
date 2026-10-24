@@ -1,17 +1,51 @@
 name: backend
+
 on:
   pull_request:
     branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - run: dotnet restore Wallet.slnx
-      - run: dotnet build Wallet.slnx -c Release --no-restore
-      - run: dotnet test Wallet.slnx -c Release --no-build
+
+      - name: Restaurar dependencias
+        run: dotnet restore Wallet.slnx
+
+      - name: Compilar
+        run: dotnet build Wallet.slnx -c Release --no-restore
+
+      - name: Ejecutar pruebas
+        run: >
+          dotnet test Wallet.slnx -c Release
+          --no-build --no-restore
+          --logger trx
+          --results-directory TestResults
+
+      - name: Guardar resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,6 +1,8 @@
-# Wallet · Incremento 1: identidad
+# Wallet · Identidad y creación de billetera
 
 Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. Mi objetivo es preparar identidad para la versión v0.2.0; todavía tengo pendiente validar el frontend integrado y la persistencia real para completar H1.
+
+Para el Incremento 2 incorporo la creación explícita de una billetera ARS por usuario.
 
 ## Arquitectura
 
@@ -106,6 +108,7 @@ Expongo estos endpoints para el incremento:
 | `GET /health/ready` | Público | 200 | 503 |
 | `POST /api/users` | Público | 201 + `Location: /api/users/me` | 400, 409, 415, 429, 503 |
 | `POST /api/auth/login` | Público | 200 + token Bearer | 400, 401, 415, 429, 503 |
+| `POST /api/wallets` | JWT + Client, sin cuerpo | 201 al crear, 200 si existe | 400, 401, 403, 503 |
 | `GET /api/users/me` | JWT + Client | 200 | 401, 403, 503 |
 | `PUT /api/users/me/profile` | JWT + Client | 200 | 400, 401, 403, 409, 415, 503 |
 
@@ -125,7 +128,7 @@ Comparto un límite de diez intentos de registro/login por IP y minuto. Uso resp
 
 Ejecuto las pruebas HTTP con JWT real y un doble de repositorio exclusivo de tests. Para las pruebas SQL configuro `WALLET_TEST_CONNECTION` con una base aislada y previamente migrada. Los tests crean usuarios propios y eliminan únicamente esos registros. No interpreto una prueba omitida como aprobada.
 
-En la última ejecución local de TEST-001 obtuve **30 pruebas aprobadas, 0 fallidas y 2 SQL omitidas** porque no configuré la conexión de pruebas. Todavía necesito evidencia SQL y de la ejecución remota de CI para cerrar la tarjeta.
+En la ejecución de TEST-001 obtuve **30 pruebas aprobadas, 0 fallidas y 2 SQL omitidas** porque no configuré la conexión de pruebas. Todavía necesito evidencia SQL y de la ejecución remota de CI para cerrar la tarjeta.
 
 Para validar H1 tengo pendiente comprobar desde el frontend registro → login → perfil, reiniciar la API y confirmar que los usuarios y cambios persisten. No considero H0/H1 ni la DoD completos por tener pruebas locales en verde.
 
@@ -133,7 +136,7 @@ Para validar H1 tengo pendiente comprobar desde el frontend registro → login �
 
 Trabajo desde `develop` en ramas por tarjeta y propongo la integración mediante Pull Request. Registro defectos con pasos, resultado esperado, resultado obtenido y evidencia. Mantengo trazabilidad entre tarjeta, rama, commits, PR y versión.
 
-Dejo billeteras y transferencias para el Incremento 2; pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
+En el Incremento 2 implemento la creación de billeteras; mantengo pendientes consulta de saldo y transferencias. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
 
 ## Referencias
 

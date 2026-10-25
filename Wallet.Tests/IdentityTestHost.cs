@@ -20,6 +20,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
     internal const string Password = "Frase de prueba 2026!";
     internal readonly byte[] Key = RandomNumberGenerator.GetBytes(64);
     internal TestUserRepository Users { get; } = new();
+    internal TestWalletRepository Wallets { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -36,6 +37,8 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
             {
                 s.RemoveAll<IUserRepository>();
                 s.AddSingleton<IUserRepository>(Users);
+                s.RemoveAll<IWalletRepository>();
+                s.AddSingleton<IWalletRepository>(Wallets);
             });
     }
 
@@ -112,4 +115,16 @@ internal sealed class TestUserRepository : IUserRepository
         return Task.CompletedTask;
     }
     public Task<bool> IsReadyAsync(CancellationToken ct) => Task.FromResult(!Unavailable);
+}
+
+internal sealed class TestWalletRepository : IWalletRepository
+{
+    internal readonly ConcurrentDictionary<Guid, global::Wallet.Domain.Wallet> Items = new();
+    internal bool Unavailable { get; set; }
+    public Task<WalletCreation> CreateOrGetAsync(global::Wallet.Domain.Wallet candidate, CancellationToken ct)
+    {
+        if (Unavailable) throw new StorageUnavailableException(new InvalidOperationException());
+        var actual = Items.GetOrAdd(candidate.UserId, candidate);
+        return Task.FromResult(new WalletCreation(actual, ReferenceEquals(actual, candidate)));
+    }
 }

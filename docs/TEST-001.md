@@ -1,10 +1,10 @@
 # TEST-001 — Autenticación, autorización y endpoints protegidos
 
-Rama: feature/TEST-001-auth-tests. Las pruebas HTTP usan WebApplicationFactory con el pipeline real de JWT, autorización, rate limiting y hashing. Sólo reemplazan IUserRepository por un doble exclusivo de tests. Cada caso tiene un host, clave efímera y estado propios; no se simula la autenticación ni se comparte el limitador entre pruebas.
+Trabajo en la rama `feature/TEST-001-auth-tests`. Para las pruebas HTTP uso WebApplicationFactory con el pipeline real de JWT, autorización, rate limiting y hashing. Reemplazo únicamente `IUserRepository` por un doble exclusivo de tests. Aíslo cada caso con su propio host, clave efímera y estado; mantengo la autenticación real y un limitador independiente por prueba.
 
 ## Ejecutar
 
-Requiere el SDK compatible con global.json. En el entorno preparado, ejecutar primero `source /workspace/.setup/wallet-env.sh`. Desde la raíz del repositorio:
+Uso un SDK compatible con `global.json`. En mi entorno cloud preparado, ejecuto primero `source /workspace/.setup/wallet-env.sh`. Desde la raíz del repositorio ejecuto:
 
 ```sh
 dotnet restore Wallet.slnx
@@ -12,15 +12,15 @@ dotnet test Wallet.slnx -c Release --no-restore --filter 'Category!=Sql' --logge
 dotnet test Wallet.slnx -c Release --no-restore --logger trx --results-directory TestResults
 ```
 
-La primera selección ejecuta pruebas sin SQL; la segunda incluye las pruebas SQL optativas, que aparecen omitidas si falta conexión. El workflow existente ya ejecuta la suite completa y conserva los TRX.
+Con el primer comando de pruebas ejecuto los casos sin SQL; con el segundo incluyo los casos SQL optativos. Si falta conexión, los registro como omitidos. Uso el workflow existente para ejecutar la suite completa y conservar los TRX.
 
-Para pruebas reales configurar WALLET_TEST_CONNECTION por un mecanismo seguro, apuntando exclusivamente a una base de pruebas previamente migrada con InitialIdentity. Nunca usar una base de usuarios reales. Las pruebas SQL crean registros con identificadores únicos y eliminan únicamente sus propios usuarios; no crean ni eliminan la base y no aplican migraciones automáticamente.
+Para las pruebas reales configuro `WALLET_TEST_CONNECTION` por un mecanismo seguro y uso exclusivamente una base de pruebas previamente migrada con `InitialIdentity`. Creo registros con identificadores únicos y elimino únicamente los usuarios de cada prueba. No uso una base de usuarios reales ni aplico migraciones automáticamente desde los tests.
 
 ```sh
 dotnet test Wallet.slnx -c Release --no-restore --filter 'Category=Sql' --logger trx --results-directory TestResults
 ```
 
-Un resultado omitido no demuestra funcionamiento de SQL. El origen de esta conexión es una variable real del proceso; no copiar valores al README, chat ni logs.
+No considero aprobado un test omitido. Proporciono la conexión mediante una variable real del proceso y mantengo su valor fuera del README, el chat y los logs.
 
 ## Cobertura de criterios
 
@@ -37,18 +37,18 @@ Un resultado omitido no demuestra funcionamiento de SQL. El origen de esta conex
 | Límite compartido de diez intentos | Registration_and_login_share_ten_attempts_per_window |
 | SQL separado, CI y reproducción | Traits Category=Sql, workflow existente, comandos de este documento |
 
-El fixture del 403 construye mediante reflexión un usuario con rol TestObserver y un token coincidente, exclusivamente en tests. Esto permite alcanzar la política real Client, en lugar de provocar un 401 por discrepancia entre token y usuario. No agrega un rol disponible en producción. No hay endpoint nuevo para revocar, deshabilitar o asignar roles.
+Para comprobar el 403 construyo mediante reflexión un usuario con rol `TestObserver` y un token coincidente, exclusivamente en el fixture. Así pruebo la política real `Client` con una sesión válida. No incorporo ese rol en producción ni agrego endpoints de revocación, deshabilitación o asignación de roles.
 
-El test SQL hace login por HTTP usando repositorio SQL real, comprueba acceso, guarda una revocación con un contexto independiente, verifica la versión con otro contexto y comprueba 401 con el token anterior. Luego inicia una nueva sesión, persiste la deshabilitación y verifica que se rechazan tanto esa sesión como un nuevo login.
+En el test SQL hago login por HTTP con el repositorio real, compruebo acceso, guardo una revocación con un contexto independiente y verifico la versión con otro contexto. Después compruebo el 401 con el token anterior, inicio una nueva sesión, persisto la deshabilitación y verifico el rechazo de esa sesión y de un nuevo login.
 
 ## Defecto encontrado y corrección
 
-La primera ejecución produjo 27 aprobadas, 1 fallida y 2 omitidas. El caso missing:jti recibió 200 en lugar de 401: faltaba validar ese claim en OnTokenValidated. Se agregó validación de jti como UUID no vacío, coherente con el formato emitido por el servicio actual. También se rechaza sub vacío y versión de sesión negativa. Se mantiene la validación criptográfica existente. La prueba de jti ausente no se debilitó ni se omitió; se agregó jti malformado y rol discrepante.
+En la primera ejecución obtuve 27 pruebas aprobadas, 1 fallida y 2 omitidas. El caso missing:jti recibió 200 en lugar de 401: faltaba validar ese claim en OnTokenValidated. Agregué la validación de `jti` como UUID no vacío, coherente con el formato del emisor actual. También rechazo `sub` vacío y versiones de sesión negativas. Conservé la validación criptográfica y la prueba de `jti` ausente; agregué casos de `jti` malformado y rol discrepante.
 
-El formato UUID de jti es el contrato de este emisor, no una obligación general del estándar JWT. Si se adopta un proveedor externo, revisar este contrato explícitamente.
+Uso UUID para `jti` como contrato de mi emisor; el estándar JWT no exige ese formato. Si incorporo un proveedor externo, revisaré este contrato.
 
 ## Límites de la evidencia
 
-Los tests con dobles no demuestran persistencia, restricciones ni concurrencia SQL. La prueba SQL de revocación y la existente de unicidad concurrente requieren ejecución y evidencia con la base configurada antes de cerrar la tarjeta. Tampoco se validó ejecución remota de GitHub Actions en esta tarea ni se modificó Trello. Los reportes locales se generan bajo TestResults, ignorado por Git.
+Con los dobles verifico contratos HTTP, pero no demuestro persistencia, restricciones ni concurrencia SQL. Antes de cerrar la tarjeta necesito ejecutar y registrar la prueba SQL de revocación y la de unicidad concurrente. Todavía no verifiqué la ejecución remota de GitHub Actions ni modifiqué Trello. Guardo los reportes locales en `TestResults`, ignorado por Git.
 
-Resultado final local de la suite completa: compilación exitosa, 30 pruebas aprobadas, 0 fallidas y 2 SQL omitidas por ausencia de WALLET_TEST_CONNECTION. Reporte: TestResults/_0fe974b3472d_2026-10-25_21_40_50.trx. git diff --check sin errores.
+En la última ejecución local compilé correctamente y obtuve 30 pruebas aprobadas, 0 fallidas y 2 SQL omitidas porque no configuré `WALLET_TEST_CONNECTION`. Guardé el reporte en `TestResults/_0fe974b3472d_2026-10-25_21_40_50.trx` y comprobé `git diff --check` sin errores.

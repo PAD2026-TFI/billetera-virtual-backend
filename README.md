@@ -1,37 +1,28 @@
-# Wallet · primer incremento de identidad
+# Wallet · Incremento 1: identidad
 
-Paquete de implementación propuesto, 19/10/2026. Conserva Wallet.Api, Wallet.Application, Wallet.Domain y Wallet.Infrastructure de la captura. Agrega Wallet.Tests, previsto en el plan. No modifica tu repositorio ni marca tareas como terminadas.
+Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. Mi objetivo es preparar identidad para la versión v0.2.0; todavía tengo pendiente validar el frontend integrado y la persistencia real para completar H1.
 
-## Qué estamos construyendo
+## Arquitectura
 
-Objetivo funcional: registrar una cuenta, iniciar sesión y consultar/actualizar exclusivamente el perfil propio. Es el incremento de identidad, objetivo v0.2.0; no es la billetera completa ni v1.0.0. H1 también exige frontend y persistencia verificados; este paquete cubre el backend.
+Organizo la solución en cinco proyectos:
 
-Hay dos estados explícitos de la misma aplicación:
+- `Wallet.Domain`: entidades, invariantes, perfil y versión de sesión.
+- `Wallet.Application`: casos de uso, DTOs y contratos.
+- `Wallet.Infrastructure`: EF Core, SQL, repositorios y hashing.
+- `Wallet.Api`: endpoints, JWT, autorización y configuración.
+- `Wallet.Tests`: pruebas de dominio, hashing, contratos HTTP y SQL.
 
-- **Base técnica ejecutable ahora:** Identity:Enabled=false (valor inicial). GET /health/live → 200, GET /health/ready → 503, rutas /api → 503 IDENTITY_NOT_CONFIGURED. No se simula un registro exitoso.
-- **Prototipo funcional de identidad:** habilitar Identity:Enabled, configurar Azure SQL y clave JWT, aplicar la migración y ejecutar el flujo. Sin esos recursos no puede afirmarse que identidad funciona de punta a punta.
+Mantengo Domain independiente de ASP.NET Core y EF Core. Desde Application referencio Domain; desde Infrastructure referencio Application y Domain; desde Api referencio Application e Infrastructure.
 
-La consigna §4.2 pospone Azure SQL y prohíbe introducir una base alternativa sin una decisión documentada. Por eso no se agregó almacenamiento en memoria, SQLite ni LocalDB a la aplicación. El doble en memoria vive sólo en Wallet.Tests para probar contratos HTTP; no demuestra persistencia ni sustituye Azure.
+## Requisitos
 
-## Decisiones de implementación que hay que revisar en las tarjetas
+Uso .NET 9 y un SDK compatible con `global.json`: versión base 9.0.300 y política `latestPatch`. En el entorno cloud validé el SDK 9.0.319. Uso paquetes Microsoft y la herramienta `dotnet-ef` en la versión 9.0.21.
 
-Los documentos dejan sin fijar SDK, límites y política de credenciales. Para entregar código concreto se proponen: .NET 9, SDK 9.0.319, paquetes Microsoft 9.0.21; nombres de 1–100 caracteres después de trim; email hasta 254 caracteres normalizado con Trim + ToUpperInvariant; contraseña de 12–128 caracteres, no vacía ni sólo espacios, sin modificar su contenido; JWT de 15 minutos, tolerancia de reloj 30 segundos; clave aleatoria de al menos 32 bytes en Base64; 10 intentos de registro/login combinados por IP/minuto; request máximo 16 KiB. Son decisiones propuestas para este paquete, no acuerdos previos del equipo.
+Mantengo compatibles el framework, los paquetes, las herramientas y las pruebas al actualizar el SDK. Antes de continuar más allá del fin de soporte de .NET 9, previsto para el 10/11/2026, tengo pendiente planificar la actualización a .NET 10 y un IDE compatible.
 
-Una captura anterior muestra Visual Studio 2022 17.14. Se eligió .NET 9 para mantener compatibilidad con ese entorno; confirmar igualmente el SDK instalado. .NET 9 termina su soporte el 10/11/2026: registrar una actualización a .NET 10 y un IDE compatible antes de continuar más allá de esa fecha. Esta elección es para el prototipo inmediato, no para congelar el stack del proyecto. También se puede ejecutar con el SDK desde terminal. No cambiar sólo un csproj a otra versión: framework, paquetes, herramientas, global.json y pruebas deben permanecer compatibles. No es una certificación de cumplimiento normativo ni una solución bancaria productiva.
+## Ejecución de la base técnica
 
-## Incorporarlo sin perder tu solución
-
-1. Crear rama feature/ENV-004-base-backend desde develop y conservar el trabajo existente.
-2. Verificar `dotnet --list-sdks` y confirmar la decisión de SDK.
-3. Copiar las carpetas/proyectos del paquete o abrir Wallet.slnx en una carpeta aparte para revisarlo. Si conservás tu .sln actual, agregar Wallet.Tests y configurar las referencias indicadas abajo. Los csproj del paquete heredan TargetFramework desde Directory.Build.props: copiar también ese archivo.
-4. Eliminar únicamente los archivos de ejemplo WeatherForecast.cs y WeatherForecastController.cs si siguen sin uso. No conservar dos Program.cs.
-5. Seguir TARJETAS.md; no fusionar todo como una tarea de registro.
-
-Referencias: Application → Domain; Infrastructure → Application y Domain; Api → Application e Infrastructure; Tests → los proyectos probados. Domain no referencia EF, ASP.NET ni SQL.
-
-## Ejecutar la base técnica
-
-Desde la carpeta que contiene Wallet.slnx:
+Desde la carpeta que contiene `Wallet.slnx` ejecuto:
 
 ```powershell
 dotnet --version
@@ -42,23 +33,39 @@ dotnet dev-certs https --trust
 dotnet run --project Wallet.Api --launch-profile https
 ```
 
-Abrir https://localhost:7081/health/live. Debe mostrar `{"status":"Healthy"}`. La documentación OpenAPI está en https://localhost:7081/openapi/v1.json sólo en Development. Es el contrato JSON; no se agregó interfaz Swagger UI. Wallet.Api.http permite ejecutar requests desde el editor. El test Azure SQL aparece omitido cuando no hay conexión de pruebas: no se interpreta como aprobado.
+Uso la confianza del certificado HTTPS en mi entorno local cuando la plataforma lo permite. Para mi sesión cloud preparada, primero activo el SDK con `source /workspace/.setup/wallet-env.sh` y puedo comprobar la base técnica por HTTP local:
 
-## Habilitar identidad cuando Azure esté disponible
+```sh
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project Wallet.Api -c Release --no-build --no-restore --no-launch-profile --urls http://localhost:5081
+```
 
-Usar **una base de desarrollo vacía**, acceso de red habilitado para tu equipo y una cuenta con permisos necesarios. La suscripción, costo y aprovisionamiento no fueron verificados ni creados por este trabajo. ENV-007 sigue bloqueada hasta resolverlos. Alinear la mención de base local del plan con Azure SQL.
+Con el perfil HTTPS consulto `/health/live` en el puerto 7081; para la comprobación HTTP uso el puerto 5081. En Development consulto el contrato en `/openapi/v1.json` y Swagger UI en `/swagger`.
 
-Guardar los valores reales mediante Administrar secretos de usuario del proyecto Wallet.Api (no incluirlos en Git). Esquema del archivo de secretos:
+Mantengo `Identity:Enabled=false` como configuración inicial. En ese estado verifico:
+
+| Solicitud | Resultado esperado |
+|---|---|
+| `GET /health/live` | 200, `{"status":"Healthy"}` |
+| `GET /health/ready` | 503, `{"status":"Unhealthy"}` |
+| Rutas `/api` | 503, código `IDENTITY_NOT_CONFIGURED` |
+
+Con este arranque compruebo la base técnica; no considero validado un registro ni la persistencia.
+
+## Configuración de identidad y persistencia
+
+Para habilitar identidad necesito una base SQL accesible, el esquema migrado y una clave JWT externa. Tengo pendiente alinear la validación LocalDB indicada en ENV-008 con el destino Azure SQL documentado para integración. No uso LocalDB de Windows desde el contenedor Linux ni introduzco otra base sin acordarlo.
+
+Guardo los valores reales mediante User Secrets de `Wallet.Api` en Development o mediante configuración externa. Uso este esquema como referencia, reemplazando los marcadores fuera del repositorio:
 
 ```json
 {
   "Identity:Enabled": true,
-  "ConnectionStrings:DefaultConnection": "<CADENA REAL DE AZURE SQL, Encrypt=True;TrustServerCertificate=False>",
+  "ConnectionStrings:DefaultConnection": "<CONEXION SQL REAL>",
   "Jwt:Key": "<CLAVE ALEATORIA BASE64>"
 }
 ```
 
-Para generar la clave localmente en PowerShell, sin enviarla al chat:
+Para Azure SQL mantengo `Encrypt=True;TrustServerCertificate=False`. Genero una clave aleatoria de al menos 32 bytes y la represento en Base64. En PowerShell puedo generarla localmente así:
 
 ```powershell
 $jwtBytes = New-Object byte[] 32
@@ -68,78 +75,76 @@ $rng.Dispose()
 [Convert]::ToBase64String($jwtBytes)
 ```
 
-Copiar el resultado en los secretos. No usar literalmente los marcadores. User Secrets evita guardar secretos en Git; no es una bóveda cifrada. En despliegue usar configuración externa. Variables equivalentes: Identity__Enabled, ConnectionStrings__DefaultConnection, Jwt__Key, Jwt__Issuer y Jwt__Audience. Configurar AllowedHosts para el hostname real al desplegar.
+Guardo el resultado de forma segura; no lo copio a Git ni a logs. Reconozco que User Secrets evita versionar secretos, pero no es una bóveda cifrada.
 
-Aplicar la migración incluida (no volver a crear InitialIdentity):
+También puedo configurar `Identity__Enabled`, `ConnectionStrings__DefaultConnection`, `Jwt__Key`, `Jwt__Issuer` y `Jwt__Audience`. Al desplegar ajusto `AllowedHosts` al hostname real.
+
+## Migraciones
+
+Trabajo sobre una base vacía de desarrollo autorizada. Para aplicar la migración existente ejecuto:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet tool restore
 dotnet ef migrations has-pending-model-changes --project Wallet.Infrastructure --startup-project Wallet.Api
 dotnet ef migrations script 0 InitialIdentity --project Wallet.Infrastructure --startup-project Wallet.Api --output migration.sql
-# Revisar migration.sql antes de aplicarlo a la base elegida.
+# Reviso migration.sql antes de aplicarlo a la base elegida.
 dotnet ef database update --project Wallet.Infrastructure --startup-project Wallet.Api
-dotnet run --project Wallet.Api --launch-profile https
 ```
 
-No se ejecutan migraciones automáticamente al arrancar ni se usa EnsureCreated. Una cuenta de migración puede requerir permisos distintos a los de ejecución. `database update 0` elimina Users y sus datos: sólo sirve para volver atrás en una base descartable vacía de datos importantes; en una base compartida se planifica recuperación antes de aplicarlo.
+No vuelvo a crear `InitialIdentity` ni aplico migraciones automáticamente al arrancar. Distingo los permisos de migración de los permisos de ejecución. Antes de cualquier rollback evalúo la pérdida de datos: `database update 0` elimina la tabla de usuarios.
 
-Con conexión correcta pero sin esquema, /health/ready devuelve 503. Con esquema listo devuelve 200. Si falta configuración al habilitar identidad, el proceso falla al inicio con un mensaje de configuración; no se inventa una clave ni se degrada a una base temporal.
+Con identidad habilitada compruebo que `/health/ready` responde 200 cuando el esquema está disponible y 503 cuando la base o el esquema no están accesibles. Si falta conexión o clave JWT, rechazo el inicio sin inventar configuración.
 
-## Contratos del incremento
+## Contratos HTTP
+
+Expongo estos endpoints para el incremento:
 
 | Método y ruta | Acceso | Éxito | Errores principales |
 |---|---|---|---|
-| GET /health/live | Público | 200, status Healthy | No consulta SQL |
-| GET /health/ready | Público | 200, status Healthy | 503, status Unhealthy |
-| POST /api/users | Público | 201, UserResponse, Location /api/users/me | 400, 409, 415, 429, 503 |
-| POST /api/auth/login | Público | 200, accessToken/tokenType/expiresIn | 400, 401, 415, 429, 503 |
-| GET /api/users/me | Bearer + Client | 200, UserResponse | 401, 403, 503 |
-| PUT /api/users/me/profile | Bearer + Client | 200, UserResponse | 400, 401, 403, 409, 415, 503 |
+| `GET /health/live` | Público | 200 | No consulta SQL |
+| `GET /health/ready` | Público | 200 | 503 |
+| `POST /api/users` | Público | 201 + `Location: /api/users/me` | 400, 409, 415, 429, 503 |
+| `POST /api/auth/login` | Público | 200 + token Bearer | 400, 401, 415, 429, 503 |
+| `GET /api/users/me` | JWT + Client | 200 | 401, 403, 503 |
+| `PUT /api/users/me/profile` | JWT + Client | 200 | 400, 401, 403, 409, 415, 503 |
 
-UserResponse sólo expone id, firstName, lastName y email. Registro recibe firstName, lastName, email, password. Login recibe email, password. PUT reemplaza los dos campos editables: firstName y lastName. Cuerpos JSON con propiedades adicionales (por ejemplo role, balance, userId) se rechazan con 400. No existe GET de otro usuario ni un endpoint administrativo. `Location: /api/users/me` se consulta tras iniciar sesión. 413 indica cuerpo demasiado grande; 500 indica falla inesperada. El health de disponibilidad conserva su contrato de estado; los errores de /api usan ProblemDetails.
+Para registro recibo `firstName`, `lastName`, `email` y `password`; para login, `email` y `password`. En la edición de perfil permito únicamente nombre y apellido. Devuelvo `id`, `firstName`, `lastName` y `email`, sin contraseñas ni hashes. Rechazo propiedades adicionales como `role`, `userId` o `balance`.
 
-Para verificar el flujo, ejecutar las requests en Wallet.Api.http; copiar accessToken al encabezado Bearer. Reiniciar la API y volver a iniciar sesión demuestra persistencia cuando se usa la base real. Una sesión emitida antes de incrementar SessionVersion o deshabilitar al usuario debe dejar de servir. La revocación está modelada y comprobada por solicitud; este alcance no agrega un endpoint de logout, administración o refresh token.
+Uso nombres obligatorios de hasta 100 caracteres, correo de hasta 254 y contraseña de 12 a 128 caracteres, no compuesta sólo por espacios. Normalizo el correo con `Trim + ToUpperInvariant` para comprobar unicidad y conservo la contraseña sin transformaciones. Limito el cuerpo de las solicitudes a 16 KiB.
 
-## Reparto de responsabilidades
+## Autenticación y autorización
 
-- Domain/User: invariantes, estado, normalización, perfil y versión de sesión. Sin contraseñas en claro persistidas.
-- Application: DTOs, contratos, Result<T>, casos de uso y validaciones también al invocarlos fuera de HTTP.
-- Infrastructure: EF Core, índice único de email, rowversion de SQL, repositorio específico y PasswordHasher de ASP.NET Core Identity.
-- Api: controllers, JWT, identidad actual, configuración, límites y traducción HTTP.
-- Tests: dominio, hash, API y prueba optativa de unicidad concurrente en SQL real.
+Emito tokens HS256 de quince minutos con tolerancia de reloj de treinta segundos. Valido firma, algoritmo, emisor, audiencia, vigencia y claims de identidad. En este emisor uso UUID no vacío para `sub` y `jti`, y una versión de sesión no negativa.
 
-I/O usa Task y CancellationToken. Validaciones, mapeo y hashing son síncronos; no se usa Task.Run para simular I/O. List<T> se usa donde hay colecciones reales (claims y validaciones). Result<T> y el helper de acceso SQL son genéricos porque eliminan repetición concreta. No se agrega Queue<T>: la mensajería está en el incremento 5, y una cola local tampoco equivaldría a un broker durable. Tampoco hay CRUD genérico, MediatR ni microservicios.
+En cada solicitud privada consulto el usuario persistido y compruebo estado activo, rol y versión de sesión. Asigno `Client` desde el servidor y no permito que el cliente elija su rol. Al incrementar `SessionVersion` o deshabilitar la cuenta invalido los tokens anteriores en las siguientes comprobaciones. No expongo todavía endpoints de logout, administración ni refresh tokens.
 
-## Seguridad y límites conocidos de este prototipo
+Comparto un límite de diez intentos de registro/login por IP y minuto. Uso respuestas `no-store`, errores controlados y consultas parametrizadas. No registro contraseñas, claves, tokens ni conexiones. Mantengo pendiente acordar el origen del frontend para CORS en ENV-011.
 
-Validación de firma, algoritmo, issuer, audience y expiración; revisión de estado/rol/session version desde SQL en cada request privado; contraseñas hasheadas con sal y componente probado; HTTPS; no-store en respuestas; secretos externos; campos explícitos; límite de intentos por IP; consultas parametrizadas por EF; errores sin detalles SQL ni credenciales. No se configura CORS abierto: las pruebas HTTP no lo necesitan; el origen real del frontend se acordará en ENV-011.
+## Pruebas y evidencia
 
-El límite por IP es local a esta instancia y no es una solución distribuida ni protección completa contra ataques. El login responde un mensaje genérico; no promete tiempo de respuesta constante ni imposibilidad de enumeración (el registro ya usa 409 según la consigna). No hay políticas de producción, MFA, recuperación de contraseña o verificación de email: quedan fuera de este corte. PasswordHasher puede indicar necesidad futura de rehash; este corte verifica hashes y una actualización de política debe agregar una migración gradual del hash. No se registran cuerpos de request ni tokens. No hay dinero real.
+Documento los casos, comandos y límites de TEST-001 en [docs/TEST-001.md](docs/TEST-001.md).
 
-## Pruebas y feedback
+Ejecuto las pruebas HTTP con JWT real y un doble de repositorio exclusivo de tests. Para las pruebas SQL configuro `WALLET_TEST_CONNECTION` con una base aislada y previamente migrada. Los tests crean usuarios propios y eliminan únicamente esos registros. No interpreto una prueba omitida como aprobada.
 
-`dotnet test` ejecuta pruebas locales y HTTP con un doble exclusivo de tests. Para la prueba SQL configurar WALLET_TEST_CONNECTION con una base **aislada de pruebas**, aplicar previamente la migración allí y volver a ejecutar. Esa prueba crea un usuario de email aleatorio y elimina sólo ese usuario al terminar; jamás apuntarla a una base de usuarios reales. No crea ni elimina la base completa.
+En la última ejecución local de TEST-001 obtuve **30 pruebas aprobadas, 0 fallidas y 2 SQL omitidas** porque no configuré la conexión de pruebas. Todavía necesito evidencia SQL y de la ejecución remota de CI para cerrar la tarjeta.
 
-Antes de cerrar TEST-001 completar PRUEBAS.md en Azure. No afirmar H0/H1 ni DoD completa por tener tests locales verdes. La CI incluida ejecuta restore/build/test, no despliega ni dispone de Azure por sí sola.
+Para validar H1 tengo pendiente comprobar desde el frontend registro → login → perfil, reiniciar la API y confirmar que los usuarios y cambios persisten. No considero H0/H1 ni la DoD completos por tener pruebas locales en verde.
 
-Después de cada demostración registrar BUG o CHANGE con pasos, esperado, obtenido y evidencia; corregir en bugfix/<ticket>-<descripcion> desde develop y repetir el flujo afectado. Mostrar primero registro/login/perfil, recibir feedback y mantener pequeño el siguiente incremento. Transferencias, saldos, pagos, tarjetas, geolocalización y colas esperan sus tarjetas.
+## Organización del trabajo
 
-## Fuentes que delimitan el trabajo
+Trabajo desde `develop` en ramas por tarjeta y propongo la integración mediante Pull Request. Registro defectos con pasos, resultado esperado, resultado obtenido y evidencia. Mantengo trazabilidad entre tarjeta, rama, commits, PR y versión.
 
-Lectura actual de los seis documentos: Consigna, Plan de Desarrollo, Plan de Mantenimiento, Control de Versiones, DoR y DoD. Se conservan los identificadores del plan; TARJETAS.md amplía su definición para este corte. El inventario de la carpeta enlazada devuelve los cinco documentos de gestión; la Consigna se leyó desde su documento conocido. No se modificaron esos documentos en esta entrega.
+Dejo billeteras y transferencias para el Incremento 2; pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
 
-- Consigna: https://docs.google.com/document/d/18jI1IpjO5SqIquSSp6t_smMAccTvSbhqO7jDUj_yYro
-- Plan: https://docs.google.com/document/d/1AX-_na1qXV5yY7RU8kCaj34E3mRkdmYft7oO2eFNbbA
-- DoR: https://docs.google.com/document/d/1iyhpQGIlRO7K5BftSBNJ04fz7YQSCY1xPPMi9rsCAKg
-- DoD: https://docs.google.com/document/d/1ivZhuq6ELIlCdFphwwW6saqMsUGHX109dfadezSUD4A
-- Versiones: https://docs.google.com/document/d/15BE9V_7xXOVsK0c6b-G11Beo8bZ07NhoxjnXIWnnTKw
-- Mantenimiento: https://docs.google.com/document/d/1-em45Bswy8wO6Sd0NqbqGzAqTDq9OjqiobSuLLxN6AI
-- JWT: https://learn.microsoft.com/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-9.0
-- OpenAPI: https://learn.microsoft.com/aspnet/core/fundamentals/openapi/customize-openapi?view=aspnetcore-9.0
+## Referencias
 
-Los fundamentos de capas, SOLID, DTOs y evolución incremental provienen de la consigna y sus referencias bibliográficas ya revisadas. No se afirmó haber releído íntegramente todos los libros en esta entrega.
+Uso como referencia el Plan de Desarrollo, el Plan de Mantenimiento, Control de Versiones, DoR, DoD y el Modelo de Dominio y Datos compartidos para el proyecto. Mantengo estos enlaces documentales:
 
-Compatibilidad y soporte consultados: https://learn.microsoft.com/dotnet/core/porting/versioning-sdk-msbuild-vs y https://devblogs.microsoft.com/dotnet/dotnet-8-9-end-of-support/ . Se fijó además System.Security.Cryptography.Pkcs 9.0.21 para evitar una versión transitiva vulnerable detectada durante la restauración. Mantener la auditoría NuGet activa; no silenciar vulnerabilidades para lograr un build verde.
-
-Resultados ejecutados y límites de la validación: ver VERIFICACION.md. El script SQL generado se incluye como InitialIdentity.sql.
+- [Plan de Desarrollo](https://docs.google.com/document/d/1AX-_na1qXV5yY7RU8kCaj34E3mRkdmYft7oO2eFNbbA)
+- [Plan de Mantenimiento](https://docs.google.com/document/d/1-em45Bswy8wO6Sd0NqbqGzAqTDq9OjqiobSuLLxN6AI)
+- [Control de Versiones](https://docs.google.com/document/d/15BE9V_7xXOVsK0c6b-G11Beo8bZ07NhoxjnXIWnnTKw)
+- [Definition of Ready](https://docs.google.com/document/d/1iyhpQGIlRO7K5BftSBNJ04fz7YQSCY1xPPMi9rsCAKg)
+- [Definition of Done](https://docs.google.com/document/d/1ivZhuq6ELIlCdFphwwW6saqMsUGHX109dfadezSUD4A)
+- [Autenticación JWT en ASP.NET Core](https://learn.microsoft.com/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-9.0)
+- [OpenAPI en ASP.NET Core](https://learn.microsoft.com/aspnet/core/fundamentals/openapi/customize-openapi?view=aspnetcore-9.0)

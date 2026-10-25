@@ -125,11 +125,17 @@ if (enabled)
                             context.Principal?
                                 .FindFirst("sub")?.Value,
                             out var id)
+                        || id == Guid.Empty
+                        || !Guid.TryParse(
+                            context.Principal?.FindFirst("jti")?.Value,
+                            out var tokenId)
+                        || tokenId == Guid.Empty
                         ||
                         !int.TryParse(
                             context.Principal?
                                 .FindFirst("session_version")?.Value,
-                            out var version))
+                            out var version)
+                        || version < 0)
                     {
                         context.Fail("Invalid token");
                         return;

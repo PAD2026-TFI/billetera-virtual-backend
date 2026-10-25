@@ -14,6 +14,7 @@ public sealed class AzureSqlFactAttribute : FactAttribute
             Skip = "Falta WALLET_TEST_CONNECTION: requiere Azure SQL de pruebas con migración aplicada.";
     }
 }
+[Trait("Category", "Sql")]
 public sealed class SqlIdentityTests
 {
     private static WalletDbContext NewDb() => new(new DbContextOptionsBuilder<WalletDbContext>()

@@ -123,8 +123,6 @@ Comparto un límite de diez intentos de registro/login por IP y minuto. Uso resp
 
 ## Pruebas y evidencia
 
-Documento los casos, comandos y límites de TEST-001 en [docs/TEST-001.md](docs/TEST-001.md).
-
 Ejecuto las pruebas HTTP con JWT real y un doble de repositorio exclusivo de tests. Para las pruebas SQL configuro `WALLET_TEST_CONNECTION` con una base aislada y previamente migrada. Los tests crean usuarios propios y eliminan únicamente esos registros. No interpreto una prueba omitida como aprobada.
 
 En la última ejecución local de TEST-001 obtuve **30 pruebas aprobadas, 0 fallidas y 2 SQL omitidas** porque no configuré la conexión de pruebas. Todavía necesito evidencia SQL y de la ejecución remota de CI para cerrar la tarjeta.

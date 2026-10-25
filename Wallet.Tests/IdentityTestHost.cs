@@ -121,9 +121,18 @@ internal sealed class TestWalletRepository : IWalletRepository
 {
     internal readonly ConcurrentDictionary<Guid, global::Wallet.Domain.Wallet> Items = new();
     internal bool Unavailable { get; set; }
+    internal int Creates { get; private set; }
+    internal int Reads { get; private set; }
+    public Task<global::Wallet.Domain.Wallet?> GetByUserIdAsync(Guid userId, CancellationToken ct)
+    {
+        Reads++;
+        if (Unavailable) throw new StorageUnavailableException(new InvalidOperationException());
+        return Task.FromResult(Items.GetValueOrDefault(userId));
+    }
     public Task<WalletCreation> CreateOrGetAsync(global::Wallet.Domain.Wallet candidate, CancellationToken ct)
     {
         if (Unavailable) throw new StorageUnavailableException(new InvalidOperationException());
+        Creates++;
         var actual = Items.GetOrAdd(candidate.UserId, candidate);
         return Task.FromResult(new WalletCreation(actual, ReferenceEquals(actual, candidate)));
     }

@@ -78,6 +78,7 @@ if (enabled)
     var key = jwt.GetKey();
 
     builder.Services.AddScoped<IdentityService>();
+    builder.Services.AddScoped<WalletService>();
     builder.Services.AddSingleton(jwt);
     builder.Services.AddScoped<ITokenService, JwtTokenService>();
 

@@ -23,3 +23,8 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {"firstName":"Ana María","lastName":"Pérez"}
+
+### Creo mi billetera ARS; sin cuerpo. Repetir devuelve la existente.
+POST {{baseUrl}}/api/wallets
+Authorization: Bearer {{token}}
+Accept: application/json

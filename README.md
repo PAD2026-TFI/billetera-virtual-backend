@@ -2,7 +2,7 @@
 
 Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. Mi objetivo es preparar identidad para la versión v0.2.0; todavía tengo pendiente validar el frontend integrado y la persistencia real para completar H1.
 
-Para el Incremento 2 incorporo la creación explícita de una billetera ARS por usuario. Documento el contrato y las comprobaciones pendientes en [WAL-001](docs/WAL-001.md).
+Para el Incremento 2 incorporo la creación explícita de una billetera ARS por usuario.
 
 ## Arquitectura
 

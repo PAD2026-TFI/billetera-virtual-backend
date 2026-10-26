@@ -51,7 +51,7 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
                 var transfer = Transfer.Complete(source.Id, destination.Id, command.Amount, command.IdempotencyKey, hash, clock.GetUtcNow());
                 source.Debit(command.Amount); destination.Credit(command.Amount);
                 db.Transfers.Add(transfer);
-                db.Movements.AddRange(Movement.ForTransfer(transfer, true, source.Balance), Movement.ForTransfer(transfer, false, destination.Balance));
+                db.Movements.AddRange(Movement.ForCompletedTransfer(transfer, source, destination));
                 await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
                 return new(TransferResponse.From(transfer), true);

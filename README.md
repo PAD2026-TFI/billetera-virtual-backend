@@ -120,6 +120,12 @@ Uso nombres obligatorios de hasta 100 caracteres, correo de hasta 254 y contrase
 
 Para consultar mi saldo envío `GET /api/wallets/me` con el token Bearer, sin cuerpo ni identificador de usuario. Recibo `id`, `balance`, `currency` y `createdAt`. Si todavía no creé mi billetera, recibo 404 con código `WALLET_NOT_FOUND`; la consulta no la crea. Ante indisponibilidad recibo 503 en lugar de un saldo cero ficticio. Uso respuestas `no-store` y no modifico datos al consultar.
 
+## Registro de movimientos
+
+Registro conjuntamente un débito y un crédito por cada transferencia completada. Compruebo que las billeteras y monedas correspondan a la transferencia, y que el saldo posterior del crédito no sea inferior al importe acreditado. Cada movimiento conserva importe positivo, saldo posterior, fecha UTC y referencia de origen.
+
+Guardo ambos movimientos junto con saldos y transferencia. No expongo creación, modificación ni eliminación manual de movimientos. Mantengo la fuente DevelopmentFunding para cargas de prueba y evito duplicar movimientos mediante restricciones SQL e idempotencia. La verificación SQL de TX-002 se ejecuta con `dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlMovementRegistrationTests"` sobre una base aislada y migrada.
+
 ## Transferencias entre billeteras
 
 Para enviar ARS uso `POST /api/transfers` con mi token Bearer y un encabezado obligatorio `Idempotency-Key` que contiene un UUID. El origen se obtiene de mi sesión; en el cuerpo envío únicamente:

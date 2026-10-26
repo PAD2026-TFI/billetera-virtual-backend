@@ -108,6 +108,7 @@ Expongo estos endpoints para el incremento:
 | `GET /health/ready` | Público | 200 | 503 |
 | `POST /api/users` | Público | 201 + `Location: /api/users/me` | 400, 409, 415, 429, 503 |
 | `POST /api/auth/login` | Público | 200 + token Bearer | 400, 401, 415, 429, 503 |
+| `GET /api/wallets/me/movements` | JWT + Client | 200, historial paginado | 400, 401, 403, 404, 503 |
 | `POST /api/transfers` | JWT + Client, Idempotency-Key | 201 nueva, 200 repetida | 400, 401, 403, 404, 409, 422, 503 |
 | `GET /api/wallets/me` | JWT + Client | 200 con billetera y saldo actual | 401, 403, 404, 503 |
 | `POST /api/wallets` | JWT + Client, sin cuerpo | 201 al crear, 200 si existe | 400, 401, 403, 503 |
@@ -119,6 +120,16 @@ Para registro recibo `firstName`, `lastName`, `email` y `password`; para login, 
 Uso nombres obligatorios de hasta 100 caracteres, correo de hasta 254 y contraseña de 12 a 128 caracteres, no compuesta sólo por espacios. Normalizo el correo con `Trim + ToUpperInvariant` para comprobar unicidad y conservo la contraseña sin transformaciones. Limito el cuerpo de las solicitudes a 16 KiB.
 
 Para consultar mi saldo envío `GET /api/wallets/me` con el token Bearer, sin cuerpo ni identificador de usuario. Recibo `id`, `balance`, `currency` y `createdAt`. Si todavía no creé mi billetera, recibo 404 con código `WALLET_NOT_FOUND`; la consulta no la crea. Ante indisponibilidad recibo 503 en lugar de un saldo cero ficticio. Uso respuestas `no-store` y no modifico datos al consultar.
+
+## Historial de movimientos
+
+Consulto `GET /api/wallets/me/movements` con mi token Bearer para recuperar únicamente los movimientos de mi billetera. Recibo `items` y `nextCursor`; cada movimiento informa identificador, tipo, importe positivo, moneda, saldo posterior histórico, fuente, referencia y fecha UTC. Incluyo cargas de desarrollo y transferencias.
+
+Uso `limit=20` por defecto, entre 1 y 100. Para continuar envío el `nextCursor` recibido como query `cursor`, codificado para URL. Ordeno de más reciente a más antiguo, con identificador como desempate. No prometo una instantánea de múltiples páginas mientras se registran nuevas operaciones.
+
+Protejo los cursores mediante ASP.NET Core Data Protection y los vinculo a la billetera. No los edito ni reutilizo con otra cuenta; un cursor inválido recibe 400. Conservo las claves de Data Protection para mantener válidos los cursores tras un reinicio; en varias instancias necesito compartir el anillo de claves. No guardo esas claves en Git.
+
+Si no tengo movimientos recibo 200 con `items: []` y `nextCursor: null`; sin billetera recibo 404 `WALLET_NOT_FOUND`. Una falla SQL devuelve 503, no una colección vacía. La consulta utiliza no-store y no modifica el saldo ni crea recursos. No agrego filtros por fecha, tipo ni exportación en este alcance.
 
 ## Transferencias entre billeteras
 

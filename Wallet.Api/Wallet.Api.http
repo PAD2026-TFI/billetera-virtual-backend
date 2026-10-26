@@ -43,3 +43,8 @@ Idempotency-Key: {{transferKey}}
 Content-Type: application/json
 
 {"destinationWalletId":"{{destinationWalletId}}","amount":300.00}
+
+### Consulto mi historial; para continuar uso el nextCursor recibido.
+GET {{baseUrl}}/api/wallets/me/movements?limit=20
+Authorization: Bearer {{token}}
+Accept: application/json

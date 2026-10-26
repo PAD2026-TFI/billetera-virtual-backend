@@ -212,6 +212,14 @@ En cada solicitud privada consulto el usuario persistido y compruebo estado acti
 
 Comparto un límite de diez intentos de registro/login por IP y minuto. Uso respuestas `no-store`, errores controlados y consultas parametrizadas. No registro contraseñas, claves, tokens ni conexiones. Mantengo pendiente acordar el origen del frontend para CORS en ENV-011.
 
+## Atomicidad de transferencias
+
+Antes de aplicar los saldos valido ambos extremos, el importe, el saldo disponible y la capacidad del receptor. Si una validación falla, no modifico ninguno de los dos objetos. Esa validación de dominio complementa la transacción SQL; no la reemplaza.
+
+Mantengo los locks de las billeteras durante la transacción, uso contextos nuevos en cada reintento y realizo como máximo tres intentos totales por conflictos recuperables. Si agoto esos intentos informo CONCURRENCY_CONFLICT, sin confirmar un resultado parcial. Respeto la cancelación antes de aplicar saldos y antes del commit. Si el commit ya ocurrió, recupero la operación con su clave en vez de asumir un rollback.
+
+Verifico las fallas de cancelación y confirmación con `dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlTransferAtomicityTests"`, sobre una base exclusiva de pruebas configurada en WALLET_TEST_CONNECTION. Las pruebas SQL omitidas no demuestran atomicidad.
+
 ## Pruebas y evidencia
 
 Ejecuto las pruebas HTTP con JWT real y un doble de repositorio exclusivo de tests. Para las pruebas SQL configuro `WALLET_TEST_CONNECTION` con una base aislada y previamente migrada. Los tests crean usuarios propios y eliminan únicamente esos registros. No interpreto una prueba omitida como aprobada.

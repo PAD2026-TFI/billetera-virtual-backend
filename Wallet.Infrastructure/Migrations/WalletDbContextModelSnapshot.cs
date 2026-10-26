@@ -22,6 +22,99 @@ namespace Wallet.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Wallet.Domain.DevelopmentFunding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("char(64)");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("DevelopmentFundings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DevelopmentFundings_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_DevelopmentFundings_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+                        });
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Movement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DevelopmentFundingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DevelopmentFundingId")
+                        .IsUnique()
+                        .HasFilter("[DevelopmentFundingId] IS NOT NULL");
+
+                    b.HasIndex("WalletId", "CreatedAt", "Id");
+
+                    b.ToTable("Movements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Movements_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_Movements_BalanceAfter", "[BalanceAfter] >= 0");
+
+                            t.HasCheckConstraint("CK_Movements_Source", "[DevelopmentFundingId] IS NOT NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit'");
+                        });
+                });
+
             modelBuilder.Entity("Wallet.Domain.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -118,6 +211,29 @@ namespace Wallet.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Wallets_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
                         });
+                });
+
+            modelBuilder.Entity("Wallet.Domain.DevelopmentFunding", b =>
+                {
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Movement", b =>
+                {
+                    b.HasOne("Wallet.Domain.DevelopmentFunding", null)
+                        .WithOne()
+                        .HasForeignKey("Wallet.Domain.Movement", "DevelopmentFundingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Wallet.Domain.Wallet", b =>

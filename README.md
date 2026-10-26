@@ -119,6 +119,50 @@ Uso nombres obligatorios de hasta 100 caracteres, correo de hasta 254 y contrase
 
 Para consultar mi saldo envío `GET /api/wallets/me` con el token Bearer, sin cuerpo ni identificador de usuario. Recibo `id`, `balance`, `currency` y `createdAt`. Si todavía no creé mi billetera, recibo 404 con código `WALLET_NOT_FOUND`; la consulta no la crea. Ante indisponibilidad recibo 503 en lugar de un saldo cero ficticio. Uso respuestas `no-store` y no modifico datos al consultar.
 
+## Fondos de prueba en desarrollo
+
+Para preparar fondos sin pasarela uso la herramienta local `Wallet.DevelopmentTools`. No expongo esta operación mediante la API. Necesito una billetera existente con titular activo y una base exclusiva de desarrollo; no uso fondos reales ni una conexión productiva.
+
+Comparto la conexión de User Secrets de `Wallet.Api` (`pad2026-wallet-initial`) o la suministro mediante `ConnectionStrings__DefaultConnection`. No la escribo en argumentos ni logs. Aplico primero la migración `DevelopmentFunding` con la configuración de desarrollo de la API:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet tool restore
+dotnet ef database update --project Wallet.Infrastructure --startup-project Wallet.Api
+```
+
+Para cada intención de carga genero una clave una sola vez. En PowerShell ejecuto:
+
+```powershell
+$env:DOTNET_ENVIRONMENT = "Development"
+$fundingKey = [guid]::NewGuid().ToString()
+dotnet run --project Wallet.DevelopmentTools -c Release -- fund-wallet --wallet-id "<ID_BILLETERA>" --amount 1000.00 --idempotency-key "$fundingKey" --server "<SERVIDOR_EXACTO>" --database "<BASE_DESARROLLO>" --confirm-development-database
+```
+
+Reemplazo los marcadores por el identificador de la billetera y los nombres exactos de servidor y base de mi conexión. La herramienta exige coincidencia de ambos nombres, rechaza bases del sistema y exige `DOTNET_ENVIRONMENT=Development`. Esa confirmación es mi responsabilidad: etiquetar el proceso como Development no convierte una base productiva en una base de pruebas.
+
+Uso punto decimal, sin separador de miles, e importes positivos sin fracciones de centavo. El límite de $780.400 corresponde a transferencias, no a estas cargas. Respeto la capacidad del saldo `decimal(18,2)`.
+
+La respuesta JSON informa `id`, `walletId`, `amount`, `currency`, `createdAt`, `balanceAfter` y `created`. La primera ejecución devuelve `created=true`; repetir el comando con la misma clave y contenido devuelve `created=false` sin acreditar nuevamente. Para reintentar conservo `$fundingKey`: no vuelvo a generarlo. Si cambio importe o billetera con la misma clave, recibo `IDEMPOTENCY_CONFLICT`.
+
+Registro la carga y su movimiento Credit/DevelopmentFunding, y sumo el saldo, dentro de la misma transacción SQL. Si fallo antes del commit, revierto todos los cambios. Si pierdo la confirmación del commit, reintento con la misma clave para recuperar el resultado; no asumo que hubo rollback. El `balanceAfter` de una repetición es el saldo histórico de esa carga; consulto `GET /api/wallets/me` para conocer el actual.
+
+No registro la herramienta como servicio de la API. Por ahora sólo implemento movimientos de cargas de desarrollo; las referencias y restricciones de transferencias y pagos se ampliarán con sus respectivas funcionalidades. No creo sus tablas anticipadamente.
+
+Consulto la ayuda sin acceder a SQL:
+
+```sh
+dotnet run --project Wallet.DevelopmentTools -c Release -- --help
+```
+
+Para ejecutar las pruebas SQL de cargas uso una base aislada, previamente migrada, configurada mediante `WALLET_TEST_CONNECTION`:
+
+```sh
+dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlDevelopmentFundingTests"
+```
+
+Estas pruebas cubren repetición, conflicto de clave, concurrencia, rollback tras una escritura y recuperación de una confirmación perdida después del commit. Las omitidas no cuentan como aprobadas.
+
 ## Autenticación y autorización
 
 Emito tokens HS256 de quince minutos con tolerancia de reloj de treinta segundos. Valido firma, algoritmo, emisor, audiencia, vigencia y claims de identidad. En este emisor uso UUID no vacío para `sub` y `jti`, y una versión de sesión no negativa.

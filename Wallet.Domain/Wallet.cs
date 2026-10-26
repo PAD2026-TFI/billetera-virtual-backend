@@ -11,6 +11,13 @@ public sealed class Wallet
 
     private Wallet() { } // Materialización EF Core.
 
+    public void Credit(decimal amount)
+    {
+        MoneyRules.ValidatePositive(amount);
+        if (amount > MoneyRules.MaxBalance - Balance) throw new ArgumentException("El saldo excedería su capacidad.", nameof(amount));
+        Balance += amount;
+    }
+
     public static Wallet Create(Guid userId, DateTimeOffset now)
     {
         if (userId == Guid.Empty) throw new ArgumentException("Titular inválido.", nameof(userId));

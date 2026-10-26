@@ -16,6 +16,19 @@ public sealed class Transfer
     public DateTimeOffset CreatedAt { get; private set; }
     private Transfer() { }
 
+    public void ApplyTo(Wallet source, Wallet destination)
+    {
+        // Valido ambos extremos antes de tocar cualquiera de los dos saldos.
+        if (Status != TransferStatus.Completed || source.Id != SourceWalletId || destination.Id != DestinationWalletId
+            || source.Currency != Currency || destination.Currency != Currency)
+            throw new ArgumentException("Las billeteras no corresponden a esta transferencia.");
+        ValidateAmount(Amount);
+        if (source.Balance < Amount) throw new ArgumentException("Saldo insuficiente.");
+        if (Amount > MoneyRules.MaxBalance - destination.Balance) throw new ArgumentException("El destino excedería su capacidad.");
+        source.Debit(Amount);
+        destination.Credit(Amount);
+    }
+
     public static void ValidateAmount(decimal amount)
     {
         MoneyRules.ValidatePositive(amount);

@@ -16,6 +16,12 @@ Organizo la solución en cinco proyectos:
 
 Mantengo Domain independiente de ASP.NET Core y EF Core. Desde Application referencio Domain; desde Infrastructure referencio Application y Domain; desde Api referencio Application e Infrastructure.
 
+## Registro de movimientos
+
+Registro conjuntamente un débito y un crédito por cada transferencia completada. Compruebo que las billeteras y monedas correspondan a la transferencia, y que el saldo posterior del crédito no sea inferior al importe acreditado. Cada movimiento conserva importe positivo, saldo posterior, fecha UTC y referencia de origen.
+
+Guardo ambos movimientos junto con saldos y transferencia. No expongo creación, modificación ni eliminación manual de movimientos. Mantengo la fuente DevelopmentFunding para cargas de prueba y evito duplicar movimientos mediante restricciones SQL e idempotencia. La verificación SQL de TX-002 se ejecuta con `dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlMovementRegistrationTests"` sobre una base aislada y migrada.
+
 ## Requisitos
 
 Uso .NET 9 y un SDK compatible con `global.json`: versión base 9.0.300 y política `latestPatch`. En el entorno cloud validé el SDK 9.0.319. Uso paquetes Microsoft y la herramienta `dotnet-ef` en la versión 9.0.21.

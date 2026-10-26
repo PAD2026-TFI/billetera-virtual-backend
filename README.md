@@ -16,6 +16,12 @@ Organizo la solución en cinco proyectos:
 
 Mantengo Domain independiente de ASP.NET Core y EF Core. Desde Application referencio Domain; desde Infrastructure referencio Application y Domain; desde Api referencio Application e Infrastructure.
 
+## Registro de movimientos
+
+Registro conjuntamente un débito y un crédito por cada transferencia completada. Compruebo que las billeteras y monedas correspondan a la transferencia, y que el saldo posterior del crédito no sea inferior al importe acreditado. Cada movimiento conserva importe positivo, saldo posterior, fecha UTC y referencia de origen.
+
+Guardo ambos movimientos junto con saldos y transferencia. No expongo creación, modificación ni eliminación manual de movimientos. Mantengo la fuente DevelopmentFunding para cargas de prueba y evito duplicar movimientos mediante restricciones SQL e idempotencia. La verificación SQL de TX-002 se ejecuta con `dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlMovementRegistrationTests"` sobre una base aislada y migrada.
+
 ## Requisitos
 
 Uso .NET 9 y un SDK compatible con `global.json`: versión base 9.0.300 y política `latestPatch`. En el entorno cloud validé el SDK 9.0.319. Uso paquetes Microsoft y la herramienta `dotnet-ef` en la versión 9.0.21.
@@ -119,12 +125,6 @@ Para registro recibo `firstName`, `lastName`, `email` y `password`; para login, 
 Uso nombres obligatorios de hasta 100 caracteres, correo de hasta 254 y contraseña de 12 a 128 caracteres, no compuesta sólo por espacios. Normalizo el correo con `Trim + ToUpperInvariant` para comprobar unicidad y conservo la contraseña sin transformaciones. Limito el cuerpo de las solicitudes a 16 KiB.
 
 Para consultar mi saldo envío `GET /api/wallets/me` con el token Bearer, sin cuerpo ni identificador de usuario. Recibo `id`, `balance`, `currency` y `createdAt`. Si todavía no creé mi billetera, recibo 404 con código `WALLET_NOT_FOUND`; la consulta no la crea. Ante indisponibilidad recibo 503 en lugar de un saldo cero ficticio. Uso respuestas `no-store` y no modifico datos al consultar.
-
-## Registro de movimientos
-
-Registro conjuntamente un débito y un crédito por cada transferencia completada. Compruebo que las billeteras y monedas correspondan a la transferencia, y que el saldo posterior del crédito no sea inferior al importe acreditado. Cada movimiento conserva importe positivo, saldo posterior, fecha UTC y referencia de origen.
-
-Guardo ambos movimientos junto con saldos y transferencia. No expongo creación, modificación ni eliminación manual de movimientos. Mantengo la fuente DevelopmentFunding para cargas de prueba y evito duplicar movimientos mediante restricciones SQL e idempotencia. La verificación SQL de TX-002 se ejecuta con `dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlMovementRegistrationTests"` sobre una base aislada y migrada.
 
 ## Transferencias entre billeteras
 

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
@@ -23,6 +24,8 @@ public sealed class SwaggerToolsTests
             using var index = await client.GetAsync("/swagger/index.html");
             Assert.Equal(HttpStatusCode.OK, index.StatusCode);
             Assert.Contains("/swagger/wallet-tools.js", await index.Content.ReadAsStringAsync());
+            using var document = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
+            Assert.False(document.RootElement.GetProperty("paths").TryGetProperty("/swagger/wallet-tools.js", out _));
         }
     }
 }

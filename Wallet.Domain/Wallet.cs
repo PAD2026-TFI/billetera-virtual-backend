@@ -11,6 +11,13 @@ public sealed class Wallet
 
     private Wallet() { } // Materialización EF Core.
 
+    public void Debit(decimal amount)
+    {
+        MoneyRules.ValidatePositive(amount);
+        if (amount > Balance) throw new ArgumentException("Saldo insuficiente.", nameof(amount));
+        Balance -= amount;
+    }
+
     public void Credit(decimal amount)
     {
         MoneyRules.ValidatePositive(amount);

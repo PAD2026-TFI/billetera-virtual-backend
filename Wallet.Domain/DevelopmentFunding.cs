@@ -42,9 +42,20 @@ public sealed class Movement
     public decimal Amount { get; private set; }
     public decimal BalanceAfter { get; private set; }
     public MovementSource Source { get; private set; }
+    public Guid? TransferId { get; private set; }
     public Guid? DevelopmentFundingId { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     private Movement() { }
+
+    public static Movement ForTransfer(Transfer transfer, bool debit, decimal balanceAfter)
+    {
+        if (balanceAfter < 0 || balanceAfter > MoneyRules.MaxBalance || decimal.Round(balanceAfter, 2) != balanceAfter)
+            throw new ArgumentException("Saldo posterior inválido.");
+        return new() { Id = Guid.NewGuid(), WalletId = debit ? transfer.SourceWalletId : transfer.DestinationWalletId,
+            Type = debit ? MovementType.Debit : MovementType.Credit, Amount = transfer.Amount,
+            BalanceAfter = balanceAfter, Source = MovementSource.Transfer, TransferId = transfer.Id,
+            CreatedAt = transfer.CreatedAt };
+    }
 
     public static Movement ForDevelopmentFunding(DevelopmentFunding funding, decimal balanceAfter)
     {

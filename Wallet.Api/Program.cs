@@ -79,6 +79,7 @@ if (enabled)
 
     builder.Services.AddScoped<IdentityService>();
     builder.Services.AddScoped<WalletService>();
+    builder.Services.AddScoped<TransferService>();
     builder.Services.AddSingleton(jwt);
     builder.Services.AddScoped<ITokenService, JwtTokenService>();
 

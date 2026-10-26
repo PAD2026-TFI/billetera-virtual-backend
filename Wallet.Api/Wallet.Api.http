@@ -33,3 +33,13 @@ Accept: application/json
 GET {{baseUrl}}/api/wallets/me
 Authorization: Bearer {{token}}
 Accept: application/json
+
+### Transfiero ARS; conservo la clave al reintentar la misma intención.
+@destinationWalletId = REEMPLAZAR_POR_UUID_BILLETERA_DESTINO
+@transferKey = REEMPLAZAR_POR_UUID_DE_LA_OPERACION
+POST {{baseUrl}}/api/transfers
+Authorization: Bearer {{token}}
+Idempotency-Key: {{transferKey}}
+Content-Type: application/json
+
+{"destinationWalletId":"{{destinationWalletId}}","amount":300.00}

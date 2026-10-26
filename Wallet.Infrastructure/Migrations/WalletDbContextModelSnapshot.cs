@@ -89,6 +89,9 @@ namespace Wallet.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<Guid?>("TransferId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -103,6 +106,10 @@ namespace Wallet.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[DevelopmentFundingId] IS NOT NULL");
 
+                    b.HasIndex("TransferId", "WalletId", "Type")
+                        .IsUnique()
+                        .HasFilter("[TransferId] IS NOT NULL");
+
                     b.HasIndex("WalletId", "CreatedAt", "Id");
 
                     b.ToTable("Movements", null, t =>
@@ -111,7 +118,62 @@ namespace Wallet.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Movements_BalanceAfter", "[BalanceAfter] >= 0");
 
-                            t.HasCheckConstraint("CK_Movements_Source", "[DevelopmentFundingId] IS NOT NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit'");
+                            t.HasCheckConstraint("CK_Movements_Source", "([DevelopmentFundingId] IS NOT NULL AND [TransferId] IS NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit') OR ([DevelopmentFundingId] IS NULL AND [TransferId] IS NOT NULL AND [Source] = 'Transfer' AND [Type] IN ('Debit', 'Credit'))");
+                        });
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Transfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)");
+
+                    b.Property<Guid>("DestinationWalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("char(64)");
+
+                    b.Property<Guid>("SourceWalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinationWalletId");
+
+                    b.HasIndex("SourceWalletId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("Transfers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Transfers_Amount", "[Amount] > 0 AND [Amount] <= 780400");
+
+                            t.HasCheckConstraint("CK_Transfers_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+
+                            t.HasCheckConstraint("CK_Transfers_Status", "[Status] = 'Completed'");
+
+                            t.HasCheckConstraint("CK_Transfers_Wallets", "[SourceWalletId] <> [DestinationWalletId]");
                         });
                 });
 
@@ -229,9 +291,29 @@ namespace Wallet.Infrastructure.Migrations
                         .HasForeignKey("Wallet.Domain.Movement", "DevelopmentFundingId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Wallet.Domain.Transfer", null)
+                        .WithMany()
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Wallet.Domain.Wallet", null)
                         .WithMany()
                         .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Transfer", b =>
+                {
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("DestinationWalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("SourceWalletId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

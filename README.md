@@ -2,7 +2,7 @@
 
 Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. Mi objetivo es preparar identidad para la versión v0.2.0; todavía tengo pendiente validar el frontend integrado y la persistencia real para completar H1.
 
-Para el Incremento 2 incorporo la creación explícita de una billetera ARS por usuario y la consulta de su saldo actual.
+Para el Incremento 2 incorporo creación de billeteras ARS, consulta de saldo y transferencias entre usuarios.
 
 ## Arquitectura
 
@@ -108,6 +108,7 @@ Expongo estos endpoints para el incremento:
 | `GET /health/ready` | Público | 200 | 503 |
 | `POST /api/users` | Público | 201 + `Location: /api/users/me` | 400, 409, 415, 429, 503 |
 | `POST /api/auth/login` | Público | 200 + token Bearer | 400, 401, 415, 429, 503 |
+| `POST /api/transfers` | JWT + Client, Idempotency-Key | 201 nueva, 200 repetida | 400, 401, 403, 404, 409, 422, 503 |
 | `GET /api/wallets/me` | JWT + Client | 200 con billetera y saldo actual | 401, 403, 404, 503 |
 | `POST /api/wallets` | JWT + Client, sin cuerpo | 201 al crear, 200 si existe | 400, 401, 403, 503 |
 | `GET /api/users/me` | JWT + Client | 200 | 401, 403, 503 |
@@ -118,6 +119,46 @@ Para registro recibo `firstName`, `lastName`, `email` y `password`; para login, 
 Uso nombres obligatorios de hasta 100 caracteres, correo de hasta 254 y contraseña de 12 a 128 caracteres, no compuesta sólo por espacios. Normalizo el correo con `Trim + ToUpperInvariant` para comprobar unicidad y conservo la contraseña sin transformaciones. Limito el cuerpo de las solicitudes a 16 KiB.
 
 Para consultar mi saldo envío `GET /api/wallets/me` con el token Bearer, sin cuerpo ni identificador de usuario. Recibo `id`, `balance`, `currency` y `createdAt`. Si todavía no creé mi billetera, recibo 404 con código `WALLET_NOT_FOUND`; la consulta no la crea. Ante indisponibilidad recibo 503 en lugar de un saldo cero ficticio. Uso respuestas `no-store` y no modifico datos al consultar.
+
+## Transferencias entre billeteras
+
+Para enviar ARS uso `POST /api/transfers` con mi token Bearer y un encabezado obligatorio `Idempotency-Key` que contiene un UUID. El origen se obtiene de mi sesión; en el cuerpo envío únicamente:
+
+```json
+{
+  "destinationWalletId": "<UUID_BILLETERA_DESTINO>",
+  "amount": 300.00
+}
+```
+
+Necesito dos billeteras distintas con titulares activos. Acepto importes desde 0,01 hasta 780400 ARS inclusive, sin fracciones de centavo. Compruebo saldo suficiente y capacidad del destino dentro de la transacción.
+
+Recibo 201 al completar una transferencia nueva y 200 al repetir la misma clave con el mismo contenido. La respuesta contiene `id`, `sourceWalletId`, `destinationWalletId`, `amount`, `currency`, `status` y `createdAt`. No incluyo datos personales del destinatario.
+
+Genero una clave por intención de transferencia y la conservo en los reintentos. Misma clave con otro importe o destino devuelve 409 `IDEMPOTENCY_CONFLICT`. La clave tiene alcance por billetera de origen y no vence automáticamente. Recuperar una transferencia completada no vuelve a exigir el saldo original ni vuelve a mover dinero.
+
+Debito el origen, acredito el destino y guardo la transferencia y dos movimientos dentro de una única transacción SQL. Bloqueo las billeteras en un orden estable y uso RowVersion como protección adicional. Si fallo antes del commit, revierto todos los cambios; si pierdo su confirmación, recupero el resultado con la misma clave. No borro movimientos para simular una reversión después del commit.
+
+Distingo `INVALID_INPUT`/`INVALID_AMOUNT`/`SAME_WALLET` (400), sesión inválida (401), falta de permiso (403), `SOURCE_WALLET_NOT_FOUND` (404), `DESTINATION_UNAVAILABLE` (422), `INSUFFICIENT_FUNDS`/`DESTINATION_BALANCE_LIMIT`/`IDEMPOTENCY_CONFLICT`/`CONCURRENCY_CONFLICT` (409) e indisponibilidad SQL (503). Si no conozco el resultado por un fallo de red, no genero otra clave para repetir la misma intención.
+
+Antes de probar aplico las migraciones con la conexión y configuración de desarrollo de la API:
+
+```sh
+dotnet tool restore
+dotnet ef database update --project Wallet.Infrastructure --startup-project Wallet.Api
+```
+
+La migración `Transfers` requiere la anterior `DevelopmentFunding` de TECH-001. Conservo las cargas existentes y amplío la referencia de movimientos con TransferId y una restricción que exige una única fuente. No incorporo referencias a pagos hasta implementar esa integración.
+
+Para la prueba manual preparo dos cuentas y billeteras, acredito fondos al emisor con la herramienta local, obtengo su token y ejecuto la transferencia desde Swagger. Consulto el saldo con la sesión de cada titular: una transferencia de 300 sobre saldos iniciales de 1000 y 0 debe dejarlos en 700 y 300. Repetir la misma clave devuelve la operación original sin cambiar esos saldos.
+
+Para validar atomicidad y concurrencia necesito SQL real, una base exclusiva de pruebas migrada hasta Transfers y `WALLET_TEST_CONNECTION` configurada de forma segura:
+
+```sh
+dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlTransferTests"
+```
+
+No considero demostrados rollback, prevención de doble gasto ni concurrencia sólo por las pruebas HTTP con un doble del store. Mantengo pendientes las pruebas SQL cuando se omiten por falta de conexión. El rollback de la migración elimina el esquema de transferencias y restringe de nuevo los movimientos: no lo ejecuto sobre transferencias confirmadas como mecanismo de devolución.
 
 ## Fondos de prueba en desarrollo
 
@@ -183,7 +224,7 @@ Para validar H1 tengo pendiente comprobar desde el frontend registro → login �
 
 Trabajo desde `develop` en ramas por tarjeta y propongo la integración mediante Pull Request. Registro defectos con pasos, resultado esperado, resultado obtenido y evidencia. Mantengo trazabilidad entre tarjeta, rama, commits, PR y versión.
 
-En el Incremento 2 implemento la creación de billeteras y consulta de saldo; mantengo pendientes las transferencias. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
+En el Incremento 2 implemento creación de billeteras, consulta de saldo y transferencias; mantengo pendiente acreditar su validación SQL completa. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
 
 ## Referencias
 

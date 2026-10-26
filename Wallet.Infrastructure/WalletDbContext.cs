@@ -7,6 +7,7 @@ public sealed class WalletDbContext(DbContextOptions<WalletDbContext> options) :
     public DbSet<User> Users => Set<User>();
     public DbSet<global::Wallet.Domain.Wallet> Wallets => Set<global::Wallet.Domain.Wallet>();
     public DbSet<DevelopmentFunding> DevelopmentFundings => Set<DevelopmentFunding>();
+    public DbSet<Transfer> Transfers => Set<Transfer>();
     public DbSet<Movement> Movements => Set<Movement>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,13 +40,31 @@ public sealed class WalletDbContext(DbContextOptions<WalletDbContext> options) :
         f.HasIndex(x => x.IdempotencyKey).IsUnique();
         f.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(x => x.WalletId).OnDelete(DeleteBehavior.Restrict);
 
+        var t = modelBuilder.Entity<Transfer>();
+        t.ToTable("Transfers", table =>
+        {
+            table.HasCheckConstraint("CK_Transfers_Amount", "[Amount] > 0 AND [Amount] <= 780400");
+            table.HasCheckConstraint("CK_Transfers_Wallets", "[SourceWalletId] <> [DestinationWalletId]");
+            table.HasCheckConstraint("CK_Transfers_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+            table.HasCheckConstraint("CK_Transfers_Status", "[Status] = 'Completed'");
+        });
+        t.HasKey(x => x.Id); t.Property(x => x.Id).ValueGeneratedNever();
+        t.Property(x => x.Amount).HasPrecision(18, 2);
+        t.Property(x => x.Currency).HasColumnType("char(3)").HasMaxLength(3).IsRequired();
+        t.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+        t.Property(x => x.RequestHash).HasColumnType("char(64)").HasMaxLength(64).IsRequired();
+        t.HasIndex(x => new { x.SourceWalletId, x.IdempotencyKey }).IsUnique();
+        t.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(x => x.SourceWalletId).OnDelete(DeleteBehavior.Restrict);
+        t.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(x => x.DestinationWalletId).OnDelete(DeleteBehavior.Restrict);
+
         var m = modelBuilder.Entity<Movement>();
         m.ToTable("Movements", table =>
         {
             table.HasCheckConstraint("CK_Movements_Amount", "[Amount] > 0");
             table.HasCheckConstraint("CK_Movements_BalanceAfter", "[BalanceAfter] >= 0");
-            // Sólo esta fuente está implementada; TX y PAY ampliarán la restricción y sus FKs.
-            table.HasCheckConstraint("CK_Movements_Source", "[DevelopmentFundingId] IS NOT NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit'");
+            table.HasCheckConstraint("CK_Movements_Source",
+                "([DevelopmentFundingId] IS NOT NULL AND [TransferId] IS NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit') OR " +
+                "([DevelopmentFundingId] IS NULL AND [TransferId] IS NOT NULL AND [Source] = 'Transfer' AND [Type] IN ('Debit', 'Credit'))");
         });
         m.HasKey(x => x.Id);
         m.Property(x => x.Id).ValueGeneratedNever();
@@ -55,6 +74,8 @@ public sealed class WalletDbContext(DbContextOptions<WalletDbContext> options) :
         m.Property(x => x.Source).HasConversion<string>().HasMaxLength(32);
         m.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(x => x.WalletId).OnDelete(DeleteBehavior.Restrict);
         m.HasOne<DevelopmentFunding>().WithOne().HasForeignKey<Movement>(x => x.DevelopmentFundingId).OnDelete(DeleteBehavior.Restrict);
+        m.HasOne<Transfer>().WithMany().HasForeignKey(x => x.TransferId).OnDelete(DeleteBehavior.Restrict);
+        m.HasIndex(x => new { x.TransferId, x.WalletId, x.Type }).IsUnique().HasFilter("[TransferId] IS NOT NULL");
         m.HasIndex(x => new { x.WalletId, x.CreatedAt, x.Id });
 
         var u = modelBuilder.Entity<User>();

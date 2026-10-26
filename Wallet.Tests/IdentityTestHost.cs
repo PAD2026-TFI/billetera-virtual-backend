@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -22,6 +23,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
     internal TestUserRepository Users { get; } = new();
     internal TestWalletRepository Wallets { get; } = new();
     internal TestTransferStore Transfers { get; } = new();
+    internal TestMovementHistory History { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -42,6 +44,9 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
                 s.AddSingleton<IWalletRepository>(Wallets);
                 s.RemoveAll<ITransferStore>();
                 s.AddSingleton<ITransferStore>(Transfers);
+                s.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
+                s.RemoveAll<IMovementHistoryReader>();
+                s.AddSingleton<IMovementHistoryReader>(History);
             });
     }
 
@@ -149,5 +154,21 @@ internal sealed class TestTransferStore : ITransferStore
     {
         Calls++;
         return Task.FromResult((Handler ?? throw new InvalidOperationException("Configurar resultado de persistencia en el test."))(command, hash));
+    }
+}
+
+internal sealed class TestMovementHistory : IMovementHistoryReader
+{
+    internal readonly List<Movement> Items = [];
+    internal bool Unavailable = false;
+    internal int LastCount;
+    public Task<IReadOnlyList<Movement>> ReadAsync(Guid walletId, int count, MovementPosition? before, CancellationToken ct)
+    {
+        LastCount = count;
+        if (Unavailable) throw new StorageUnavailableException(new InvalidOperationException());
+        var result = Items.Where(m => m.WalletId == walletId)
+            .Where(m => before is null || m.CreatedAt < before.CreatedAt || m.CreatedAt == before.CreatedAt && m.Id.CompareTo(before.Id) < 0)
+            .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).Take(count).ToArray();
+        return Task.FromResult<IReadOnlyList<Movement>>(result);
     }
 }

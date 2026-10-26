@@ -17,6 +17,7 @@ public sealed class SecurityDocumentTransformer : IOpenApiDocumentTransformer
             if (!path.Key.StartsWith("/api/users/me", StringComparison.Ordinal)
                 && !string.Equals(path.Key, "/api/wallets", StringComparison.Ordinal)
                 && !string.Equals(path.Key, "/api/wallets/me", StringComparison.Ordinal)
+                && !string.Equals(path.Key, "/api/wallets/me/movements", StringComparison.Ordinal)
                 && !string.Equals(path.Key, "/api/transfers", StringComparison.Ordinal)) continue;
             if (path.Value.Operations is null) continue;
             foreach (var operation in path.Value.Operations.Values)

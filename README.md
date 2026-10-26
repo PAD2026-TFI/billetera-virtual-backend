@@ -1,8 +1,8 @@
-# Wallet · Identidad y creación de billetera
+# Wallet · Identidad y billetera
 
 Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. Mi objetivo es preparar identidad para la versión v0.2.0; todavía tengo pendiente validar el frontend integrado y la persistencia real para completar H1.
 
-Para el Incremento 2 incorporo la creación explícita de una billetera ARS por usuario.
+Para el Incremento 2 incorporo la creación explícita de una billetera ARS por usuario y la consulta de su saldo actual.
 
 ## Arquitectura
 
@@ -108,6 +108,7 @@ Expongo estos endpoints para el incremento:
 | `GET /health/ready` | Público | 200 | 503 |
 | `POST /api/users` | Público | 201 + `Location: /api/users/me` | 400, 409, 415, 429, 503 |
 | `POST /api/auth/login` | Público | 200 + token Bearer | 400, 401, 415, 429, 503 |
+| `GET /api/wallets/me` | JWT + Client | 200 con billetera y saldo actual | 401, 403, 404, 503 |
 | `POST /api/wallets` | JWT + Client, sin cuerpo | 201 al crear, 200 si existe | 400, 401, 403, 503 |
 | `GET /api/users/me` | JWT + Client | 200 | 401, 403, 503 |
 | `PUT /api/users/me/profile` | JWT + Client | 200 | 400, 401, 403, 409, 415, 503 |
@@ -115,6 +116,8 @@ Expongo estos endpoints para el incremento:
 Para registro recibo `firstName`, `lastName`, `email` y `password`; para login, `email` y `password`. En la edición de perfil permito únicamente nombre y apellido. Devuelvo `id`, `firstName`, `lastName` y `email`, sin contraseñas ni hashes. Rechazo propiedades adicionales como `role`, `userId` o `balance`.
 
 Uso nombres obligatorios de hasta 100 caracteres, correo de hasta 254 y contraseña de 12 a 128 caracteres, no compuesta sólo por espacios. Normalizo el correo con `Trim + ToUpperInvariant` para comprobar unicidad y conservo la contraseña sin transformaciones. Limito el cuerpo de las solicitudes a 16 KiB.
+
+Para consultar mi saldo envío `GET /api/wallets/me` con el token Bearer, sin cuerpo ni identificador de usuario. Recibo `id`, `balance`, `currency` y `createdAt`. Si todavía no creé mi billetera, recibo 404 con código `WALLET_NOT_FOUND`; la consulta no la crea. Ante indisponibilidad recibo 503 en lugar de un saldo cero ficticio. Uso respuestas `no-store` y no modifico datos al consultar.
 
 ## Autenticación y autorización
 
@@ -136,7 +139,7 @@ Para validar H1 tengo pendiente comprobar desde el frontend registro → login �
 
 Trabajo desde `develop` en ramas por tarjeta y propongo la integración mediante Pull Request. Registro defectos con pasos, resultado esperado, resultado obtenido y evidencia. Mantengo trazabilidad entre tarjeta, rama, commits, PR y versión.
 
-En el Incremento 2 implemento la creación de billeteras; mantengo pendientes consulta de saldo y transferencias. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
+En el Incremento 2 implemento la creación de billeteras y consulta de saldo; mantengo pendientes las transferencias. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
 
 ## Referencias
 

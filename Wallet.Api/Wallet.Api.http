@@ -28,3 +28,8 @@ Content-Type: application/json
 POST {{baseUrl}}/api/wallets
 Authorization: Bearer {{token}}
 Accept: application/json
+
+### Consulto mi billetera y saldo actual; 404 si todavía no la creé.
+GET {{baseUrl}}/api/wallets/me
+Authorization: Bearer {{token}}
+Accept: application/json

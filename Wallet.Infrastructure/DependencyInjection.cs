@@ -9,6 +9,7 @@ public static class DependencyInjection
     {
         services.AddDbContext<WalletDbContext>(o => o.UseSqlServer(connection,
             sql => sql.CommandTimeout(15)));
+        services.AddScoped<ITransferStore, SqlTransferStore>();
         services.AddScoped<IWalletRepository, SqlWalletRepository>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
         services.AddScoped<IPasswordService, IdentityPasswordService>();

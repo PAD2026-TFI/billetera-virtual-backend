@@ -79,6 +79,7 @@ if (enabled)
 
     builder.Services.AddScoped<IdentityService>();
     builder.Services.AddScoped<WalletService>();
+    builder.Services.AddScoped<TransferService>();
     builder.Services.AddSingleton(jwt);
     builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
@@ -191,6 +192,7 @@ if (app.Environment.IsDevelopment())
             "Wallet API v1");
 
         options.RoutePrefix = "swagger";
+        options.InjectJavascript("/swagger/wallet-tools.js");
     });
 }
 else
@@ -242,7 +244,12 @@ if (enabled)
 }
 
 if (app.Environment.IsDevelopment())
+{
     app.MapOpenApi().AllowAnonymous();
+    app.MapGet("/swagger/wallet-tools.js", () => Results.Stream(
+        typeof(Program).Assembly.GetManifestResourceStream("Wallet.Api.Swagger.wallet-tools.js")!,
+        "application/javascript")).AllowAnonymous().ExcludeFromDescription();
+}
 
 app.MapControllers();
 

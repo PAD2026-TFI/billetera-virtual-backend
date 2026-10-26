@@ -1,0 +1,35 @@
+namespace Wallet.Domain;
+
+public enum TransferStatus { Pending, Completed, Failed }
+
+public sealed class Transfer
+{
+    public const decimal MaximumAmount = 780400m;
+    public Guid Id { get; private set; }
+    public Guid SourceWalletId { get; private set; }
+    public Guid DestinationWalletId { get; private set; }
+    public decimal Amount { get; private set; }
+    public string Currency { get; private set; } = "ARS";
+    public TransferStatus Status { get; private set; }
+    public Guid IdempotencyKey { get; private set; }
+    public string RequestHash { get; private set; } = "";
+    public DateTimeOffset CreatedAt { get; private set; }
+    private Transfer() { }
+
+    public static void ValidateAmount(decimal amount)
+    {
+        MoneyRules.ValidatePositive(amount);
+        if (amount > MaximumAmount) throw new ArgumentException("El importe supera el límite de transferencia.");
+    }
+
+    public static Transfer Complete(Guid source, Guid destination, decimal amount, Guid key, string hash, DateTimeOffset now)
+    {
+        ValidateAmount(amount);
+        if (source == Guid.Empty || destination == Guid.Empty || key == Guid.Empty || source == destination)
+            throw new ArgumentException("Identificadores de transferencia inválidos.");
+        if (hash.Length != 64 || !hash.All(Uri.IsHexDigit)) throw new ArgumentException("Huella inválida.");
+        return new() { Id = Guid.NewGuid(), SourceWalletId = source, DestinationWalletId = destination,
+            Amount = amount, Status = TransferStatus.Completed, IdempotencyKey = key, RequestHash = hash,
+            CreatedAt = now.ToUniversalTime() };
+    }
+}

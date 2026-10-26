@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 <PropertyGroup><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
 <ItemGroup>
+<ProjectReference Include="../Wallet.DevelopmentTools/Wallet.DevelopmentTools.csproj" />
 <ProjectReference Include="../Wallet.Api/Wallet.Api.csproj" />
 <ProjectReference Include="../Wallet.Application/Wallet.Application.csproj" />
 <ProjectReference Include="../Wallet.Domain/Wallet.Domain.csproj" />

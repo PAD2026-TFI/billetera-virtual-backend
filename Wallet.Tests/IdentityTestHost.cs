@@ -21,6 +21,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
     internal readonly byte[] Key = RandomNumberGenerator.GetBytes(64);
     internal TestUserRepository Users { get; } = new();
     internal TestWalletRepository Wallets { get; } = new();
+    internal TestTransferStore Transfers { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -39,6 +40,8 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
                 s.AddSingleton<IUserRepository>(Users);
                 s.RemoveAll<IWalletRepository>();
                 s.AddSingleton<IWalletRepository>(Wallets);
+                s.RemoveAll<ITransferStore>();
+                s.AddSingleton<ITransferStore>(Transfers);
             });
     }
 
@@ -135,5 +138,16 @@ internal sealed class TestWalletRepository : IWalletRepository
         Creates++;
         var actual = Items.GetOrAdd(candidate.UserId, candidate);
         return Task.FromResult(new WalletCreation(actual, ReferenceEquals(actual, candidate)));
+    }
+}
+
+internal sealed class TestTransferStore : ITransferStore
+{
+    internal int Calls;
+    internal Func<TransferCommand, string, TransferExecution>? Handler;
+    public Task<TransferExecution> ExecuteAsync(TransferCommand command, string hash, CancellationToken ct)
+    {
+        Calls++;
+        return Task.FromResult((Handler ?? throw new InvalidOperationException("Configurar resultado de persistencia en el test."))(command, hash));
     }
 }

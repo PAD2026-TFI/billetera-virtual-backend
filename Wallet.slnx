@@ -4,4 +4,5 @@
   <Project Path="Wallet.Infrastructure/Wallet.Infrastructure.csproj" />
   <Project Path="Wallet.Api/Wallet.Api.csproj" />
   <Project Path="Wallet.Tests/Wallet.Tests.csproj" />
+  <Project Path="Wallet.DevelopmentTools/Wallet.DevelopmentTools.csproj" />
 </Solution>

@@ -5,15 +5,16 @@ using Wallet.Infrastructure;
 using Xunit;
 namespace Wallet.Tests;
 
-// Opt-in: una base Azure SQL exclusiva de pruebas, previamente migrada.
+// Opt-in: una base SQL Server/Azure SQL exclusiva de pruebas, previamente migrada.
 public sealed class AzureSqlFactAttribute : FactAttribute
 {
     public AzureSqlFactAttribute()
     {
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WALLET_TEST_CONNECTION")))
-            Skip = "Falta WALLET_TEST_CONNECTION: requiere Azure SQL de pruebas con migración aplicada.";
+            Skip = "Falta WALLET_TEST_CONNECTION: requiere SQL Server/Azure SQL de pruebas con migración aplicada.";
     }
 }
+[Collection("SqlIntegration")]
 [Trait("Category", "Sql")]
 public sealed class SqlIdentityTests
 {

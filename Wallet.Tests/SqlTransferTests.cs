@@ -11,6 +11,7 @@ using DomainWallet = Wallet.Domain.Wallet;
 
 namespace Wallet.Tests;
 
+[Collection("SqlIntegration")]
 [Trait("Category", "Sql")]
 public sealed class SqlTransferTests
 {

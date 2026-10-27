@@ -237,6 +237,25 @@ Mantengo los locks de las billeteras durante la transacción, uso contextos nuev
 
 Verifico las fallas de cancelación y confirmación con `dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlTransferAtomicityTests"`, sobre una base exclusiva de pruebas configurada en WALLET_TEST_CONNECTION. Las pruebas SQL omitidas no demuestran atomicidad.
 
+## Pruebas de consistencia financiera
+
+Uso el workflow **SQL consistency** para ejecutar las pruebas SQL sobre SQL Server 2022 descartable en GitHub Actions. En cada ejecución genero credenciales y clave JWT efímeras, las enmascaro en logs y no las guardo en Git. Publico SQL sólo en loopback del runner, espero readiness y aplico las migraciones antes de ejecutar `Category=Sql`.
+
+Conservo el reporte TRX siete días y retiro el contenedor al finalizar. Rechazo ejecuciones con cero pruebas, resultados fallidos u omitidos, o sin las suites financieras obligatorias. El check `sql-consistency` se agrega al workflow backend existente; necesito exigirlo en las reglas de protección si quiero que bloquee el merge. La confianza del certificado autofirmado se limita a ese contenedor local, sin cambiar la configuración de producción.
+
+Serializo las clases SQL para aislar sus fixtures. Dentro de las pruebas de carrera uso una barrera explícita antes de los locks para solapar solicitudes. Verifico duplicados, doble gasto y ambos límites inclusivos del importe, además de las pruebas existentes de rollback, cancelación, movimientos y recuperación del commit.
+
+Para ejecutar SQL localmente configuro WALLET_TEST_CONNECTION con una base exclusiva de pruebas, previamente migrada. No uso WalletDev con mis usuarios manuales ni una base productiva:
+
+```sh
+dotnet test Wallet.slnx -c Release --filter "Category=Sql" --logger trx --results-directory TestResults/Sql
+python scripts/testing/verify-sql-results.py TestResults/Sql
+```
+
+Uso un directorio de resultados nuevo para cada ejecución; el verificador examina todos sus TRX. Una conexión configurada pero inaccesible hace fallar las pruebas. Una conexión ausente produce pruebas omitidas y el verificador rechaza el resultado. No considero una suite omitida como evidencia de consistencia.
+
+Para cerrar el Incremento 2 necesito también el recorrido frontend/backend de saldo, historial y transferencias, con sus criterios de H2. Los checks del backend por sí solos no acreditan esa integración.
+
 ## Pruebas y evidencia
 
 Ejecuto las pruebas HTTP con JWT real y un doble de repositorio exclusivo de tests. Para las pruebas SQL configuro `WALLET_TEST_CONNECTION` con una base aislada y previamente migrada. Los tests crean usuarios propios y eliminan únicamente esos registros. No interpreto una prueba omitida como aprobada.

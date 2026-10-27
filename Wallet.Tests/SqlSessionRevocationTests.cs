@@ -8,6 +8,7 @@ using Xunit;
 
 namespace Wallet.Tests;
 
+[Collection("SqlIntegration")]
 [Trait("Category", "Sql")]
 public sealed class SqlSessionRevocationTests
 {

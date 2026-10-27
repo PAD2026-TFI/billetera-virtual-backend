@@ -1,18 +1,19 @@
 # Wallet · Identidad y billetera
 
-Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. Mi objetivo es preparar identidad para la versión v0.2.0; todavía tengo pendiente validar el frontend integrado y la persistencia real para completar H1.
+Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. La persistencia local de identidad fue comprobada manualmente; la aceptación integrada desde el frontend continúa pendiente para completar H1.
 
-Para el Incremento 2 incorporo creación de billeteras ARS, consulta de saldo y transferencias entre usuarios.
+Para el Incremento 2 implemento billeteras ARS, consulta de saldo, fondos ficticios de desarrollo, transferencias con idempotencia y movimientos con historial paginado. Distingo implementación, validación del backend y aceptación integrada H2.
 
 ## Arquitectura
 
-Organizo la solución en cinco proyectos:
+Organizo el backend en las siguientes capas y proyecto de pruebas; además dispongo de una herramienta de desarrollo:
 
 - `Wallet.Domain`: entidades, invariantes, perfil y versión de sesión.
 - `Wallet.Application`: casos de uso, DTOs y contratos.
 - `Wallet.Infrastructure`: EF Core, SQL, repositorios y hashing.
 - `Wallet.Api`: endpoints, JWT, autorización y configuración.
 - `Wallet.Tests`: pruebas de dominio, hashing, contratos HTTP y SQL.
+- `Wallet.DevelopmentTools`: cargas ficticias de desarrollo; no es un endpoint público.
 
 Mantengo Domain independiente de ASP.NET Core y EF Core. Desde Application referencio Domain; desde Infrastructure referencio Application y Domain; desde Api referencio Application e Infrastructure.
 
@@ -61,7 +62,19 @@ Con este arranque compruebo la base técnica; no considero validado un registro 
 
 ## Configuración de identidad y persistencia
 
-Para habilitar identidad necesito una base SQL accesible, el esquema migrado y una clave JWT externa. Tengo pendiente alinear la validación LocalDB indicada en ENV-008 con el destino Azure SQL documentado para integración. No uso LocalDB de Windows desde el contenedor Linux ni introduzco otra base sin acordarlo.
+Para habilitar identidad necesito una base SQL accesible, el esquema migrado y una clave JWT externa. EF Core gestiona acceso y migraciones; LocalDB, SQL Server y Azure SQL son destinos del proveedor SQL, no reemplazos de EF.
+
+| Ambiente | Motor | Base | Propósito |
+|---|---|---|---|
+| Desarrollo local | LocalDB en Windows | WalletDev | Pruebas manuales y datos ficticios |
+| Pruebas locales | LocalDB en Windows | WalletTests | Pruebas automatizadas aisladas |
+| CI | SQL Server 2022 en Docker | WalletIntegrationTests | Pruebas automatizadas descartables |
+| Integración compartida | Por confirmar | Por definir | Validación frontend/backend |
+| Azure SQL | Previsto, configuración no acreditada | Por definir | Posible integración o despliegue |
+
+LocalDB no funciona en contenedores Linux; para CI uso SQL Server. Azure no es requisito para el backend local. No ejecuto pruebas automatizadas contra WalletDev ni datos reales.
+
+La API y la herramienta de desarrollo utilizan `ConnectionStrings:DefaultConnection`; las pruebas SQL utilizan `WALLET_TEST_CONNECTION`. Varias copias del repositorio con el mismo UserSecretsId pueden compartir configuración privada y base. Cambiar rama o carpeta no crea una base independiente. No elimino ni recreo bases para resolver un error sin identificar primero su causa.
 
 Guardo los valores reales mediante User Secrets de `Wallet.Api` en Development o mediante configuración externa. Uso este esquema como referencia, reemplazando los marcadores fuera del repositorio:
 
@@ -89,20 +102,20 @@ También puedo configurar `Identity__Enabled`, `ConnectionStrings__DefaultConnec
 
 ## Migraciones
 
-Trabajo sobre una base vacía de desarrollo autorizada. Para aplicar la migración existente ejecuto:
+Mantengo un modelo y una secuencia común de migraciones: `InitialIdentity` → `CreateWallets` → `DevelopmentFunding` → `Transfers`. Aplico los cambios explícitamente en la base seleccionada, sin migración automática al iniciar la API. Para revisar y aplicar la secuencia completa ejecuto:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet tool restore
 dotnet ef migrations has-pending-model-changes --project Wallet.Infrastructure --startup-project Wallet.Api
-dotnet ef migrations script 0 InitialIdentity --project Wallet.Infrastructure --startup-project Wallet.Api --output migration.sql
+dotnet ef migrations script 0 Transfers --project Wallet.Infrastructure --startup-project Wallet.Api --output migration.sql
 # Reviso migration.sql antes de aplicarlo a la base elegida.
 dotnet ef database update --project Wallet.Infrastructure --startup-project Wallet.Api
 ```
 
-No vuelvo a crear `InitialIdentity` ni aplico migraciones automáticamente al arrancar. Distingo los permisos de migración de los permisos de ejecución. Antes de cualquier rollback evalúo la pérdida de datos: `database update 0` elimina la tabla de usuarios.
+No vuelvo a crear `InitialIdentity` ni aplico migraciones automáticamente al arrancar. Distingo los permisos de migración de los permisos de ejecución. Antes de cualquier rollback evalúo la pérdida de datos: `database update 0` revierte todo el esquema. Distingo rollback de esquema, restauración de un backup y compensación financiera; una migración destructiva no es una devolución de transferencia.
 
-Con identidad habilitada compruebo que `/health/ready` responde 200 cuando el esquema está disponible y 503 cuando la base o el esquema no están accesibles. Si falta conexión o clave JWT, rechazo el inicio sin inventar configuración.
+Actualmente `/health/ready` consulta Users con identidad habilitada: puede responder 200 aunque falten tablas financieras o haya migraciones pendientes. ENV-010 debe corregirlo para comprobar conectividad, tablas requeridas y ausencia de migraciones pendientes, sin modificar datos; una dependencia requerida no disponible debe producir 503 sin credenciales ni detalles SQL. `/health/live` sigue independiente de la base. La verificación completa se documentará como realizada sólo después de implementarla y probarla. Si falta conexión o clave JWT, rechazo el inicio sin inventar configuración.
 
 ## Contratos HTTP
 
@@ -205,7 +218,7 @@ La respuesta JSON informa `id`, `walletId`, `amount`, `currency`, `createdAt`, `
 
 Registro la carga y su movimiento Credit/DevelopmentFunding, y sumo el saldo, dentro de la misma transacción SQL. Si fallo antes del commit, revierto todos los cambios. Si pierdo la confirmación del commit, reintento con la misma clave para recuperar el resultado; no asumo que hubo rollback. El `balanceAfter` de una repetición es el saldo histórico de esa carga; consulto `GET /api/wallets/me` para conocer el actual.
 
-No registro la herramienta como servicio de la API. Por ahora sólo implemento movimientos de cargas de desarrollo; las referencias y restricciones de transferencias y pagos se ampliarán con sus respectivas funcionalidades. No creo sus tablas anticipadamente.
+No registro la herramienta como servicio de la API. Los movimientos actuales incluyen cargas de desarrollo y transferencias; pagos sigue fuera del incremento. La separación efectiva de permisos de migración, ejecución y carga ficticia permanece como refinamiento pendiente.
 
 Consulto la ayuda sin acceder a SQL:
 
@@ -247,14 +260,29 @@ Serializo las clases SQL para aislar sus fixtures. Dentro de las pruebas de carr
 
 Para ejecutar SQL localmente configuro WALLET_TEST_CONNECTION con una base exclusiva de pruebas, previamente migrada. No uso WalletDev con mis usuarios manuales ni una base productiva:
 
-```sh
-dotnet test Wallet.slnx -c Release --filter "Category=Sql" --logger trx --results-directory TestResults/Sql
-python scripts/testing/verify-sql-results.py TestResults/Sql
+En Windows preparo una base de pruebas separada. La conexión siguiente es local, sin contraseña, y no modifica User Secrets de la API. `--connection` selecciona la base a migrar; no la publica ni la convierte en configuración permanente:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:WALLET_TEST_CONNECTION = "Server=(localdb)\MSSQLLocalDB;Database=WalletTests;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=True"
+dotnet tool restore
+dotnet ef database update --project Wallet.Infrastructure --startup-project Wallet.Api --connection "$env:WALLET_TEST_CONNECTION"
+if ($LASTEXITCODE -ne 0) { throw "Falló la aplicación de migraciones." }
+
+$sqlResults = Join-Path "TestResults" ("Sql-" + [guid]::NewGuid().ToString("N"))
+dotnet test Wallet.slnx -c Release --filter "Category=Sql" --logger trx --results-directory "$sqlResults"
+if ($LASTEXITCODE -ne 0) { throw "Fallaron las pruebas SQL; conservar los TRX." }
+python scripts/testing/verify-sql-results.py "$sqlResults"
+if ($LASTEXITCODE -ne 0) { throw "El verificador rechazó los resultados SQL." }
+Get-ChildItem "$sqlResults" -Filter *.trx
+Remove-Item Env:WALLET_TEST_CONNECTION
 ```
+
+La variable es temporal al proceso de PowerShell. La conexión con confianza del certificado se limita a LocalDB local; no se traslada a Azure/producción. La base debe ser exclusivamente WalletTests. Conservar los TRX con commit, fecha y comando de ejecución, sin secretos, y adjuntarlos a TEST-002. En Docker/CI sigo `.github/workflows/sql-tests.yml`, que prepara su propio SQL Server y base descartable; estas instrucciones LocalDB no se ejecutan en Linux.
 
 Uso un directorio de resultados nuevo para cada ejecución; el verificador examina todos sus TRX. Una conexión configurada pero inaccesible hace fallar las pruebas. Una conexión ausente produce pruebas omitidas y el verificador rechaza el resultado. No considero una suite omitida como evidencia de consistencia.
 
-Para cerrar el Incremento 2 necesito también el recorrido frontend/backend de saldo, historial y transferencias, con sus criterios de H2. Los checks del backend por sí solos no acreditan esa integración.
+Para cerrar H2 necesito desde el frontend iniciar sesión con dos usuarios, consultar saldo, transferir, comprobar ambos saldos e historial, y tratar saldo insuficiente, sesión inválida y solicitudes repetidas. Swagger y los checks del backend no sustituyen ese recorrido. La existencia del workflow no demuestra éxito remoto: debo revisar SQL consistency y exigir sql-consistency en protección de ramas (ENV-018).
 
 ## Pruebas y evidencia
 
@@ -268,7 +296,18 @@ Para validar H1 tengo pendiente comprobar desde el frontend registro → login �
 
 Trabajo desde `develop` en ramas por tarjeta y propongo la integración mediante Pull Request. Registro defectos con pasos, resultado esperado, resultado obtenido y evidencia. Mantengo trazabilidad entre tarjeta, rama, commits, PR y versión.
 
-En el Incremento 2 implemento creación de billeteras, consulta de saldo y transferencias; mantengo pendiente acreditar su validación SQL completa. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
+Para TEST-002 se informa una ejecución concreta en LocalDB / WalletTests con 28 pruebas SQL aprobadas, 0 fallidas, 0 omitidas y verificador satisfactorio. El TRX no se aportó a esta revisión documental: queda pendiente adjuntarlo con fecha y commit. No convierto ese número en garantía permanente ni en evidencia de SQL Server 2022 en GitHub Actions. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
+
+## Pendientes y orden antes del Incremento 3
+
+1. Alinear ambientes y configuración.
+2. Corregir y probar readiness completo (ENV-010).
+3. Confirmar SQL consistency remoto y sus reglas de protección.
+4. Completar evidencia frontend/backend H2.
+5. Refinar secuencia contable por billetera y reconciliación saldo/movimientos.
+6. Continuar con pagos.
+
+La separación de permisos de migración, ejecución y fondos ficticios, y la recuperación y backups del ambiente compartido, siguen pendientes. Esta actualización documental no implementa esas capacidades ni cierra tarjetas automáticamente.
 
 ## Referencias
 

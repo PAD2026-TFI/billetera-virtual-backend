@@ -22,7 +22,7 @@ public sealed class SqlTransferTests
         new SqlTransferStore(Options(interceptors), TimeProvider.System).ExecuteAsync(
             new(userId, destination, amount, key), TransferService.Fingerprint(destination, amount), CancellationToken.None);
 
-    private sealed class Pair : IAsyncDisposable
+    internal sealed class Pair : IAsyncDisposable
     {
         public User Sender { get; } = NewUser();
         public User Receiver { get; } = NewUser();

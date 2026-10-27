@@ -16,6 +16,10 @@ public sealed class Transfer
     public DateTimeOffset CreatedAt { get; private set; }
     private Transfer() { }
 
+    public bool MatchesRequest(Guid destination, decimal amount, string requestHash) =>
+        Status == TransferStatus.Completed && Currency == "ARS" && DestinationWalletId == destination
+        && Amount == amount && RequestHash == requestHash;
+
     public void ApplyTo(Wallet source, Wallet destination)
     {
         // Valido ambos extremos antes de tocar cualquiera de los dos saldos.

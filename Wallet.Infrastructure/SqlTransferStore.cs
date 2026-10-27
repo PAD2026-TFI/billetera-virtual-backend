@@ -74,7 +74,7 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
         db.Transfers.AsNoTracking().SingleOrDefaultAsync(t => t.SourceWalletId == source && t.IdempotencyKey == key, ct);
     private static TransferExecution Replay(Transfer transfer, TransferCommand command, string hash)
     {
-        if (transfer.RequestHash != hash || transfer.DestinationWalletId != command.DestinationWalletId || transfer.Amount != command.Amount)
+        if (!transfer.MatchesRequest(command.DestinationWalletId, command.Amount, hash))
             throw new TransferRejectedException("IDEMPOTENCY_CONFLICT");
         return new(TransferResponse.From(transfer), false);
     }

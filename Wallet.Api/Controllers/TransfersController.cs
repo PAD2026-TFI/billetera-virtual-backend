@@ -24,6 +24,7 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
         try
         {
             var result = await transfers.ExecuteAsync(request, idempotencyKey, ct);
+            Response.Headers["Idempotency-Replayed"] = result.Created ? "false" : "true";
             return StatusCode(result.Created ? 201 : 200, result.Transfer);
         }
         catch (TransferRejectedException e)

@@ -117,6 +117,7 @@ public sealed class TransferTests
         client.DefaultRequestHeaders.Add("Idempotency-Key", key.ToString());
         using var response = await client.PostAsJsonAsync("/api/transfers", new { destinationWalletId = destination, amount = 300m });
         Assert.Equal(status, response.StatusCode); Assert.True(response.Headers.CacheControl?.NoStore);
+        Assert.Equal(created ? "false" : "true", response.Headers.GetValues("Idempotency-Replayed").Single());
         Assert.Equal(transfer, await response.Content.ReadFromJsonAsync<TransferResponse>());
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(new[] { "amount", "createdAt", "currency", "destinationWalletId", "id", "sourceWalletId", "status" },

@@ -1,0 +1,52 @@
+name: SQL consistency
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sql-consistency-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sql-consistency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      Identity__Enabled: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restaurar y compilar
+        run: |
+          dotnet restore Wallet.slnx
+          dotnet tool restore
+          dotnet build Wallet.slnx -c Release --no-restore
+      - name: Preparar SQL Server descartable
+        run: bash scripts/testing/start-ci-sql.sh
+      - name: Aplicar migraciones sobre la base de pruebas
+        run: dotnet ef database update --project Wallet.Infrastructure --startup-project Wallet.Api --configuration Release --no-build
+      - name: Ejecutar pruebas SQL
+        run: dotnet test Wallet.slnx -c Release --no-build --no-restore --filter 'Category=Sql' --logger trx --results-directory TestResults/Sql
+      - name: Confirmar que no hay pruebas SQL omitidas
+        run: python3 scripts/testing/verify-sql-results.py TestResults/Sql
+      - name: Conservar evidencia SQL
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sql-test-results
+          path: TestResults/Sql/*.trx
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Retirar contenedor de pruebas
+        if: always()
+        run: docker rm --force wallet-test-sql || true

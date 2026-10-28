@@ -1,8 +1,9 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application;
-using Wallet.Domain;
-using DomainWallet = Wallet.Domain.Wallet;
+using Wallet.Domain.Entities;
+using Wallet.Domain.Entities.Status;
+using DomainWallet = Wallet.Domain.Entities.Wallet;
 
 namespace Wallet.Infrastructure;
 

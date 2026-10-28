@@ -1,6 +1,4 @@
-﻿
-
-namespace Wallet.Domain
+﻿namespace Wallet.Domain.Entities.Status
 {
     public enum AdressValidationStatus
     {

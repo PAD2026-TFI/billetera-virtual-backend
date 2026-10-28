@@ -2,8 +2,10 @@ using System.Globalization;
 using Wallet.Application;
 using Wallet.DevelopmentTools;
 using Wallet.Domain;
+using Wallet.Domain.Entities;
+using Wallet.Domain.Entities.Status;
 using Xunit;
-using DomainWallet = Wallet.Domain.Wallet;
+using DomainWallet = Wallet.Domain.Entities.Wallet;
 
 namespace Wallet.Tests;
 

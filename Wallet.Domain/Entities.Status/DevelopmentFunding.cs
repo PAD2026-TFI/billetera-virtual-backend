@@ -1,4 +1,4 @@
-namespace Wallet.Domain;
+namespace Wallet.Domain.Entities.Status;
 
 public static class MoneyRules
 {

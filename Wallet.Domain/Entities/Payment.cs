@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Wallet.Domain.Entities.Status;
 
-namespace Wallet.Domain
+namespace Wallet.Domain.Entities
 {
     public sealed class Payment
     {

@@ -1,7 +1,7 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application;
-using Wallet.Domain;
+using Wallet.Domain.Entities;
 
 namespace Wallet.Infrastructure;
 

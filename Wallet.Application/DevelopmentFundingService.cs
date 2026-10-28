@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using Wallet.Domain;
+using Wallet.Domain.Entities.Status;
 
 namespace Wallet.Application;
 

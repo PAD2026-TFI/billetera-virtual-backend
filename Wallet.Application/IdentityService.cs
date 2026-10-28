@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Wallet.Domain;
+using Wallet.Domain.Entities;
 namespace Wallet.Application;
 
 public sealed class IdentityService(IUserRepository users, IPasswordService passwords,

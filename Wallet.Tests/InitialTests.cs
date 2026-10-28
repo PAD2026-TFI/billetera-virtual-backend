@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Wallet.Api.Controllers;
-using Wallet.Domain;
+using Wallet.Domain.Entities;
 using Wallet.Infrastructure;
 using Xunit;
 namespace Wallet.Tests;

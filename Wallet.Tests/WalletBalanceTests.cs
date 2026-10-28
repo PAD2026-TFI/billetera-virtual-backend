@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Wallet.Application;
 using Xunit;
-using DomainWallet = Wallet.Domain.Wallet;
+using DomainWallet = Wallet.Domain.Entities.Wallet;
 
 namespace Wallet.Tests;
 

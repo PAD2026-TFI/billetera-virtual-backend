@@ -3,9 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Wallet.Application;
 using Wallet.Domain;
+using Wallet.Domain.Entities;
 using Wallet.Infrastructure;
 using Xunit;
-using DomainWallet = Wallet.Domain.Wallet;
+using DomainWallet = Wallet.Domain.Entities.Wallet;
 
 namespace Wallet.Tests;
 

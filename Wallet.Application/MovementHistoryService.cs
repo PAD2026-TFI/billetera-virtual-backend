@@ -1,4 +1,4 @@
-using Wallet.Domain;
+using Wallet.Domain.Entities;
 
 namespace Wallet.Application;
 

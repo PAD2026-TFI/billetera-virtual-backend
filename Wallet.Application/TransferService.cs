@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using Wallet.Domain;
+using Wallet.Domain.Entities;
 
 namespace Wallet.Application;
 

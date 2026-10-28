@@ -1,4 +1,6 @@
-namespace Wallet.Domain;
+using Wallet.Domain.Entities.Status;
+
+namespace Wallet.Domain.Entities;
 
 public sealed class Transfer
 {

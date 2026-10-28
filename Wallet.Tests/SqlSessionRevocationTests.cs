@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application;
-using Wallet.Domain;
+using Wallet.Domain.Entities;
 using Wallet.Infrastructure;
 using Xunit;
 

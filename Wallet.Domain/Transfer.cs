@@ -1,7 +1,5 @@
 namespace Wallet.Domain;
 
-public enum TransferStatus { Pending, Completed, Failed }
-
 public sealed class Transfer
 {
     public const decimal MaximumAmount = 780400m;

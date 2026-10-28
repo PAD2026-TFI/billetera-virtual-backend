@@ -1,0 +1,11 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Wallet.Domain
+{
+    public enum MovementType {Debit, Credit}
+    public enum MovementSource { Transfer, Payment }
+}

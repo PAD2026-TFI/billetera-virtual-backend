@@ -11,7 +11,7 @@ if not files:
 counts = collections.Counter()
 seen_classes = set()
 ns = "{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}"
-required = {"Wallet.Tests.SqlTransferTests", "Wallet.Tests.SqlTransferAtomicityTests", "Wallet.Tests.CoordinatedSqlTransferTests"}
+required = {"Wallet.Tests.SqlTransferTests", "Wallet.Tests.SqlTransferAtomicityTests", "Wallet.Tests.CoordinatedSqlTransferTests", "Wallet.Tests.SqlPaymentTests"}
 for path in files:
     root = ET.parse(path).getroot()
     definitions = {test.get("id"): test.find(ns + "TestMethod").get("className", "")

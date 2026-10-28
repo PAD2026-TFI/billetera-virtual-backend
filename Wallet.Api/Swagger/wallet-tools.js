@@ -1,16 +1,21 @@
 (() => {
     "use strict";
     // Una clave por intención. Execute conserva la clave; Nueva clave inicia otra.
-    let key = crypto.randomUUID();
+    const keys = new Map();
     const watched = new WeakSet();
-    function fill(input, value) {
+    function fill(path, value) {
         // Actualizo el estado de Swagger, no sólo el valor visible del input.
         window.ui.getSystem().specActions.changeParam(
-            ["/api/transfers", "post"], "Idempotency-Key", "header", value);
+            [path, "post"], "Idempotency-Key", "header", value);
     }
     function enhance() {
-        const path = document.querySelector('.opblock-summary-path[data-path="/api/transfers"]');
-        const operation = path?.closest(".opblock");
+        if (typeof document === "undefined" || !document.documentElement) return;
+        for (const path of ["/api/transfers", "/api/payments"]) enhanceOperation(path);
+    }
+    function enhanceOperation(path) {
+        const summary = document.querySelector(`.opblock-summary-path[data-path="${path}"]`);
+        const operation = summary?.closest(".opblock");
+        if (!keys.has(path)) keys.set(path, crypto.randomUUID());
         if (!operation) return;
         const row = Array.from(operation.querySelectorAll("tr")).find(r =>
             r.dataset.paramName === "Idempotency-Key" ||
@@ -19,9 +24,9 @@
         if (!input || input.disabled) return;
         if (!watched.has(input)) {
             watched.add(input);
-            input.addEventListener("input", () => { if (input.value) key = input.value; });
+            input.addEventListener("input", () => { if (input.value) keys.set(path, input.value); });
         }
-        if (!input.value) fill(input, key);
+        if (!input.value) fill(path, keys.get(path));
         if (row.querySelector("[data-wallet-key-tools]")) return;
         const tools = document.createElement("div");
         tools.dataset.walletKeyTools = "true";
@@ -31,12 +36,12 @@
         button.className = "btn";
         button.textContent = "Nueva clave";
         button.addEventListener("click", () => {
-            key = crypto.randomUUID();
+            keys.set(path, crypto.randomUUID());
             const current = row.querySelector("input");
-            if (current && !current.disabled) fill(current, key);
+            if (current && !current.disabled) fill(path, keys.get(path));
         });
         const hint = document.createElement("p");
-        hint.textContent = "Conservá la clave para reintentar. Generá una nueva para otra transferencia.";
+        hint.textContent = "Conservá la clave para reintentar. Generá una nueva para otra operación.";
         tools.append(button, hint);
         (row.querySelector("td:last-child") || input.parentElement).append(tools);
     }

@@ -1,18 +1,19 @@
-# Wallet · Identidad y billetera
+# Wallet · Billetera y pagos sandbox
 
-Desarrollo el backend de una billetera virtual con ASP.NET Core. En este incremento implemento registro, inicio de sesión y consulta y actualización del perfil propio. Mi objetivo es preparar identidad para la versión v0.2.0; todavía tengo pendiente validar el frontend integrado y la persistencia real para completar H1.
+Desarrollo el backend de una billetera virtual con ASP.NET Core. Implemento identidad, billeteras ARS, transferencias, movimientos y el flujo de cargas sandbox mediante Mercado Pago. Verifico por separado las pruebas controladas, SQL y la integración externa; no considero una prueba omitida como aprobada.
 
 Para el Incremento 2 incorporo creación de billeteras ARS, consulta de saldo y transferencias entre usuarios.
 
 ## Arquitectura
 
-Organizo la solución en cinco proyectos:
+Organizo la solución en seis proyectos:
 
 - `Wallet.Domain`: entidades, invariantes, perfil y versión de sesión.
 - `Wallet.Application`: casos de uso, DTOs y contratos.
 - `Wallet.Infrastructure`: EF Core, SQL, repositorios y hashing.
 - `Wallet.Api`: endpoints, JWT, autorización y configuración.
 - `Wallet.Tests`: pruebas de dominio, hashing, contratos HTTP y SQL.
+- `Wallet.DevelopmentTools`: herramienta local de fondos de desarrollo.
 
 Mantengo Domain independiente de ASP.NET Core y EF Core. Desde Application referencio Domain; desde Infrastructure referencio Application y Domain; desde Api referencio Application e Infrastructure.
 
@@ -61,7 +62,7 @@ Con este arranque compruebo la base técnica; no considero validado un registro 
 
 ## Configuración de identidad y persistencia
 
-Para habilitar identidad necesito una base SQL accesible, el esquema migrado y una clave JWT externa. Tengo pendiente alinear la validación LocalDB indicada en ENV-008 con el destino Azure SQL documentado para integración. No uso LocalDB de Windows desde el contenedor Linux ni introduzco otra base sin acordarlo.
+Para habilitar identidad necesito una base SQL accesible, el esquema migrado y una clave JWT externa. Uso WalletDev en LocalDB para mis pruebas manuales y WalletTests como base aislada de pruebas. En CI uso SQL Server 2022 descartable. Mantengo EF Core y las mismas migraciones en todos esos ambientes; Azure SQL queda como destino futuro. No intento ejecutar LocalDB de Windows dentro del contenedor Linux.
 
 Guardo los valores reales mediante User Secrets de `Wallet.Api` en Development o mediante configuración externa. Uso este esquema como referencia, reemplazando los marcadores fuera del repositorio:
 
@@ -169,7 +170,7 @@ La migración `Transfers` requiere la anterior `DevelopmentFunding` de TECH-001.
 
 Para la prueba manual preparo dos cuentas y billeteras, acredito fondos al emisor con la herramienta local, obtengo su token y ejecuto la transferencia desde Swagger. Consulto el saldo con la sesión de cada titular: una transferencia de 300 sobre saldos iniciales de 1000 y 0 debe dejarlos en 700 y 300. Repetir la misma clave devuelve la operación original sin cambiar esos saldos.
 
-Para validar atomicidad y concurrencia necesito SQL real, una base exclusiva de pruebas migrada hasta Transfers y `WALLET_TEST_CONNECTION` configurada de forma segura:
+Para validar atomicidad y concurrencia necesito SQL real, una base exclusiva de pruebas con todas las migraciones de pagos aplicadas y `WALLET_TEST_CONNECTION` configurada de forma segura:
 
 ```sh
 dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~SqlTransferTests"
@@ -260,7 +261,7 @@ Para cerrar el Incremento 2 necesito también el recorrido frontend/backend de s
 
 Ejecuto las pruebas HTTP con JWT real y un doble de repositorio exclusivo de tests. Para las pruebas SQL configuro `WALLET_TEST_CONNECTION` con una base aislada y previamente migrada. Los tests crean usuarios propios y eliminan únicamente esos registros. No interpreto una prueba omitida como aprobada.
 
-En la ejecución de TEST-001 obtuve **30 pruebas aprobadas, 0 fallidas y 2 SQL omitidas** porque no configuré la conexión de pruebas. Todavía necesito evidencia SQL y de la ejecución remota de CI para cerrar la tarjeta.
+Conservé la evidencia local del Incremento 2: 28 pruebas SQL aprobadas, sin fallas ni omisiones, sobre WalletTests. Después de incorporar Payments necesito aplicar su migración y repetir la suite ampliada; la evidencia anterior no valida las pruebas nuevas de pagos. Verifico también el resultado remoto de CI antes del merge.
 
 Para validar H1 tengo pendiente comprobar desde el frontend registro → login → perfil, reiniciar la API y confirmar que los usuarios y cambios persisten. No considero H0/H1 ni la DoD completos por tener pruebas locales en verde.
 
@@ -268,7 +269,7 @@ Para validar H1 tengo pendiente comprobar desde el frontend registro → login �
 
 Trabajo desde `develop` en ramas por tarjeta y propongo la integración mediante Pull Request. Registro defectos con pasos, resultado esperado, resultado obtenido y evidencia. Mantengo trazabilidad entre tarjeta, rama, commits, PR y versión.
 
-En el Incremento 2 implemento creación de billeteras, consulta de saldo y transferencias; mantengo pendiente acreditar su validación SQL completa. Pagos, tarjetas, geolocalización y mensajería siguen sus incrementos. No incorporo dinero real, procesamiento de tarjetas bancarias ni funcionalidades ajenas al alcance del prototipo.
+En el Incremento 3 implemento cargas sandbox con Mercado Pago. Mantengo pendiente la verificación real del proveedor hasta configurar su aplicación de prueba y completar la evidencia. Tarjetas, geolocalización y mensajería siguen sus incrementos. No habilito dinero real ni capturo datos de tarjetas.
 
 ## Referencias
 
@@ -281,3 +282,62 @@ Uso como referencia el Plan de Desarrollo, el Plan de Mantenimiento, Control de 
 - [Definition of Done](https://docs.google.com/document/d/1ivZhuq6ELIlCdFphwwW6saqMsUGHX109dfadezSUD4A)
 - [Autenticación JWT en ASP.NET Core](https://learn.microsoft.com/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-9.0)
 - [OpenAPI en ASP.NET Core](https://learn.microsoft.com/aspnet/core/fundamentals/openapi/customize-openapi?view=aspnetcore-9.0)
+
+
+## Cargas sandbox con Mercado Pago
+
+Uso Checkout Pro para iniciar una carga en ARS. Creo la operación local antes de contactar al proveedor y devuelvo su enlace sandbox. Verifico el pago mediante la API del proveedor antes de acreditar. No interpreto el retorno del navegador como una aprobación.
+
+Mantengo `Payments:Enabled=false` hasta tener mi aplicación de prueba configurada. Uso un máximo inicial configurable de $100.000 ARS por carga; es independiente del límite de transferencias. No almaceno PAN, CVV ni credenciales en el frontend.
+
+Desde `Wallet.Api` abro mi archivo de secretos con el administrador de secretos de usuario. Integro estos valores con mi conexión y JWT existentes, sin reemplazarlos ni publicarlos:
+
+```json
+{
+  "Payments:Enabled": true,
+  "Payments:AccessToken": "<TOKEN DEL VENDEDOR DE PRUEBA>",
+  "Payments:WebhookSecret": "<SECRETO DE WEBHOOKS>",
+  "Payments:CollectorId": "<ID DEL VENDEDOR DE PRUEBA>",
+  "Payments:PublicBaseUrl": "https://<HOST PUBLICO DE MI API>",
+  "Payments:MaxTopUpAmount": 100000,
+  "Payments:TimeoutSeconds": 15,
+  "Frontend:AllowedOrigins:0": "http://localhost:5173",
+  "AllowedHosts": "localhost;<HOST PUBLICO DE MI API>"
+}
+```
+
+Configuro el evento de pagos en Webhooks del proveedor con la URL `https://<HOST PUBLICO DE MI API>/api/payments/mercadopago/webhook`. Necesito HTTPS público para recibir notificaciones: el proveedor no puede llamar a mi localhost. En local apunto el túnel a mi API HTTPS en https://localhost:7081. Uso un túnel o un ambiente de integración y mantengo su hostname alineado con PublicBaseUrl y AllowedHosts. La verificación implementada utiliza `x-signature`, `x-request-id` y el `data.id` de la query; compruebo su compatibilidad con las notificaciones reales como parte de SPIKE-001.
+
+Aplico las migraciones antes de arrancar:
+
+```powershell
+dotnet ef database update --project Wallet.Infrastructure --startup-project Wallet.Api
+dotnet run --project Wallet.Api --launch-profile https
+```
+
+Uso estas operaciones autenticadas con rol Client:
+
+| Operación | Comportamiento |
+|---|---|
+| `GET /api/payments/config` | Consulto habilitación, máximo y ARS, sin secretos. |
+| `POST /api/payments` | Envío `{ "amount": 1000 }` y `Idempotency-Key` UUID. Recibo 201 al preparar una carga nueva, 200 al recuperar una existente o 202 si sigue incierta. |
+| `GET /api/payments/{id}` | Consulto únicamente una operación propia. |
+| `POST /api/payments/{id}/refresh` | Consulto al proveedor y reconcilio la misma operación, sin crear otro checkout. |
+
+En Swagger genero automáticamente una clave por intención, separada de la clave de transferencias. Execute conserva la clave y Nueva clave inicia otra intención. Reutilizarla con otro importe devuelve 409. Una repetición no vuelve a crear la preferencia externa; crear preferencias no presupone soporte de idempotencia por parte de Mercado Pago.
+
+Guardo Created, Pending, Unknown, Approved, Rejected, Cancelled o Error. Approved significa que verifiqué la aprobación y confirmé el crédito local. Compruebo referencia, importe, ARS, cuenta receptora y `live_mode=false`. Confirmo saldo, estado, movimiento Credit/Payment y recibo de procesamiento en una única transacción SQL, con locks y restricciones únicas. Un pago puede tener varios intentos rechazados, pero sólo una aprobación puede acreditar la intención. Una segunda aprobación diferente requiere revisión.
+
+Ejecuto recuperación periódica cada minuto, con consultas acotadas y espera creciente entre intentos de cada operación. Cuando no puedo resolver una operación pendiente o incierta tras diez comprobaciones, marco RequiresReview; puedo volver a consultarla explícitamente mediante refresh. Una operación con discrepancias queda identificada para revisión. Si una creación de checkout queda incierta y no hay pagos localizables, conservo la identidad local sin crear otra preferencia automáticamente.
+
+No revierto cobros externos con rollback SQL. Mantengo devoluciones y contracargos fuera de este incremento; detecto esos estados para revisión y no borro movimientos anteriores. La habilitación de dinero real requiere una validación adicional de las condiciones comerciales y operativas del proveedor.
+
+Para mi prueba manual, inicio sesión en Swagger, anoto el saldo, preparo una carga y abro CheckoutUrl en el navegador. Completo el checkout con medios sandbox, consulto la operación y verifico un único crédito en saldo e historial. Repito la solicitud con la misma clave y compruebo que no aumente nuevamente el saldo. También pruebo rechazo y pendiente sin acreditación.
+
+Ejecuto las pruebas controladas de pagos con:
+
+```powershell
+dotnet test Wallet.slnx -c Release --filter "FullyQualifiedName~Payment"
+```
+
+Para SQL uso WalletTests, aplico Payments a esa conexión mediante `--connection`, configuro WALLET_TEST_CONNECTION y ejecuto la suite completa Category=Sql. El verificador exige también SqlPaymentTests. No interpreto las pruebas del adaptador con HTTP simulado como evidencia de sandbox real. `/health/ready` comprueba migraciones pendientes y las tablas del modelo financiero, incluso si las cargas están deshabilitadas.

@@ -84,6 +84,9 @@ namespace Wallet.Infrastructure.Migrations
                     b.Property<Guid?>("DevelopmentFundingId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -106,6 +109,10 @@ namespace Wallet.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[DevelopmentFundingId] IS NOT NULL");
 
+                    b.HasIndex("PaymentId")
+                        .IsUnique()
+                        .HasFilter("[PaymentId] IS NOT NULL");
+
                     b.HasIndex("TransferId", "WalletId", "Type")
                         .IsUnique()
                         .HasFilter("[TransferId] IS NOT NULL");
@@ -118,8 +125,139 @@ namespace Wallet.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Movements_BalanceAfter", "[BalanceAfter] >= 0");
 
-                            t.HasCheckConstraint("CK_Movements_Source", "([DevelopmentFundingId] IS NOT NULL AND [TransferId] IS NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit') OR ([DevelopmentFundingId] IS NULL AND [TransferId] IS NOT NULL AND [Source] = 'Transfer' AND [Type] IN ('Debit', 'Credit'))");
+                            t.HasCheckConstraint("CK_Movements_Source", "([PaymentId] IS NULL AND [DevelopmentFundingId] IS NOT NULL AND [TransferId] IS NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit') OR ([PaymentId] IS NULL AND [DevelopmentFundingId] IS NULL AND [TransferId] IS NOT NULL AND [Source] = 'Transfer' AND [Type] IN ('Debit', 'Credit')) OR ([PaymentId] IS NOT NULL AND [DevelopmentFundingId] IS NULL AND [TransferId] IS NULL AND [Source] = 'Payment' AND [Type] = 'Credit')");
                         });
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset?>("CheckoutAttemptedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CheckoutUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("CreditedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("char(3)");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LastIssue")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("NextCheckAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PreferenceId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ProviderPaymentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("ProviderUpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("RecoveryAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("char(64)");
+
+                    b.Property<bool>("RequiresReview")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PreferenceId")
+                        .IsUnique()
+                        .HasFilter("[PreferenceId] IS NOT NULL");
+
+                    b.HasIndex("Provider", "ProviderPaymentId")
+                        .IsUnique()
+                        .HasFilter("[ProviderPaymentId] IS NOT NULL");
+
+                    b.HasIndex("Status", "NextCheckAt");
+
+                    b.HasIndex("WalletId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("Payments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_Payments_Credit", "([Status] = 'Approved' AND [CreditedAt] IS NOT NULL AND [ProviderPaymentId] IS NOT NULL) OR ([Status] <> 'Approved' AND [CreditedAt] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Payments_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+
+                            t.HasCheckConstraint("CK_Payments_Status", "[Status] IN ('Created','Pending','Unknown','Approved','Rejected','Cancelled','Error')");
+                        });
+                });
+
+            modelBuilder.Entity("Wallet.Domain.PaymentReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasColumnType("char(64)");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventKey")
+                        .IsUnique();
+
+                    b.HasIndex("PaymentId");
+
+                    b.ToTable("PaymentReceipts", (string)null);
                 });
 
             modelBuilder.Entity("Wallet.Domain.Transfer", b =>
@@ -291,6 +429,11 @@ namespace Wallet.Infrastructure.Migrations
                         .HasForeignKey("Wallet.Domain.Movement", "DevelopmentFundingId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Wallet.Domain.Payment", null)
+                        .WithOne()
+                        .HasForeignKey("Wallet.Domain.Movement", "PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Wallet.Domain.Transfer", null)
                         .WithMany()
                         .HasForeignKey("TransferId")
@@ -299,6 +442,24 @@ namespace Wallet.Infrastructure.Migrations
                     b.HasOne("Wallet.Domain.Wallet", null)
                         .WithMany()
                         .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Payment", b =>
+                {
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.PaymentReceipt", b =>
+                {
+                    b.HasOne("Wallet.Domain.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

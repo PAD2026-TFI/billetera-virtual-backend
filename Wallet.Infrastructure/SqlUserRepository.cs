@@ -21,8 +21,15 @@ public sealed class SqlUserRepository(WalletDbContext db) : IUserRepository
     {
         try
         {
-            // También comprueba que exista el esquema; CanConnect no basta.
-            await db.Users.AsNoTracking().Select(x => x.Id).Take(1).ToListAsync(ct);
+            // CanConnect o SELECT Users.Id no detectan migraciones ni tablas financieras faltantes.
+            if ((await db.Database.GetPendingMigrationsAsync(ct)).Any()) return false;
+            await db.Users.AsNoTracking().Take(1).ToListAsync(ct);
+            await db.Wallets.AsNoTracking().Take(1).ToListAsync(ct);
+            await db.Transfers.AsNoTracking().Take(1).ToListAsync(ct);
+            await db.DevelopmentFundings.AsNoTracking().Take(1).ToListAsync(ct);
+            await db.Movements.AsNoTracking().Take(1).ToListAsync(ct);
+            await db.Payments.AsNoTracking().Take(1).ToListAsync(ct);
+            await db.PaymentReceipts.AsNoTracking().Take(1).ToListAsync(ct);
             return true;
         }
         catch (SqlException) { return false; }

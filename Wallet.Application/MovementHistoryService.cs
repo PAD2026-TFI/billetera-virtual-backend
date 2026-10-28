@@ -31,7 +31,7 @@ public sealed class MovementHistoryService(IWalletRepository wallets, IMovementH
         var rows = await history.ReadAsync(wallet.Id, limit + 1, before, ct);
         var items = rows.Take(limit).Select(m => new MovementResponse(m.Id, m.Type.ToString(), m.Amount,
             wallet.Currency, m.BalanceAfter, m.Source.ToString(),
-            m.TransferId ?? m.DevelopmentFundingId ?? throw new InvalidOperationException("Movimiento sin referencia."), m.CreatedAt)).ToArray();
+            m.TransferId ?? m.DevelopmentFundingId ?? m.PaymentId ?? throw new InvalidOperationException("Movimiento sin referencia."), m.CreatedAt)).ToArray();
         var next = rows.Count > limit
             ? cursors.Encode(wallet.Id, new(items[^1].CreatedAt, items[^1].Id)) : null;
         return Result<MovementPage>.Success(new(items, next));

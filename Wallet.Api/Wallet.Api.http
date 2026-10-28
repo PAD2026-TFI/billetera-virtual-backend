@@ -1,10 +1,10 @@
 @baseUrl = https://localhost:7081
 @token = REEMPLAZAR_POR_ACCESS_TOKEN
-### Vida sin Azure
+### Vida sin consultar SQL
 GET {{baseUrl}}/health/live
 ### Dependencias; 503 mientras no esté habilitada identidad
 GET {{baseUrl}}/health/ready
-### Registro (requiere Azure y migración)
+### Registro (requiere SQL Server y migraciones)
 POST {{baseUrl}}/api/users
 Content-Type: application/json
 
@@ -48,3 +48,25 @@ Content-Type: application/json
 GET {{baseUrl}}/api/wallets/me/movements?limit=20
 Authorization: Bearer {{token}}
 Accept: application/json
+
+### Configuración pública de cargas (no devuelve secretos).
+GET {{baseUrl}}/api/payments/config
+Authorization: Bearer {{token}}
+
+### Preparo una carga sandbox; conservo esta clave para recuperar la misma intención.
+@paymentKey = REEMPLAZAR_POR_UUID_DE_LA_CARGA
+POST {{baseUrl}}/api/payments
+Authorization: Bearer {{token}}
+Idempotency-Key: {{paymentKey}}
+Content-Type: application/json
+
+{"amount":1000.00}
+
+### Consulto el estado persistido; el retorno del navegador no acredita saldo.
+@paymentId = REEMPLAZAR_POR_ID_LOCAL_DE_LA_CARGA
+GET {{baseUrl}}/api/payments/{{paymentId}}
+Authorization: Bearer {{token}}
+
+### Consulto Mercado Pago y reconcilio la misma operación. No inicio otro checkout.
+POST {{baseUrl}}/api/payments/{{paymentId}}/refresh
+Authorization: Bearer {{token}}

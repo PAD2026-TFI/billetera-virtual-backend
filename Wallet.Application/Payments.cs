@@ -13,12 +13,15 @@ public sealed class PaymentSettings
     public string AccessToken { get; set; } = "";
     public string WebhookSecret { get; set; } = "";
     public string CollectorId { get; set; } = "";
+    public string[] TestBuyerIds { get; set; } = [];
     public string PublicBaseUrl { get; set; } = "";
     public int TimeoutSeconds { get; set; } = 15;
     public void Validate()
     {
         if (!Enabled) return;
         MoneyRules.ValidatePositive(MaxTopUpAmount);
+        if (TestBuyerIds.Any(id => string.IsNullOrWhiteSpace(id) || id.Length > 32 || !id.All(char.IsAsciiDigit) || id == CollectorId))
+            throw new InvalidOperationException("Identificadores de compradores de prueba inválidos.");
         if (string.IsNullOrWhiteSpace(AccessToken) || WebhookSecret.Length < 16
             || !CollectorId.All(char.IsAsciiDigit) || CollectorId.Length is < 1 or > 32
             || !Uri.TryCreate(PublicBaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != "https"

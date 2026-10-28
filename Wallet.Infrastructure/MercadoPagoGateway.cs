@@ -65,10 +65,22 @@ public sealed class MercadoPagoGateway(HttpClient http, PaymentSettings settings
                 throw new GatewayException("PROVIDER_TEST_ACCOUNTS_UNVERIFIED");
             using var buyerRequest = new HttpRequestMessage(HttpMethod.Get, "users/" + payerId);
             using var buyer = await SendAsync(buyerRequest, ct);
-            if (!IsTestUser(buyer.RootElement, payerId)) throw new GatewayException("PROVIDER_TEST_ACCOUNTS_UNVERIFIED");
+            if (!IsTestUser(buyer.RootElement, payerId) && !IsConfiguredTestBuyer(buyer.RootElement, payerId))
+                throw new GatewayException("PROVIDER_TEST_ACCOUNTS_UNVERIFIED");
             payment = payment with { TestAccountsVerified = true };
         }
         return payment;
+    }
+    private bool IsConfiguredTestBuyer(JsonElement buyer, string expectedId)
+    {
+        // El perfil público puede omitir tags. En ese caso exijo un ID confirmado en
+        // Cuentas de prueba y configurado por el operador; nunca se toma del request del cliente.
+        try
+        {
+            return Scalar(buyer, "id") == expectedId && !buyer.TryGetProperty("tags", out _)
+                && settings.TestBuyerIds.Contains(expectedId, StringComparer.Ordinal);
+        }
+        catch (Exception e) when (e is KeyNotFoundException or InvalidOperationException) { return false; }
     }
     private static bool IsTestUser(JsonElement user, string expectedId)
     {

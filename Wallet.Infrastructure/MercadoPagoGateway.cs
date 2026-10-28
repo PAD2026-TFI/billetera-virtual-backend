@@ -22,7 +22,8 @@ public sealed class MercadoPagoGateway(HttpClient http, PaymentSettings settings
             items = new[] { new { id = request.Reference.ToString("D"), title = "Carga de saldo de prueba",
                 quantity = 1, currency_id = request.Currency, unit_price = request.Amount } },
             external_reference = request.Reference.ToString("D"),
-            notification_url = root + "/api/payments/mercadopago/webhook",
+            // Checkout Pro puede enviar IPN además de Webhooks si no filtro la fuente.
+            notification_url = root + "/api/payments/mercadopago/webhook?source_news=webhooks",
             back_urls = new { success = root + "/payments/return", pending = root + "/payments/return", failure = root + "/payments/return" }
         });
         using var json = await SendAsync(message, ct);

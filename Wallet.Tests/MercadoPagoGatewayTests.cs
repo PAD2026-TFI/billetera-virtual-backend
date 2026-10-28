@@ -26,7 +26,7 @@ public sealed class MercadoPagoGatewayTests
             using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
             Assert.Equal(reference.ToString("D"), body.RootElement.GetProperty("external_reference").GetString());
             Assert.Equal(1000m, body.RootElement.GetProperty("items")[0].GetProperty("unit_price").GetDecimal());
-            Assert.Equal("https://wallet.example.com/api/payments/mercadopago/webhook", body.RootElement.GetProperty("notification_url").GetString());
+            Assert.Equal("https://wallet.example.com/api/payments/mercadopago/webhook?source_news=webhooks", body.RootElement.GetProperty("notification_url").GetString());
             return Json("""{"id":"pref-123","sandbox_init_point":"https://sandbox.mercadopago.com.ar/checkout/v1/redirect?pref_id=pref-123"}""");
         });
         var result = await Gateway(handler).StartAsync(new(reference, 1000m, "ARS"), CancellationToken.None);

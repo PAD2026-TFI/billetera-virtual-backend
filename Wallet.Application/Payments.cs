@@ -43,10 +43,10 @@ public sealed class GatewayException(string code, bool definitive = false) : Exc
 public sealed class PaymentRejectedException(string code) : Exception(code) { public string Code { get; } = code; }
 public sealed record PaymentResponse(Guid Id, Guid WalletId, decimal Amount, string Currency, string Provider,
     string Status, string? CheckoutUrl, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,
-    DateTimeOffset? CreditedAt, bool RequiresReview)
+    DateTimeOffset? CreditedAt, bool RequiresReview, string? IssueCode = null)
 {
     public static PaymentResponse From(Payment p) => new(p.Id, p.WalletId, p.Amount, p.Currency, p.Provider,
-        p.Status.ToString(), p.CheckoutUrl, p.CreatedAt, p.UpdatedAt, p.CreditedAt, p.RequiresReview);
+        p.Status.ToString(), p.CheckoutUrl, p.CreatedAt, p.UpdatedAt, p.CreditedAt, p.RequiresReview, p.LastIssue);
 }
 public sealed record PaymentCreation(Payment Payment, bool Created);
 public sealed record PaymentExecution(PaymentResponse Payment, bool Created);
@@ -129,11 +129,14 @@ public sealed class PaymentProcessor(IPaymentStore store, IPaymentGateway gatewa
     private async Task VerifyAndApplyAsync(VerifiedPayment external, CancellationToken ct)
     {
         var local = await store.GetAsync(external.Reference, ct) ?? throw new PaymentRejectedException("PAYMENT_NOT_FOUND");
-        if (external.LiveMode || external.CollectorId != settings.CollectorId || external.Currency != "ARS"
-            || external.Amount != local.Amount || local.Currency != external.Currency)
+        var mismatch = external.LiveMode ? "PAYMENT_LIVE_MODE"
+            : external.CollectorId != settings.CollectorId ? "PAYMENT_COLLECTOR_MISMATCH"
+            : external.Currency != "ARS" || local.Currency != external.Currency ? "PAYMENT_CURRENCY_MISMATCH"
+            : external.Amount != local.Amount ? "PAYMENT_AMOUNT_MISMATCH" : null;
+        if (mismatch is not null)
         {
-            await store.RecordIssueAsync(local.Id, "PAYMENT_MISMATCH", false, ct);
-            throw new PaymentRejectedException("PAYMENT_MISMATCH");
+            await store.RecordIssueAsync(local.Id, mismatch, false, ct);
+            throw new PaymentRejectedException(mismatch);
         }
         try { await store.ApplyAsync(external, ct); }
         catch (PaymentRejectedException e)

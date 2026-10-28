@@ -61,7 +61,8 @@ public sealed class Payment
         if (definitive && ProviderPaymentId is null) SetStatus(PaymentStatus.Error, now);
         else if (Status == PaymentStatus.Created) SetStatus(PaymentStatus.Unknown, now);
         ScheduleRecovery(now);
-        if (code is "PAYMENT_MISMATCH" or "MULTIPLE_PROVIDER_PAYMENTS" or "PROVIDER_PAYMENT_CONFLICT"
+        if (code is "PAYMENT_MISMATCH" or "PAYMENT_LIVE_MODE" or "PAYMENT_COLLECTOR_MISMATCH"
+            or "PAYMENT_CURRENCY_MISMATCH" or "PAYMENT_AMOUNT_MISMATCH" or "MULTIPLE_PROVIDER_PAYMENTS" or "PROVIDER_PAYMENT_CONFLICT"
             or "CREDIT_REQUIRES_REVIEW" or "PROVIDER_STATUS_REQUIRES_REVIEW" or "PROVIDER_SEARCH_REQUIRES_REVIEW")
             RequiresReview = true;
     }

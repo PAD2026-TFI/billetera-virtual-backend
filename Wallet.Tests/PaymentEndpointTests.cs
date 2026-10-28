@@ -74,7 +74,7 @@ public sealed class PaymentEndpointTests
         f.Client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
         var first = await f.Client.PostAsJsonAsync("/api/payments", new { amount = 1000m });
         Assert.Equal(HttpStatusCode.Accepted, first.StatusCode);
-        var payment = (await first.Content.ReadFromJsonAsync<PaymentResponse>())!; Assert.Equal("Unknown", payment.Status);
+        var payment = (await first.Content.ReadFromJsonAsync<PaymentResponse>())!; Assert.Equal("Unknown", payment.Status); Assert.Equal("PROVIDER_TIMEOUT", payment.IssueCode);
         await f.Client.PostAsJsonAsync("/api/payments", new { amount = 1000m }); Assert.Equal(1, f.Gateway.Starts);
         f.Gateway.Failure = null; f.Gateway.Result = PaymentTestData.Verified(f.Store.Items[payment.Id]);
         using var refreshed = await f.Client.PostAsync($"/api/payments/{payment.Id}/refresh", null);
@@ -107,6 +107,10 @@ public sealed class PaymentEndpointTests
         f.Gateway.Result = mismatch switch { "amount" => verified with { Amount = 1m }, "currency" => verified with { Currency = "USD" },
             "collector" => verified with { CollectorId = "999" }, _ => verified with { LiveMode = true } };
         Assert.Equal(HttpStatusCode.Conflict, (await f.Notify("123456789")).StatusCode); Assert.Equal(0, f.Store.Credits);
+        var current = await f.Client.GetFromJsonAsync<PaymentResponse>($"/api/payments/{payment.Id}");
+        Assert.Equal(mismatch switch { "amount" => "PAYMENT_AMOUNT_MISMATCH", "currency" => "PAYMENT_CURRENCY_MISMATCH",
+            "collector" => "PAYMENT_COLLECTOR_MISMATCH", _ => "PAYMENT_LIVE_MODE" }, current!.IssueCode);
+        Assert.True(current.RequiresReview);
     }
     [Theory]
     [InlineData(PaymentStatus.Pending)] [InlineData(PaymentStatus.Rejected)] [InlineData(PaymentStatus.Cancelled)]

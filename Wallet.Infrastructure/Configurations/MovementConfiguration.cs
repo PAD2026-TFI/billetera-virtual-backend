@@ -13,7 +13,7 @@ namespace Wallet.Infrastructure.Configurations
                 table.HasCheckConstraint("CK_Movements_BalanceAfter", "[BalanceAfter] >= 0");
                 table.HasCheckConstraint("CK_Movements_Source",
                     "([DevelopmentFundingId] IS NOT NULL AND [TransferId] IS NULL AND [Source] = 'DevelopmentFunding' AND [Type] = 'Credit') OR " +
-                    "([DevelopmentFundingId] IS NULL AND [TransferId] IS NOT NULL AND [Source] = 'Transfer' AND [Type] IN ('Debit', 'Credit'))");
+                    "([DevelopmentFundingId] IS NULL AND [TransferId] IS NOT NULL AND [Source] = 'Transfer' AND [Type] IN ('Debit', 'Credit'))"); //TODO: creo que todo lo referido a DevelopmentFunding se puede borrar
             });
             builder.HasKey(  movement => movement.Id);
             builder.Property(movement => movement.Id).ValueGeneratedNever();

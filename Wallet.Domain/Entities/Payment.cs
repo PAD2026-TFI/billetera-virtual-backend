@@ -15,6 +15,7 @@ namespace Wallet.Domain.Entities
         public PaymentStatus Status { get; private set; } = PaymentStatus.Pending;
         public string Currency { get; private set; } = "ARS";
         public string ExternalReference { get; private set; } = "";
+        public Guid IdempotencyKey { get; private set; }
         public DateTimeOffset CreatedAt { get; private set; }
         public DateTimeOffset UpdatedAt { get; set; }
 

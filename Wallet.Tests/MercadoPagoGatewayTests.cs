@@ -95,4 +95,28 @@ public sealed class MercadoPagoGatewayTests
             Gateway(handler).GetAsync("123456789", CancellationToken.None))).Code);
     }
 
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    public async Task Live_flag_requires_verified_test_seller_and_buyer(bool testSeller, bool testBuyer, bool allowed)
+    {
+        using var handler = new Handler((r, _) =>
+        {
+            var body = r.RequestUri!.AbsolutePath switch
+            {
+                "/v1/payments/123" => JsonSerializer.Serialize(new { id = 123, external_reference = Guid.NewGuid(),
+                    transaction_amount = 1000m, transaction_amount_refunded = 0m, currency_id = "ARS", collector_id = 123456,
+                    live_mode = true, payer = new { id = 789 }, status = "approved", date_last_updated = "2026-10-28T00:00:00Z" }),
+                "/users/me" => JsonSerializer.Serialize(new { id = 123456, tags = testSeller ? new[] { "test_user" } : Array.Empty<string>() }),
+                "/users/789" => JsonSerializer.Serialize(new { id = 789, tags = testBuyer ? new[] { "test_user" } : Array.Empty<string>() }),
+                _ => throw new InvalidOperationException()
+            };
+            return Task.FromResult(Json(body));
+        });
+        if (allowed) Assert.True((await Gateway(handler).GetAsync("123", CancellationToken.None)).TestAccountsVerified);
+        else Assert.Equal("PROVIDER_TEST_ACCOUNTS_UNVERIFIED", (await Assert.ThrowsAsync<GatewayException>(() =>
+            Gateway(handler).GetAsync("123", CancellationToken.None))).Code);
+    }
+
 }

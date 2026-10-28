@@ -31,7 +31,7 @@ public sealed class PaymentRequest { [Required] public decimal? Amount { get; in
 public sealed record CheckoutRequest(Guid Reference, decimal Amount, string Currency);
 public sealed record CheckoutResult(string PreferenceId, string CheckoutUrl);
 public sealed record VerifiedPayment(string Id, Guid Reference, decimal Amount, string Currency,
-    string CollectorId, bool LiveMode, PaymentStatus Status, string EventKey, DateTimeOffset? ProviderUpdatedAt = null);
+    string CollectorId, bool LiveMode, PaymentStatus Status, string EventKey, DateTimeOffset? ProviderUpdatedAt = null, bool TestAccountsVerified = false);
 public interface IPaymentGateway
 {
     Task<CheckoutResult> StartAsync(CheckoutRequest request, CancellationToken ct);
@@ -129,7 +129,7 @@ public sealed class PaymentProcessor(IPaymentStore store, IPaymentGateway gatewa
     private async Task VerifyAndApplyAsync(VerifiedPayment external, CancellationToken ct)
     {
         var local = await store.GetAsync(external.Reference, ct) ?? throw new PaymentRejectedException("PAYMENT_NOT_FOUND");
-        var mismatch = external.LiveMode ? "PAYMENT_LIVE_MODE"
+        var mismatch = external.LiveMode && !external.TestAccountsVerified ? "PAYMENT_LIVE_MODE"
             : external.CollectorId != settings.CollectorId ? "PAYMENT_COLLECTOR_MISMATCH"
             : external.Currency != "ARS" || local.Currency != external.Currency ? "PAYMENT_CURRENCY_MISMATCH"
             : external.Amount != local.Amount ? "PAYMENT_AMOUNT_MISMATCH" : null;

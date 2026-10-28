@@ -77,7 +77,7 @@ public sealed class SqlPaymentStore(DbContextOptions<WalletDbContext> options, T
             $"SELECT * FROM [Wallets] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {candidate.WalletId}").SingleAsync(ct);
         var payment = await db.Payments.FromSqlInterpolated(
             $"SELECT * FROM [Payments] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {candidate.Id}").SingleAsync(ct);
-        if (verified.LiveMode || verified.Currency != "ARS" || verified.Amount != payment.Amount)
+        if ((verified.LiveMode && !verified.TestAccountsVerified) || verified.Currency != "ARS" || verified.Amount != payment.Amount)
             throw new PaymentRejectedException("PAYMENT_MISMATCH");
         if (await db.PaymentReceipts.AnyAsync(r => r.EventKey == verified.EventKey, ct)) { await tx.CommitAsync(ct); return true; }
         if (await db.Payments.AnyAsync(p => p.Id != payment.Id && p.Provider == payment.Provider

@@ -168,7 +168,8 @@ public sealed class SqlPaymentTests
         using var created = await client.PostAsJsonAsync("/api/payments", new { amount = 1000m });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var payment = (await created.Content.ReadFromJsonAsync<PaymentResponse>())!;
-        gateway.Result = PaymentTestData.Verified((await Store().GetAsync(payment.Id, CancellationToken.None))!, id: RandomId());
+        gateway.Result = PaymentTestData.Verified((await Store().GetAsync(payment.Id, CancellationToken.None))!, id: RandomId())
+            with { LiveMode = true, TestAccountsVerified = true };
         using var refreshed = await client.PostAsync($"/api/payments/{payment.Id}/refresh", null);
         Assert.Equal(HttpStatusCode.OK, refreshed.StatusCode);
         Assert.Equal("Approved", (await refreshed.Content.ReadFromJsonAsync<PaymentResponse>())!.Status);

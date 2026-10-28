@@ -161,4 +161,14 @@ public sealed class PaymentEndpointTests
         Assert.False(signature.Verify("123", request, $"ts=1000000000,v1={digest}"));
         Assert.False(signature.Verify("123", request, $"ts={timestamp},ts={timestamp},v1={digest}"));
     }
+    [Fact]
+    public async Task Verified_test_accounts_with_live_flag_can_credit_once()
+    {
+        await using var f = new Fixture(); var payment = await f.Start();
+        f.Gateway.Result = PaymentTestData.Verified(f.Store.Items[payment.Id]) with { LiveMode = true, TestAccountsVerified = true };
+        Assert.Equal(HttpStatusCode.OK, (await f.Notify("123456789")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await f.Notify("123456789")).StatusCode);
+        Assert.Equal(1, f.Store.Credits);
+    }
+
 }

@@ -49,7 +49,35 @@ public sealed class MercadoPagoGateway(HttpClient http, PaymentSettings settings
         using var message = new HttpRequestMessage(HttpMethod.Get, "v1/payments/" + paymentId);
         using var json = await SendAsync(message, ct); var payment = Parse(json.RootElement);
         if (payment.Id != paymentId) throw new GatewayException("PROVIDER_INVALID_RESPONSE");
+        if (payment.LiveMode)
+        {
+            // Algunos pagos entre usuarios de prueba informan live_mode=true.
+            // Verifico las identidades mediante la API; nunca confío en el navegador ni en el prefijo del token.
+            string payerId;
+            try { payerId = Scalar(json.RootElement.GetProperty("payer"), "id"); }
+            catch (Exception e) when (e is KeyNotFoundException or InvalidOperationException)
+            { throw new GatewayException("PROVIDER_TEST_ACCOUNTS_UNVERIFIED"); }
+            if (payerId.Length is < 1 or > 32 || !payerId.All(char.IsAsciiDigit) || payerId == payment.CollectorId)
+                throw new GatewayException("PROVIDER_TEST_ACCOUNTS_UNVERIFIED");
+            using var sellerRequest = new HttpRequestMessage(HttpMethod.Get, "users/me");
+            using var seller = await SendAsync(sellerRequest, ct);
+            if (!IsTestUser(seller.RootElement, payment.CollectorId) || payment.CollectorId != settings.CollectorId)
+                throw new GatewayException("PROVIDER_TEST_ACCOUNTS_UNVERIFIED");
+            using var buyerRequest = new HttpRequestMessage(HttpMethod.Get, "users/" + payerId);
+            using var buyer = await SendAsync(buyerRequest, ct);
+            if (!IsTestUser(buyer.RootElement, payerId)) throw new GatewayException("PROVIDER_TEST_ACCOUNTS_UNVERIFIED");
+            payment = payment with { TestAccountsVerified = true };
+        }
         return payment;
+    }
+    private static bool IsTestUser(JsonElement user, string expectedId)
+    {
+        try
+        {
+            return Scalar(user, "id") == expectedId && user.GetProperty("tags").ValueKind == JsonValueKind.Array
+                && user.GetProperty("tags").EnumerateArray().Any(t => t.ValueKind == JsonValueKind.String && t.GetString() == "test_user");
+        }
+        catch (Exception e) when (e is KeyNotFoundException or InvalidOperationException) { return false; }
     }
     public async Task<IReadOnlyList<VerifiedPayment>> SearchAsync(Guid reference, CancellationToken ct)
     {

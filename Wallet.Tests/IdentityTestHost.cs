@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using Wallet.Application;
 using Wallet.Infrastructure;
 using Wallet.Domain.Entities;
+using Wallet.Domain;
 
 namespace Wallet.Tests;
 

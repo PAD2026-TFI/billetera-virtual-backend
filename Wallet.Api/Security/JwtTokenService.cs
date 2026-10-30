@@ -2,7 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using Wallet.Application;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
+
 namespace Wallet.Api.Security;
 
 public sealed class JwtTokenService(JwtSettings settings, TimeProvider clock) : ITokenService

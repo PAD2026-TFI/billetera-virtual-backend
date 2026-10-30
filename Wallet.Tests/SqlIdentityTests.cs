@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
 using Wallet.Infrastructure;
 using Xunit;
 namespace Wallet.Tests;

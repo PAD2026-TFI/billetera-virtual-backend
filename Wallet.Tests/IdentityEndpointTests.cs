@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Wallet.Application;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
 using Xunit;
 namespace Wallet.Tests;
 

@@ -26,7 +26,7 @@
         public static Money Positive(decimal amount, string currency = DefaultCurrency)
         {
             if (amount <= 0)
-                throw new ArgumentException("Ammount must be strictly higher than zero.", nameof(amount));
+                throw new ArgumentException("Amount must be strictly greater than zero.", nameof(amount));
 
             return From(amount, currency);
         }
@@ -85,7 +85,7 @@
 
         private static string ValidateCurrency(string currency)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(currency);
+            ArgumentException.ThrowIfNullOrWhiteSpace(currency); //TODO: cuando currency es null, arroja ArgumentNullException, lo cual != de ArgumentException. El test con currency=null falla. No sé si es un comportamiento normal de C#
             var trimmed = currency.Trim().ToUpperInvariant();
             if (trimmed.Length != 3 || !trimmed.All(char.IsAsciiLetterUpper))
                 throw new ArgumentException("The currency code must have exactly 3 alphabetic characters.", nameof(currency));

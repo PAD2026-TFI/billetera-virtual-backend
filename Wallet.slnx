@@ -1,8 +1,9 @@
 <Solution>
-  <Project Path="Wallet.Domain/Wallet.Domain.csproj" />
-  <Project Path="Wallet.Application/Wallet.Application.csproj" />
-  <Project Path="Wallet.Infrastructure/Wallet.Infrastructure.csproj" />
   <Project Path="Wallet.Api/Wallet.Api.csproj" />
-  <Project Path="Wallet.Tests/Wallet.Tests.csproj" />
+  <Project Path="Wallet.Application/Wallet.Application.csproj" />
   <Project Path="Wallet.DevelopmentTools/Wallet.DevelopmentTools.csproj" />
+  <Project Path="Wallet.Domain.Tests/Wallet.Domain.Tests.csproj" Id="6ea4dfa9-4e56-44fe-9f15-43e1eb902e29" />
+  <Project Path="Wallet.Domain/Wallet.Domain.csproj" />
+  <Project Path="Wallet.Infrastructure/Wallet.Infrastructure.csproj" />
+  <Project Path="Wallet.Tests/Wallet.Tests.csproj" />
 </Solution>

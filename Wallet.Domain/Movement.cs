@@ -78,7 +78,7 @@ public sealed class Movement
     {
         ArgumentNullException.ThrowIfNull(transfer);
 
-        var transferAmount = Money.From(transfer.Amount, transfer.Currency);
+        var transferAmount = transfer.Amount;
         var targetWalletId = isDebit ? transfer.SourceWalletId : transfer.DestinationWalletId;
         var movementType = isDebit ? MovementType.Debit : MovementType.Credit;
 
@@ -101,7 +101,7 @@ public sealed class Movement
     {
         ArgumentNullException.ThrowIfNull(funding);
 
-        var fundingAmount = Money.From(funding.Amount, funding.Currency);
+        var fundingAmount = funding.Amount;
 
         return new Movement(
             id: Guid.NewGuid(),

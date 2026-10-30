@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
+
 namespace Wallet.Infrastructure.Configurations
 {
     public class AdressConfiguration : IEntityTypeConfiguration<Adress>

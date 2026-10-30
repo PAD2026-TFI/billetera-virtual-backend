@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
 namespace Wallet.Infrastructure.Configurations
 {
     public class MovementConfiguration : IEntityTypeConfiguration<Movement>
@@ -21,7 +21,7 @@ namespace Wallet.Infrastructure.Configurations
             builder.Property(movement => movement.BalanceAfter).HasPrecision(18, 2);
             builder.Property(movement => movement.Type).HasConversion<string>().HasMaxLength(16);
             builder.Property(movement => movement.Source).HasConversion<string>().HasMaxLength(32);
-            builder.HasOne<global::Wallet.Domain.Entities.Wallet>().WithMany().HasForeignKey(x => x.WalletId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(x => x.WalletId).OnDelete(DeleteBehavior.Restrict);
             builder.HasOne<Transfer>().WithMany().HasForeignKey(x => x.TransferId).OnDelete(DeleteBehavior.Restrict);
             builder.HasIndex(movement => new { movement.TransferId, movement.WalletId, movement.Type }).IsUnique().HasFilter("[TransferId] IS NOT NULL");
             builder.HasIndex(movement => new { movement.WalletId, movement.CreatedAt, movement.Id });

@@ -4,9 +4,9 @@ using Wallet.Domain;
 
 namespace Wallet.Infrastructure.Configurations
 {
-    public class WalletConfiguration : IEntityTypeConfiguration<Domain.Entities.Wallet>
+    public class WalletConfiguration : IEntityTypeConfiguration<Domain.Wallet>
     {
-        public void Configure(EntityTypeBuilder<Domain.Entities.Wallet> builder) 
+        public void Configure(EntityTypeBuilder<Domain.Wallet> builder) 
         {
             builder.ToTable("Wallets", table =>
             {
@@ -19,7 +19,7 @@ namespace Wallet.Infrastructure.Configurations
             builder.Property(wallet => wallet.Currency).HasColumnType("char(3)").HasMaxLength(3).IsRequired();
             builder.Property(wallet => wallet.RowVersion).IsRowVersion();
             builder.HasIndex(wallet => wallet.UserId).IsUnique();
-            builder.HasOne<User>().WithOne().HasForeignKey<global::Wallet.Domain.Entities.Wallet>(x => x.UserId)
+            builder.HasOne<User>().WithOne().HasForeignKey<global::Wallet.Domain.Wallet>(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

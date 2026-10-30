@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
 
 namespace Wallet.Infrastructure.Configurations
 {
@@ -33,7 +33,7 @@ namespace Wallet.Infrastructure.Configurations
                 .IsRequired();
             builder.Property(p => p.UpdatedAt)
                 .IsRequired();
-            builder.HasOne<global::Wallet.Domain.Entities.Wallet>().WithMany().HasForeignKey(payment => payment.WalletId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(payment => payment.WalletId).OnDelete(DeleteBehavior.Restrict);
             builder.HasIndex(builder => new { builder.WalletId, builder.IdempotencyKey }).IsUnique();
         }
     }

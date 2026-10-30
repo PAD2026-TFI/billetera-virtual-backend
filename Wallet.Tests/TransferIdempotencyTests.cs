@@ -1,6 +1,6 @@
 using System.Globalization;
 using Wallet.Application;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
 using Xunit;
 
 namespace Wallet.Tests;

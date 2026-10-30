@@ -1,8 +1,7 @@
 using Wallet.Application;
 using Wallet.Domain;
-using Wallet.Domain.Entities;
 using Xunit;
-using DomainWallet = Wallet.Domain.Entities.Wallet;
+using DomainWallet = Wallet.Domain.Wallet;
 
 namespace Wallet.Tests;
 

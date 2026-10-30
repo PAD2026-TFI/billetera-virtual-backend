@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Wallet.Domain.Entities.Status;
 
-namespace Wallet.Domain.Entities
+namespace Wallet.Domain
 {
     public sealed class Payment
     {

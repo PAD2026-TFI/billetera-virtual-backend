@@ -6,6 +6,6 @@ using System.Threading.Tasks;
 
 namespace Wallet.Domain
 {
-    public enum MovementType {Debit, Credit}
-    public enum MovementSource { Transfer, Payment }
+    
+    
 }

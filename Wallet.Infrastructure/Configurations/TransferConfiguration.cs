@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Wallet.Domain.Entities;
+using Wallet.Domain;
 
 namespace Wallet.Infrastructure.Configurations
 {
@@ -22,8 +22,8 @@ namespace Wallet.Infrastructure.Configurations
             builder.Property(transfer => transfer.Status).HasConversion<string>().HasMaxLength(16);
             builder.Property(transfer => transfer.RequestHash).HasColumnType("char(64)").HasMaxLength(64).IsRequired();
             builder.HasIndex(transfer => new { transfer.SourceWalletId, transfer.IdempotencyKey }).IsUnique();
-            builder.HasOne<global::Wallet.Domain.Entities.Wallet>().WithMany().HasForeignKey(transfer => transfer.SourceWalletId).OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne<global::Wallet.Domain.Entities.Wallet>().WithMany().HasForeignKey(transfer => transfer.DestinationWalletId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(transfer => transfer.SourceWalletId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(transfer => transfer.DestinationWalletId).OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

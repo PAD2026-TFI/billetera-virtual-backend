@@ -30,7 +30,7 @@ public static class FundingCommand
             || !Guid.TryParse(values["--wallet-id"], out var walletId) || walletId == Guid.Empty
             || !Guid.TryParse(values["--idempotency-key"], out var key) || key == Guid.Empty)
             throw new ArgumentException("Importe o identificadores inválidos; uso punto decimal.");
-        global::Wallet.Domain.Entities.Status.MoneyRules.ValidatePositive(amount);
+        global::Wallet.Domain.MoneyRules.ValidatePositive(amount);
         return new(walletId, amount, key);
     }
 }

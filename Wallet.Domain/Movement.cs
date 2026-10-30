@@ -1,6 +1,4 @@
-﻿using Wallet.Domain.Entities.Status;
-
-namespace Wallet.Domain;
+﻿namespace Wallet.Domain;
 
 public sealed class Movement
 {

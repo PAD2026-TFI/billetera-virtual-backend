@@ -37,6 +37,8 @@ public sealed class Wallet
         if (amount.Currency != Balance.Currency)
             throw new InvalidOperationException($"Currency mismatch: cannot credit {amount.Currency} into a {Balance.Currency} wallet.");
 
+        //if(amount.Amount > Money.MaxAllowedAmount || (Balance += amount).Amount > Money.MaxAllowedAmount) { } TODO: Comprobar si falta esta validación
+
         Balance += amount;
     }
 

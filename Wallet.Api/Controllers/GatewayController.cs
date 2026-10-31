@@ -40,7 +40,9 @@ public sealed class GatewayController(
     [ProducesResponseType<WalletResponse>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
     [ProducesResponseType<ProblemDetails>(404)]
-    public async Task<ActionResult<WalletResponse>> GetWallet(CancellationToken ct)
+    public async Task<ActionResult<WalletResponse>> GetWallet(
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
+        CancellationToken ct)
     {
         var wallet = await wallets.GetMineAsync(ct);
         if (wallet is null)
@@ -54,7 +56,9 @@ public sealed class GatewayController(
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<WalletResponse>(201)]
     [ProducesResponseType<WalletResponse>(200)]
-    public async Task<ActionResult<WalletResponse>> CreateWallet(CancellationToken ct)
+    public async Task<ActionResult<WalletResponse>> CreateWallet(
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
+        CancellationToken ct)
     {
         var result = await wallets.CreateAsync(ct);
         return StatusCode(result.Created ? StatusCodes.Status201Created : StatusCodes.Status200OK, result.Wallet);
@@ -71,6 +75,7 @@ public sealed class GatewayController(
     public async Task<ActionResult<TransferResponse>> ProcessPayment(
         TransferRequest request,
         [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
         CancellationToken ct)
     {
         try
@@ -108,6 +113,7 @@ public sealed class GatewayController(
     [ProducesResponseType<ProblemDetails>(401)]
     [ProducesResponseType<ProblemDetails>(404)]
     public async Task<ActionResult<MovementPage>> GetMovements(
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
         [FromQuery] int limit = 20,
         [FromQuery] string? cursor = null,
         CancellationToken ct = default)

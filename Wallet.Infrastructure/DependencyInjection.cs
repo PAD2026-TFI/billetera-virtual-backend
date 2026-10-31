@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<ITransferStore, SqlTransferStore>();
         services.AddScoped<IWalletRepository, SqlWalletRepository>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
+        services.AddScoped<IExternalClientRepository, SqlExternalClientRepository>();
         services.AddScoped<IPasswordService, IdentityPasswordService>();
         return services;
     }

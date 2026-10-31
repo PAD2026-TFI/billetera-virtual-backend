@@ -9,7 +9,7 @@ public sealed class DevelopmentFunding
     public string RequestHash { get; private set; } = "";
     public DateTimeOffset CreatedAt { get; private set; }
 
-    public string Currency => Amount.Currency;
+    public string Currency { get; private set; } = Money.DefaultCurrency;
 
     private DevelopmentFunding() { }
 

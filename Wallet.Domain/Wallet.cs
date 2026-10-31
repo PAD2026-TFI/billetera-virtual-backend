@@ -9,7 +9,7 @@ public sealed class Wallet
     public DateTimeOffset CreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = [];
 
-    public string Currency => Balance.Currency;
+    public string Currency { get; private set; } = Money.DefaultCurrency;
 
     private Wallet() { } // Required for EF Core materialization
 

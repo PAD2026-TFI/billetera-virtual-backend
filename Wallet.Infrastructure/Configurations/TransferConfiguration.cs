@@ -20,7 +20,7 @@ public class TransferConfiguration : IEntityTypeConfiguration<Transfer>
         builder.Property(transfer => transfer.Amount)
             .HasConversion(m => m.Amount, a => Money.From(a, Money.DefaultCurrency))
             .HasPrecision(18, 2);
-        builder.Property<string>("Currency").HasColumnType("char(3)").HasMaxLength(3).HasDefaultValue(Money.DefaultCurrency);
+        builder.Property(transfer => transfer.Currency).HasColumnType("char(3)").HasMaxLength(3).HasDefaultValue(Money.DefaultCurrency);
         builder.Property(transfer => transfer.Status).HasConversion<string>().HasMaxLength(16);
         builder.Property(transfer => transfer.RequestHash).HasColumnType("char(64)").HasMaxLength(64).IsRequired();
         builder.HasIndex(transfer => new { transfer.SourceWalletId, transfer.IdempotencyKey }).IsUnique();

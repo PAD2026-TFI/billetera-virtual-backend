@@ -6,6 +6,7 @@ namespace Wallet.Infrastructure;
 
 public sealed class WalletDbContext(DbContextOptions<WalletDbContext> options) : DbContext(options)
 {
+    public DbSet<WalletOwner> WalletOwners => Set<WalletOwner>();
     public DbSet<User> Users => Set<User>();
     public DbSet<ExternalClient> ExternalClients => Set<ExternalClient>();
     public DbSet<global::Wallet.Domain.Wallet> Wallets => Set<global::Wallet.Domain.Wallet>();

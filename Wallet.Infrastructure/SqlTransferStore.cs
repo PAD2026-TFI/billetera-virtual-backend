@@ -38,11 +38,11 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
                 if (previous is not null) return Replay(previous, command, hash);
 
                 var source = locked[sourceId]; var destination = locked[command.DestinationWalletId];
-                foreach (var userId in new[] { source.OwnerId, destination.OwnerId }.Distinct().OrderBy(id => id))
+                foreach (var ownerId in new[] { source.OwnerId, destination.OwnerId }.Distinct().OrderBy(id => id))
                 {
-                    var user = await db.Users.FromSqlInterpolated(
-                        $"SELECT * FROM [Users] WITH (HOLDLOCK) WHERE [Id] = {userId}").SingleAsync(ct);
-                    if (!user.IsActive) throw new TransferRejectedException(userId == source.OwnerId ? "INVALID_SESSION" : "DESTINATION_UNAVAILABLE");
+                    var owner = await db.WalletOwners.FromSqlInterpolated(
+                        $"SELECT * FROM [WalletOwners] WITH (HOLDLOCK) WHERE [Id] = {ownerId}").SingleAsync(ct);
+                    if (!owner.IsActive) throw new TransferRejectedException(ownerId == source.OwnerId ? "INVALID_SESSION" : "DESTINATION_UNAVAILABLE");
                 }
                 if (source.Currency != "ARS" || destination.Currency != "ARS") throw new TransferRejectedException("DESTINATION_UNAVAILABLE");
                 if (source.Balance < command.Amount) throw new TransferRejectedException("INSUFFICIENT_FUNDS");

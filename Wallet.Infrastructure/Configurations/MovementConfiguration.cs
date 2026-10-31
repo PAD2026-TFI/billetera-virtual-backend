@@ -24,6 +24,7 @@ public class MovementConfiguration : IEntityTypeConfiguration<Movement>
         builder.Property(movement => movement.BalanceAfter)
             .HasConversion(m => m.Amount, a => Money.From(a, Money.DefaultCurrency))
             .HasPrecision(18, 2);
+        builder.Ignore(movement => movement.Currency);
         builder.Property(movement => movement.Type).HasConversion<string>().HasMaxLength(16);
         builder.Property(movement => movement.Source).HasConversion<string>().HasMaxLength(32);
         builder.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(x => x.WalletId).OnDelete(DeleteBehavior.Restrict);

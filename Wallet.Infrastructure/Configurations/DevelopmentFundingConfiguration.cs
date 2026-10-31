@@ -18,7 +18,7 @@ public class DevelopmentFundingConfiguration : IEntityTypeConfiguration<Developm
         builder.Property(x => x.Amount)
             .HasConversion(m => m.Amount, a => Money.From(a, Money.DefaultCurrency))
             .HasPrecision(18, 2);
-        builder.Property<string>("Currency").HasColumnType("char(3)").HasMaxLength(3).HasDefaultValue(Money.DefaultCurrency);
+        builder.Property(x => x.Currency).HasColumnType("char(3)").HasMaxLength(3).HasDefaultValue(Money.DefaultCurrency);
         builder.Property(x => x.RequestHash).HasColumnType("char(64)").HasMaxLength(64).IsRequired();
         builder.HasIndex(x => x.IdempotencyKey).IsUnique();
         builder.HasOne<global::Wallet.Domain.Wallet>().WithMany().HasForeignKey(x => x.WalletId).OnDelete(DeleteBehavior.Restrict);

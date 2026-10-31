@@ -1,4 +1,4 @@
-﻿namespace Wallet.Domain;
+namespace Wallet.Domain;
 
 public sealed class Movement
 {
@@ -134,6 +134,6 @@ public sealed class Movement
     private static void ValidateBalanceAfter(MovementType type, Money amount, Money balanceAfter)
     {
         if (type == MovementType.Credit && balanceAfter < amount)
-            throw new InvalidOperationException($"Credit movement balance after ({balanceAfter.Amount}) cannot be less than credited amount ({amount.Amount}).");
+            throw new ArgumentException($"Credit movement balance after ({balanceAfter.Amount}) cannot be less than credited amount ({amount.Amount}).", nameof(balanceAfter));
     }
 }

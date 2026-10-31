@@ -90,6 +90,12 @@ public sealed class Transfer
         if (source.Currency != Currency || destination.Currency != Currency)
             throw new InvalidOperationException("Wallet currency does not match transfer currency.");
 
+        if (source.Balance < Amount)
+            throw new InvalidOperationException("Insufficient funds in source wallet.");
+
+        if (destination.Balance.Amount + Amount.Amount > Money.MaxAllowedAmount)
+            throw new InvalidOperationException("Destination wallet balance limit exceeded.");
+
         source.Debit(Amount);
         destination.Credit(Amount);
     }

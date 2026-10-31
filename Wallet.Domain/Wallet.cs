@@ -4,12 +4,15 @@ public sealed class Wallet
 {
     public Guid Id { get; private set; }
     public Guid OwnerId { get; private set; }
+    public Guid UserId => OwnerId;
     public Money Balance { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = [];
+
     public string Currency => Balance.Currency;
 
-    private Wallet() { }
+    private Wallet() { } // Required for EF Core materialization
+
     private Wallet(Guid id, Guid ownerId, Money initialBalance, DateTimeOffset createdAt)
     {
         if (id == Guid.Empty)
@@ -23,10 +26,12 @@ public sealed class Wallet
         Balance = initialBalance;
         CreatedAt = createdAt.ToUniversalTime();
     }
+
     public static Wallet Create(Guid ownerId, DateTimeOffset now, string currency = Money.DefaultCurrency)
     {
         return new Wallet(Guid.NewGuid(), ownerId, Money.Zero(currency), now);
     }
+
     public void Credit(Money amount)
     {
         if (amount.Amount <= 0)
@@ -35,7 +40,8 @@ public sealed class Wallet
         if (amount.Currency != Balance.Currency)
             throw new InvalidOperationException($"Currency mismatch: cannot credit {amount.Currency} into a {Balance.Currency} wallet.");
 
-        //if(amount.Amount > Money.MaxAllowedAmount || (Balance += amount).Amount > Money.MaxAllowedAmount) { } TODO: Comprobar si falta esta validación
+        if (Balance.Amount + amount.Amount > Money.MaxAllowedAmount)
+            throw new ArgumentException("Balance cannot exceed operational limit.", nameof(amount));
 
         Balance += amount;
     }

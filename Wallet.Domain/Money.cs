@@ -1,4 +1,4 @@
-﻿namespace Wallet.Domain
+namespace Wallet.Domain
 {
     public readonly record struct Money : IComparable<Money>
     {
@@ -81,17 +81,27 @@
             return Amount.CompareTo(other.Amount);
         }
 
-        public override string ToString() => $"{Amount:0.00} {Currency}";
+        public static implicit operator decimal(Money m) => m.Amount;
+
+        public override string ToString() => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Amount:0.00} {Currency}");
 
         private static string ValidateCurrency(string currency)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(currency); //TODO: cuando currency es null, arroja ArgumentNullException, lo cual != de ArgumentException. El test con currency=null falla. No sé si es un comportamiento normal de C#
+            ArgumentException.ThrowIfNullOrWhiteSpace(currency);
+
             var trimmed = currency.Trim().ToUpperInvariant();
+
             if (trimmed.Length != 3 || !trimmed.All(char.IsAsciiLetterUpper))
-                throw new ArgumentException("The currency code must have exactly 3 alphabetic characters.", nameof(currency));
+                throw new ArgumentException(
+                    "The currency code must have exactly 3 alphabetic characters.",
+                    nameof(currency)
+                );
 
             if (trimmed != DefaultCurrency)
-                throw new ArgumentException($"Currency not supported in this iteration. Only currency supported is {DefaultCurrency}.", nameof(currency));
+                throw new ArgumentException(
+                    $"Currency not supported in this iteration. Only currency supported is {DefaultCurrency}.",
+                    nameof(currency)
+                );
 
             return trimmed;
         }

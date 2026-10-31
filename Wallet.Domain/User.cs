@@ -27,8 +27,10 @@ public sealed class User : WalletOwner
     public static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
     public void UpdateProfile(string firstName, string lastName)
     {
-        FirstName = ValidateName(firstName, nameof(firstName));
-        LastName = ValidateName(lastName, nameof(lastName));
+        var validFirst = ValidateName(firstName, nameof(firstName));
+        var validLast = ValidateName(lastName, nameof(lastName));
+        FirstName = validFirst;
+        LastName = validLast;
     }
     public void SetPasswordHash(string hash)
     {

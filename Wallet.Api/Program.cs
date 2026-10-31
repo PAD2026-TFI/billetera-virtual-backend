@@ -80,6 +80,9 @@ if (enabled)
     builder.Services.AddScoped<IdentityService>();
     builder.Services.AddScoped<WalletService>();
     builder.Services.AddScoped<GatewayService>();
+    builder.Services.AddScoped<CardSimulatorService>();
+    builder.Services.AddScoped<PaymentLinkService>();
+    builder.Services.AddScoped<DevelopmentFundingService>();
     builder.Services.AddDataProtection();
     builder.Services.AddScoped<IMovementCursorCodec, MovementCursorCodec>();
     builder.Services.AddScoped<MovementHistoryService>();

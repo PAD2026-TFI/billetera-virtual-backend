@@ -12,6 +12,7 @@ public static class DependencyInjection
             sql => sql.CommandTimeout(15)));
         services.AddScoped<IMovementHistoryReader, SqlMovementHistoryReader>();
         services.AddScoped<ITransferStore, SqlTransferStore>();
+        services.AddScoped<IDevelopmentFundingStore, SqlDevelopmentFundingStore>();
         services.AddScoped<IWalletRepository, SqlWalletRepository>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
         services.AddScoped<IExternalClientRepository, SqlExternalClientRepository>();

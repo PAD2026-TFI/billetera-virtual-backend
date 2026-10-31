@@ -88,6 +88,8 @@ El proyecto está organizado en capas desacopladas orientadas al dominio:
 | `POST` | `/api/v1/gateway/wallet` | `X-Api-Key` | Creación de billetera si el cliente aún no posee una. |
 | `POST` | `/api/v1/gateway/payments` | `X-Api-Key`, `Idempotency-Key` | Ejecución de pagos/transferencias entre billeteras. |
 | `GET` | `/api/v1/gateway/movements` | `X-Api-Key` | Historial paginado del libro mayor (Ledger). |
+| `GET` | `/api/v1/gateway/checkout-payments/{paymentId}` | `X-Api-Key` | Consulta de pago individual recibido por el comercio. |
+| `GET` | `/api/v1/gateway/checkout-payments` | `X-Api-Key` | Listado de cobros recibidos por el comercio. |
 
 ### Checkout Omnicanal & QR (Público / Híbrido)
 | Método | Endpoint | Cabeceras | Descripción |

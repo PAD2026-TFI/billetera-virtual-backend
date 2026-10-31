@@ -8,6 +8,7 @@ namespace Wallet.Tests;
 public sealed class PaymentLinkServiceTests
 {
     private readonly InMemoryPaymentLinkRepository _links = new();
+    private readonly InMemoryPaymentRepository _payments = new();
     private readonly InMemoryWalletRepository _wallets = new();
     private readonly InMemoryUserRepository _users = new();
     private readonly FakeTransferStore _transfers = new();
@@ -22,6 +23,7 @@ public sealed class PaymentLinkServiceTests
         _cardSimulator = new CardSimulatorService(_clock);
         _service = new PaymentLinkService(
             _links,
+            _payments,
             _wallets,
             _users,
             _transfers,
@@ -83,34 +85,141 @@ public sealed class PaymentLinkServiceTests
     }
 
     [Fact]
-    public async Task ProcessCheckoutAsync_with_valid_card_authorizes_and_funds_wallet()
+    public async Task ProcessCheckoutAsync_with_valid_card_authorizes_and_creates_payment_record()
     {
         var walletId = Guid.NewGuid();
+        var merchantOwnerId = Guid.NewGuid();
         var link = PaymentLink.Create(
             walletId,
-            300m,
-            "Almuerzo",
-            null,
+            1500m,
+            "Producto de prueba",
+            "Descripción",
             PaymentLinkType.SingleUse,
-            _clock.GetUtcNow());
+            DateTimeOffset.UtcNow,
+            merchantOwnerId: merchantOwnerId);
+
         await _links.CreateAsync(link, CancellationToken.None);
 
-        var checkoutReq = new ProcessCheckoutRequest(
+        var checkoutRequest = new ProcessCheckoutRequest(
             CheckoutPaymentMethod.Card,
-            null,
-            new CardPaymentDetails("4532015112830366", "Juan Perez", 12, 2030, "123"));
+            link.Token,
+            new CardPaymentDetails("4532015112830366", "Juan Pérez", 12, 2028, "123"));
 
-        var receipt = await _service.ProcessCheckoutAsync(link.Token, checkoutReq, Guid.NewGuid().ToString(), CancellationToken.None);
+        var receipt = await _service.ProcessCheckoutAsync(link.Token, checkoutRequest, "idemp-001", CancellationToken.None);
 
         Assert.NotNull(receipt);
+        Assert.Equal(1500m, receipt.Amount);
         Assert.Equal("Completed", receipt.Status);
-        Assert.Equal(300m, receipt.Amount);
-        Assert.Equal("Card", receipt.PaymentMethod);
-        Assert.False(string.IsNullOrWhiteSpace(receipt.AuthorizationCode));
+        Assert.False(receipt.IdempotencyReplayed);
 
         var updated = await _links.FindByTokenAsync(link.Token, CancellationToken.None);
         Assert.Equal(PaymentLinkStatus.Completed, updated!.Status);
         Assert.Equal(1, _funding.Calls);
+
+        var storedPayment = await _payments.FindByIdAsync(receipt.PaymentId, CancellationToken.None);
+        Assert.NotNull(storedPayment);
+        Assert.Equal(PaymentStatus.Succeeded, storedPayment.Status);
+        Assert.Equal("Visa", storedPayment.CardBrand);
+        Assert.Equal("0366", storedPayment.CardLast4);
+    }
+
+    [Fact]
+    public async Task ProcessCheckoutAsync_idempotent_replay_returns_cached_receipt()
+    {
+        var walletId = Guid.NewGuid();
+        var merchantOwnerId = Guid.NewGuid();
+        var link = PaymentLink.Create(
+            walletId,
+            1000m,
+            "Servicio Recurrente",
+            null,
+            PaymentLinkType.MultiUse,
+            DateTimeOffset.UtcNow,
+            merchantOwnerId: merchantOwnerId);
+
+        await _links.CreateAsync(link, CancellationToken.None);
+
+        var checkoutRequest = new ProcessCheckoutRequest(
+            CheckoutPaymentMethod.Card,
+            link.Token,
+            new CardPaymentDetails("4532015112830366", "Juan Pérez", 12, 2028, "123"));
+
+        var receipt1 = await _service.ProcessCheckoutAsync(link.Token, checkoutRequest, "idemp-dup", CancellationToken.None);
+        var receipt2 = await _service.ProcessCheckoutAsync(link.Token, checkoutRequest, "idemp-dup", CancellationToken.None);
+
+        Assert.Equal(receipt1.PaymentId, receipt2.PaymentId);
+        Assert.False(receipt1.IdempotencyReplayed);
+        Assert.True(receipt2.IdempotencyReplayed);
+        Assert.Equal(1, _funding.Calls);
+    }
+
+    [Fact]
+    public async Task ProcessCheckoutAsync_idempotent_key_with_altered_params_throws_conflict()
+    {
+        var walletId = Guid.NewGuid();
+        var merchantOwnerId = Guid.NewGuid();
+        var link = PaymentLink.Create(
+            walletId,
+            1000m,
+            "Servicio A",
+            null,
+            PaymentLinkType.MultiUse,
+            DateTimeOffset.UtcNow,
+            merchantOwnerId: merchantOwnerId);
+
+        await _links.CreateAsync(link, CancellationToken.None);
+
+        var checkoutRequest1 = new ProcessCheckoutRequest(
+            CheckoutPaymentMethod.Card,
+            link.Token,
+            new CardPaymentDetails("4532015112830366", "Juan Pérez", 12, 2028, "123"));
+
+        await _service.ProcessCheckoutAsync(link.Token, checkoutRequest1, "idemp-conflict", CancellationToken.None);
+
+        // Intento con diferente tarjeta pero misma clave de idempotencia
+        var checkoutRequest2 = new ProcessCheckoutRequest(
+            CheckoutPaymentMethod.Card,
+            link.Token,
+            new CardPaymentDetails("5555555555554444", "Otro Titular", 11, 2029, "456"));
+
+        var ex = await Assert.ThrowsAsync<TransferRejectedException>(() =>
+            _service.ProcessCheckoutAsync(link.Token, checkoutRequest2, "idemp-conflict", CancellationToken.None));
+
+        Assert.Equal("IDEMPOTENCY_CONFLICT", ex.Code);
+    }
+
+    [Fact]
+    public async Task GetPaymentByIdAsync_returns_payment_only_to_owner()
+    {
+        var merchantA = Guid.NewGuid();
+        var merchantB = Guid.NewGuid();
+        var destWallet = Guid.NewGuid();
+        var linkId = Guid.NewGuid();
+
+        var payment = Payment.CreateForCard(
+            linkId,
+            merchantA,
+            destWallet,
+            Money.Positive(500m),
+            "Visa",
+            "0366",
+            "Juan",
+            null,
+            "idemp-1",
+            "hash-1",
+            DateTimeOffset.UtcNow);
+
+        payment.MarkSucceeded(null, "AUTH-123", DateTimeOffset.UtcNow);
+        await _payments.CreateAsync(payment, CancellationToken.None);
+
+        // Comercio dueño debe ver su cobro
+        var resultA = await _service.GetPaymentByIdAsync(payment.Id, merchantA, CancellationToken.None);
+        Assert.NotNull(resultA);
+        Assert.Equal(500m, resultA.Amount);
+
+        // Comercio ajeno debe recibir null
+        var resultB = await _service.GetPaymentByIdAsync(payment.Id, merchantB, CancellationToken.None);
+        Assert.Null(resultB);
     }
 
     private sealed class InMemoryPaymentLinkRepository : IPaymentLinkRepository
@@ -136,6 +245,44 @@ public sealed class PaymentLinkServiceTests
             _byToken[link.Token] = link;
             _byId[link.Id] = link;
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryPaymentRepository : IPaymentRepository
+    {
+        private readonly Dictionary<Guid, Payment> _byId = [];
+
+        public Task CreateAsync(Payment payment, CancellationToken ct)
+        {
+            _byId[payment.Id] = payment;
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(Payment payment, CancellationToken ct)
+        {
+            _byId[payment.Id] = payment;
+            return Task.CompletedTask;
+        }
+
+        public Task<Payment?> FindByIdAsync(Guid id, CancellationToken ct) =>
+            Task.FromResult(_byId.TryGetValue(id, out var val) ? val : null);
+
+        public Task<Payment?> FindByIdempotencyKeyAsync(Guid merchantOwnerId, string idempotencyKey, CancellationToken ct)
+        {
+            var p = _byId.Values.FirstOrDefault(x => x.MerchantOwnerId == merchantOwnerId && x.IdempotencyKey == idempotencyKey);
+            return Task.FromResult(p);
+        }
+
+        public Task<IReadOnlyList<Payment>> GetByMerchantOwnerIdAsync(Guid merchantOwnerId, int limit, CancellationToken ct)
+        {
+            var list = _byId.Values.Where(x => x.MerchantOwnerId == merchantOwnerId).Take(limit).ToList();
+            return Task.FromResult<IReadOnlyList<Payment>>(list);
+        }
+
+        public Task<IReadOnlyList<Payment>> GetByPaymentLinkIdAsync(Guid paymentLinkId, CancellationToken ct)
+        {
+            var list = _byId.Values.Where(x => x.PaymentLinkId == paymentLinkId).ToList();
+            return Task.FromResult<IReadOnlyList<Payment>>(list);
         }
     }
 

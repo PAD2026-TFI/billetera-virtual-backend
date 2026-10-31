@@ -41,6 +41,44 @@ public sealed class CheckoutEndpointTests
         }
     }
 
+    private sealed class InMemoryPaymentRepository : IPaymentRepository
+    {
+        private readonly ConcurrentDictionary<Guid, Payment> _byId = [];
+
+        public Task CreateAsync(Payment payment, CancellationToken ct)
+        {
+            _byId[payment.Id] = payment;
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(Payment payment, CancellationToken ct)
+        {
+            _byId[payment.Id] = payment;
+            return Task.CompletedTask;
+        }
+
+        public Task<Payment?> FindByIdAsync(Guid id, CancellationToken ct) =>
+            Task.FromResult(_byId.TryGetValue(id, out var val) ? val : null);
+
+        public Task<Payment?> FindByIdempotencyKeyAsync(Guid merchantOwnerId, string idempotencyKey, CancellationToken ct)
+        {
+            var p = _byId.Values.FirstOrDefault(x => x.MerchantOwnerId == merchantOwnerId && x.IdempotencyKey == idempotencyKey);
+            return Task.FromResult(p);
+        }
+
+        public Task<IReadOnlyList<Payment>> GetByMerchantOwnerIdAsync(Guid merchantOwnerId, int limit, CancellationToken ct)
+        {
+            var list = _byId.Values.Where(x => x.MerchantOwnerId == merchantOwnerId).Take(limit).ToList();
+            return Task.FromResult<IReadOnlyList<Payment>>(list);
+        }
+
+        public Task<IReadOnlyList<Payment>> GetByPaymentLinkIdAsync(Guid paymentLinkId, CancellationToken ct)
+        {
+            var list = _byId.Values.Where(x => x.PaymentLinkId == paymentLinkId).ToList();
+            return Task.FromResult<IReadOnlyList<Payment>>(list);
+        }
+    }
+
     private sealed class InMemoryWalletRepository : IWalletRepository
     {
         private readonly ConcurrentDictionary<Guid, DomainWallet> _walletsByOwner = [];
@@ -89,6 +127,7 @@ public sealed class CheckoutEndpointTests
     public async Task EndToEnd_checkout_link_creation_qr_and_card_payment()
     {
         var linksRepo = new InMemoryPaymentLinkRepository();
+        var paymentsRepo = new InMemoryPaymentRepository();
         var walletRepo = new InMemoryWalletRepository();
         var userRepo = new InMemoryUserRepository();
         var fundingStore = new FakeFundingStore();
@@ -103,6 +142,9 @@ public sealed class CheckoutEndpointTests
             {
                 services.RemoveAll<IPaymentLinkRepository>();
                 services.AddSingleton<IPaymentLinkRepository>(linksRepo);
+
+                services.RemoveAll<IPaymentRepository>();
+                services.AddSingleton<IPaymentRepository>(paymentsRepo);
 
                 services.RemoveAll<IWalletRepository>();
                 services.AddSingleton<IWalletRepository>(walletRepo);

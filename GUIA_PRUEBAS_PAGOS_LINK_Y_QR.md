@@ -248,3 +248,23 @@ Cada vez que un pago se completa con éxito, los fondos impactan inmediatamente 
 Para auditar el saldo del comercio:
 - **Comercios B2B**: Consultar `GET /api/v1/gateway/wallet` y `GET /api/v1/gateway/movements`.
 - **Usuarios B2C**: Consultar `GET /api/v1/wallets` y `GET /api/v1/movements`.
+
+---
+
+## 6. Consulta B2B de Pagos Recibidos (Comercio Autenticado)
+
+Un comercio puede auditar y conciliar cada cobro individual recibido mediante los nuevos endpoints de pasarela B2B autenticados por `X-Api-Key`:
+
+### Consulta de Pago por ID
+```bash
+curl -k -i -X GET https://localhost:7081/api/v1/gateway/checkout-payments/<PAYMENT_ID> \
+  -H "X-Api-Key: <TU_API_KEY>"
+```
+> **Respuesta Esperada**: `200 OK` con el `MerchantPaymentDto` conteniendo importe, medio de pago, marca/últimos 4 dígitos de tarjeta (sin PAN ni CVV), estado (`Succeeded`) y fecha. Si el pago pertenece a otro comercio, devuelve `404 Not Found`.
+
+### Listado de Cobros Recibidos
+```bash
+curl -k -i -X GET "https://localhost:7081/api/v1/gateway/checkout-payments?limit=20" \
+  -H "X-Api-Key: <TU_API_KEY>"
+```
+> **Respuesta Esperada**: `200 OK` con la lista de pagos recaudados por el comercio autenticado.

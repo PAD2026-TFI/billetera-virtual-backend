@@ -216,6 +216,110 @@ namespace Wallet.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Wallet.Domain.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("AuthorizationCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CardBrand")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("CardHolderName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("CardLast4")
+                        .HasMaxLength(4)
+                        .HasColumnType("char(4)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("ARS");
+
+                    b.Property<Guid>("DestinationWalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("MerchantOwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid?>("PayerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PayerWalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PaymentLinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid?>("TransferId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinationWalletId");
+
+                    b.HasIndex("PayerUserId");
+
+                    b.HasIndex("PayerWalletId");
+
+                    b.HasIndex("PaymentLinkId");
+
+                    b.HasIndex("TransferId");
+
+                    b.HasIndex("MerchantOwnerId", "CreatedAt");
+
+                    b.HasIndex("MerchantOwnerId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
+
+                    b.ToTable("Payments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_Payments_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+                        });
+                });
+
             modelBuilder.Entity("Wallet.Domain.PaymentLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -247,6 +351,12 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.Property<Guid?>("MerchantOwnerId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -522,6 +632,42 @@ namespace Wallet.Infrastructure.Migrations
                         .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Payment", b =>
+                {
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("DestinationWalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wallet.Domain.WalletOwner", null)
+                        .WithMany()
+                        .HasForeignKey("MerchantOwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wallet.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("PayerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("PayerWalletId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Wallet.Domain.PaymentLink", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentLinkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wallet.Domain.Transfer", null)
+                        .WithMany()
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Wallet.Domain.PaymentLink", b =>

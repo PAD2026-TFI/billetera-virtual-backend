@@ -8,6 +8,7 @@ namespace Wallet.Application;
 
 public sealed class PaymentLinkService(
     IPaymentLinkRepository links,
+    IPaymentRepository payments,
     IWalletRepository wallets,
     IUserRepository users,
     ITransferStore transfers,
@@ -35,10 +36,6 @@ public sealed class PaymentLinkService(
                 ?? (await wallets.CreateOrGetAsync(DomainWallet.Create(currentUserId.Value, now), ct)).Wallet;
             destinationWalletId = userWallet.Id;
         }
-        else if (request.DestinationWalletId.HasValue && request.DestinationWalletId.Value != Guid.Empty)
-        {
-            destinationWalletId = request.DestinationWalletId.Value;
-        }
         else if (!string.IsNullOrWhiteSpace(request.MerchantEmail))
         {
             var email = request.MerchantEmail.Trim();
@@ -62,9 +59,13 @@ public sealed class PaymentLinkService(
                 merchantOwnerId = existingUser.Id;
             }
         }
+        else if (request.DestinationWalletId.HasValue && request.DestinationWalletId.Value != Guid.Empty)
+        {
+            destinationWalletId = request.DestinationWalletId.Value;
+        }
         else
         {
-            throw new ArgumentException("Debes estar autenticado o proveer 'destinationWalletId' o 'merchantEmail' para generar el link.");
+            throw new ArgumentException("Debes estar autenticado o proveer 'merchantEmail' para generar el link.");
         }
 
         var ttl = request.TtlMinutes.HasValue ? TimeSpan.FromMinutes(request.TtlMinutes.Value) : (TimeSpan?)null;
@@ -132,29 +133,90 @@ public sealed class PaymentLinkService(
         var now = clock.GetUtcNow();
         link.EnsureIsPayable(now);
 
-        var paymentId = Guid.TryParse(idempotencyKey, out var parsedKey) && parsedKey != Guid.Empty
-            ? parsedKey
-            : Guid.NewGuid();
+        var currentUserId = TryGetCurrentUserId();
+        var normalizedIdempotencyKey = !string.IsNullOrWhiteSpace(idempotencyKey) ? idempotencyKey.Trim() : null;
+        var requestHash = FingerprintPayment(link.Id, link.Amount.Amount, request.PaymentMethod, request.Card?.CardNumber, currentUserId);
 
-        string? authCode;
+        // 1. Verificación de idempotencia
+        if (normalizedIdempotencyKey is not null && link.MerchantOwnerId.HasValue)
+        {
+            var existingPayment = await payments.FindByIdempotencyKeyAsync(link.MerchantOwnerId.Value, normalizedIdempotencyKey, ct);
+            if (existingPayment is not null)
+            {
+                if (existingPayment.RequestHash == requestHash)
+                {
+                    return new CheckoutReceiptDto(
+                        existingPayment.Id,
+                        link.Token,
+                        existingPayment.Amount.Amount,
+                        existingPayment.Currency,
+                        existingPayment.DestinationWalletId,
+                        existingPayment.Method.ToString(),
+                        existingPayment.Status == PaymentStatus.Succeeded ? "Completed" : existingPayment.Status.ToString(),
+                        existingPayment.CompletedAt ?? existingPayment.CreatedAt,
+                        existingPayment.AuthorizationCode,
+                        IdempotencyReplayed: true);
+                }
+
+                throw new TransferRejectedException("IDEMPOTENCY_CONFLICT");
+            }
+        }
+
+        // 2. Control de concurrencia y exclusividad en links de un solo uso (SingleUse)
+        if (link.Type == PaymentLinkType.SingleUse)
+        {
+            var priorPayments = await payments.GetByPaymentLinkIdAsync(link.Id, ct);
+            if (priorPayments.Any(p => p.Status == PaymentStatus.Succeeded || p.Status == PaymentStatus.Processing))
+            {
+                throw new InvalidOperationException("This payment link has already been completed.");
+            }
+        }
+
+        Payment payment;
 
         if (request.PaymentMethod == CheckoutPaymentMethod.Card)
         {
             if (request.Card is null)
                 throw new ArgumentException("Los datos de la tarjeta son obligatorios para este método de pago.");
 
-            var authResult = cardSimulator.Authorize(request.Card);
-            authCode = authResult.AuthorizationCode;
+            var cleanNumber = new string(request.Card.CardNumber?.Where(char.IsDigit).ToArray() ?? []);
+            var last4 = cleanNumber.Length >= 4 ? cleanNumber[^4..] : "0000";
+            var brand = cleanNumber.StartsWith("4", StringComparison.Ordinal) ? "Visa" : "Mastercard";
 
-            // Liquidación atómica en la billetera del comercio mediante financiamiento auditado
-            var fundingRequest = new DevelopmentFundingRequest(link.DestinationWalletId, link.Amount.Amount, paymentId);
+            payment = Payment.CreateForCard(
+                link.Id,
+                link.MerchantOwnerId ?? Guid.Empty,
+                link.DestinationWalletId,
+                link.Amount,
+                brand,
+                last4,
+                request.Card.CardHolderName,
+                currentUserId,
+                normalizedIdempotencyKey,
+                requestHash,
+                now);
+
+            CardAuthorizationResult authResult;
+            try
+            {
+                authResult = cardSimulator.Authorize(request.Card);
+            }
+            catch (CardPaymentRejectedException ex)
+            {
+                payment.MarkFailed(ex.Code, now);
+                await payments.CreateAsync(payment, ct);
+                throw;
+            }
+
+            var fundingRequest = new DevelopmentFundingRequest(link.DestinationWalletId, link.Amount.Amount, payment.Id);
             var hash = FingerprintFunding(fundingRequest);
             await funding.FundAsync(fundingRequest, hash, ct);
+
+            payment.MarkSucceeded(null, authResult.AuthorizationCode, now);
         }
         else // CheckoutPaymentMethod.Wallet
         {
             Guid payerUserId;
-            var currentUserId = TryGetCurrentUserId();
             if (currentUserId.HasValue)
             {
                 payerUserId = currentUserId.Value;
@@ -165,29 +227,83 @@ public sealed class PaymentLinkService(
             }
             else
             {
-                throw new InvalidOperationException("Para pagar con billetera debés iniciar sesión o indicar el ID de billetera pagadora.");
+                throw new InvalidOperationException("Para pagar con billetera debés iniciar sesión.");
             }
 
-            var transferCommand = new TransferCommand(payerUserId, link.DestinationWalletId, link.Amount, paymentId);
+            var payerWallet = await wallets.GetByUserIdAsync(payerUserId, ct)
+                ?? throw new TransferRejectedException("SOURCE_WALLET_NOT_FOUND");
+
+            if (payerWallet.Id == link.DestinationWalletId)
+            {
+                throw new TransferRejectedException("SAME_WALLET");
+            }
+
+            payment = Payment.CreateForWallet(
+                link.Id,
+                link.MerchantOwnerId ?? Guid.Empty,
+                link.DestinationWalletId,
+                payerUserId,
+                payerWallet.Id,
+                link.Amount,
+                normalizedIdempotencyKey,
+                requestHash,
+                now);
+
+            var transferCommand = new TransferCommand(payerUserId, link.DestinationWalletId, link.Amount, payment.Id);
             var hash = TransferService.Fingerprint(link.DestinationWalletId, link.Amount.Amount);
-            await transfers.ExecuteAsync(transferCommand, hash, ct);
-            authCode = "WALLET-PAY";
+            var transferResult = await transfers.ExecuteAsync(transferCommand, hash, ct);
+
+            payment.MarkSucceeded(transferResult.Transfer.Id, "WALLET-PAY", now);
         }
 
         link.MarkCompleted(now);
         await links.UpdateAsync(link, ct);
+        await payments.CreateAsync(payment, ct);
 
         return new CheckoutReceiptDto(
-            paymentId,
+            payment.Id,
             link.Token,
-            link.Amount.Amount,
-            link.Currency,
-            link.DestinationWalletId,
-            request.PaymentMethod.ToString(),
-            "Completed",
-            now,
-            authCode);
+            payment.Amount.Amount,
+            payment.Currency,
+            payment.DestinationWalletId,
+            payment.Method.ToString(),
+            payment.Status == PaymentStatus.Succeeded ? "Completed" : payment.Status.ToString(),
+            payment.CompletedAt ?? now,
+            payment.AuthorizationCode,
+            IdempotencyReplayed: false);
     }
+
+    public async Task<MerchantPaymentDto?> GetPaymentByIdAsync(Guid paymentId, Guid merchantOwnerId, CancellationToken ct)
+    {
+        var payment = await payments.FindByIdAsync(paymentId, ct);
+        if (payment is null || payment.MerchantOwnerId != merchantOwnerId)
+            return null;
+
+        return MapToMerchantPayment(payment);
+    }
+
+    public async Task<IReadOnlyList<MerchantPaymentDto>> GetPaymentsByMerchantAsync(Guid merchantOwnerId, int limit, CancellationToken ct)
+    {
+        var list = await payments.GetByMerchantOwnerIdAsync(merchantOwnerId, limit, ct);
+        return list.Select(MapToMerchantPayment).ToList();
+    }
+
+    private static MerchantPaymentDto MapToMerchantPayment(Payment p) =>
+        new(p.Id,
+            p.PaymentLinkId,
+            p.DestinationWalletId,
+            p.Amount.Amount,
+            p.Currency,
+            p.Method.ToString(),
+            p.Status.ToString(),
+            p.TransferId,
+            p.CardBrand,
+            p.CardLast4,
+            p.CardHolderName,
+            p.AuthorizationCode,
+            p.FailureReason,
+            p.CreatedAt,
+            p.CompletedAt);
 
     private PaymentLinkDto Map(PaymentLink link)
     {
@@ -225,6 +341,14 @@ public sealed class PaymentLinkService(
     private static string FingerprintFunding(DevelopmentFundingRequest req)
     {
         var canonical = $"{req.WalletId:N}|{req.Amount.ToString("0.00", CultureInfo.InvariantCulture)}|ARS";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+
+    private static string FingerprintPayment(Guid linkId, decimal amount, CheckoutPaymentMethod method, string? cardNumber, Guid? payerId)
+    {
+        var last4 = cardNumber is not null && cardNumber.Length >= 4 ? cardNumber[^4..] : "NONE";
+        var payer = payerId.HasValue ? payerId.Value.ToString("N") : "ANONYMOUS";
+        var canonical = $"{linkId:N}|{amount.ToString("0.00", CultureInfo.InvariantCulture)}|{method}|{last4}|{payer}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 }

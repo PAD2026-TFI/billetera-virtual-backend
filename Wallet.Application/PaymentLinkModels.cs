@@ -113,4 +113,22 @@ public sealed record CheckoutReceiptDto(
     string PaymentMethod,
     string Status,
     DateTimeOffset PaidAt,
-    string? AuthorizationCode);
+    string? AuthorizationCode,
+    bool IdempotencyReplayed = false);
+
+public sealed record MerchantPaymentDto(
+    Guid Id,
+    Guid PaymentLinkId,
+    Guid DestinationWalletId,
+    decimal Amount,
+    string Currency,
+    string PaymentMethod,
+    string Status,
+    Guid? TransferId,
+    string? CardBrand,
+    string? CardLast4,
+    string? CardHolderName,
+    string? AuthorizationCode,
+    string? FailureReason,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? CompletedAt);

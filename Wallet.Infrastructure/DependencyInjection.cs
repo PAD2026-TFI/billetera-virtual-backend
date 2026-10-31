@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, SqlUserRepository>();
         services.AddScoped<IExternalClientRepository, SqlExternalClientRepository>();
         services.AddScoped<IPaymentLinkRepository, SqlPaymentLinkRepository>();
+        services.AddScoped<IPaymentRepository, SqlPaymentRepository>();
         services.AddScoped<IPasswordService, IdentityPasswordService>();
         return services;
     }

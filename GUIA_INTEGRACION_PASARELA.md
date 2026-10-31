@@ -140,6 +140,8 @@ El sistema provee dos modalidades complementarias de recaudación y cobro digita
 | `/api/v1/gateway/wallet` | `GET` / `POST` | `X-Api-Key` | Consulta y gestión de billetera de la aplicación. |
 | `/api/v1/gateway/payments` | `POST` | `X-Api-Key` | Transferencias B2B con `Idempotency-Key`. |
 | `/api/v1/gateway/movements` | `GET` | `X-Api-Key` | Conciliación y libro contable con cursor. |
+| `/api/v1/gateway/checkout-payments/{paymentId}` | `GET` | `X-Api-Key` | Consulta de pago individual por ID (aislamiento B2B). |
+| `/api/v1/gateway/checkout-payments` | `GET` | `X-Api-Key` | Listado de cobros recibidos por el comercio. |
 | `/api/v1/checkout/links` | `POST` | Híbrido | Creación de links de pago para comercio registrado o invitado. |
 | `/api/v1/checkout/links/{token}` | `GET` | Libre | Información pública para renderizar el checkout. |
 | `/api/v1/checkout/links/{token}/qr` | `GET` | Libre | Código QR vectorial SVG dinámico. |

@@ -80,6 +80,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         try
         {
             var receipt = await paymentLinks.ProcessCheckoutAsync(effectiveToken, request, idempotencyKey, ct);
+            Response.Headers["Idempotency-Replayed"] = receipt.IdempotencyReplayed ? "true" : "false";
             return Ok(receipt);
         }
         catch (KeyNotFoundException ex)
@@ -91,10 +92,21 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         }
         catch (InvalidOperationException ex)
         {
+            var status = ex.Message.Contains("iniciar sesión", StringComparison.OrdinalIgnoreCase)
+                ? StatusCodes.Status401Unauthorized
+                : StatusCodes.Status409Conflict;
+
             return Problem(
-                statusCode: StatusCodes.Status409Conflict,
+                statusCode: status,
                 title: ex.Message,
-                extensions: new Dictionary<string, object?> { ["code"] = "LINK_NOT_PAYABLE" });
+                extensions: new Dictionary<string, object?> { ["code"] = status == 401 ? "AUTH_REQUIRED" : "LINK_NOT_PAYABLE" });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "UNAUTHORIZED" });
         }
         catch (CardPaymentRejectedException ex)
         {
@@ -110,6 +122,8 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
                 "SOURCE_WALLET_NOT_FOUND" => (404, "No tenés una billetera creada para realizar el pago."),
                 "INSUFFICIENT_FUNDS" => (409, "Saldo insuficiente en tu billetera."),
                 "DESTINATION_BALANCE_LIMIT" => (409, "La billetera destino excede el límite operativo."),
+                "IDEMPOTENCY_CONFLICT" => (409, "La clave de idempotencia ya fue utilizada con otros parámetros."),
+                "SAME_WALLET" => (400, "Origen y destino deben ser distintos."),
                 _ => (400, "Error en la transferencia de billetera.")
             };
 

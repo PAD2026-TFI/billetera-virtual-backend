@@ -43,6 +43,7 @@ public class PaymentLinkConfiguration : IEntityTypeConfiguration<PaymentLink>
 
         builder.Property(l => l.CreatedAt).IsRequired();
         builder.Property(l => l.ExpiresAt);
+        builder.Property(l => l.RowVersion).IsRowVersion();
 
         builder.HasIndex(l => l.Token).IsUnique();
         builder.HasIndex(l => l.DestinationWalletId);

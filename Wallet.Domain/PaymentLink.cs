@@ -16,6 +16,7 @@ public sealed class PaymentLink
     public PaymentLinkType Type { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? ExpiresAt { get; private set; }
+    public byte[] RowVersion { get; private set; } = [];
 
     private PaymentLink() { } // Required by EF Core
 

@@ -11,7 +11,9 @@ public sealed class GatewayController(
     GatewayService gateway,
     WalletService wallets,
     TransferService transfers,
-    MovementHistoryService movements) : ControllerBase
+    MovementHistoryService movements,
+    PaymentLinkService paymentLinks,
+    ICurrentUser currentUser) : ControllerBase
 {
     [HttpPost("clients")]
     [AllowAnonymous]
@@ -127,5 +129,40 @@ public sealed class GatewayController(
         if (result.IsSuccess) return Ok(result.Value);
         return Problem(statusCode: result.Error!.Code == "WALLET_NOT_FOUND" ? 404 : 400, title: result.Error.Message,
             extensions: new Dictionary<string, object?> { ["code"] = result.Error.Code });
+    }
+
+    [HttpGet("checkout-payments/{paymentId:guid}")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<MerchantPaymentDto>(200)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<MerchantPaymentDto>> GetCheckoutPaymentById(
+        [FromRoute] Guid paymentId,
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
+        CancellationToken ct)
+    {
+        var payment = await paymentLinks.GetPaymentByIdAsync(paymentId, currentUser.Id, ct);
+        if (payment is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Pago no encontrado o no pertenece a este comercio.",
+                extensions: new Dictionary<string, object?> { ["code"] = "PAYMENT_NOT_FOUND" });
+        }
+
+        return Ok(payment);
+    }
+
+    [HttpGet("checkout-payments")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<IReadOnlyList<MerchantPaymentDto>>(200)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    public async Task<ActionResult<IReadOnlyList<MerchantPaymentDto>>> GetReceivedCheckoutPayments(
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
+        [FromQuery] int limit = 20,
+        CancellationToken ct = default)
+    {
+        var list = await paymentLinks.GetPaymentsByMerchantAsync(currentUser.Id, limit, ct);
+        return Ok(list);
     }
 }

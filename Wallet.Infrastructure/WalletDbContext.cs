@@ -16,6 +16,7 @@ public sealed class WalletDbContext(DbContextOptions<WalletDbContext> options) :
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<CardRequest> CardRequests => Set<CardRequest>();
     public DbSet<PaymentLink> PaymentLinks => Set<PaymentLink>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

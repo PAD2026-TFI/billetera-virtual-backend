@@ -216,6 +216,75 @@ namespace Wallet.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Wallet.Domain.PaymentLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("ARS");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid>("DestinationWalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("MerchantOwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinationWalletId");
+
+                    b.HasIndex("MerchantOwnerId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("PaymentLinks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentLinks_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_PaymentLinks_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+                        });
+                });
+
             modelBuilder.Entity("Wallet.Domain.Transfer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -453,6 +522,20 @@ namespace Wallet.Infrastructure.Migrations
                         .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.PaymentLink", b =>
+                {
+                    b.HasOne("Wallet.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("DestinationWalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wallet.Domain.WalletOwner", null)
+                        .WithMany()
+                        .HasForeignKey("MerchantOwnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Wallet.Domain.Transfer", b =>

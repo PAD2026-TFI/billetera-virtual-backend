@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wallet.Application;
+
 namespace Wallet.Infrastructure;
 
 public static class DependencyInjection
@@ -14,6 +15,7 @@ public static class DependencyInjection
         services.AddScoped<IWalletRepository, SqlWalletRepository>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
         services.AddScoped<IExternalClientRepository, SqlExternalClientRepository>();
+        services.AddScoped<IPaymentLinkRepository, SqlPaymentLinkRepository>();
         services.AddScoped<IPasswordService, IdentityPasswordService>();
         return services;
     }

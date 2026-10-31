@@ -255,6 +255,61 @@
             padding: 16px 0 8px;
         }
 
+        .auth-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .auth-user-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .btn-link:hover {
+            color: var(--primary-hover);
+        }
+
+        .wallet-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .wallet-stat-val {
+            font-weight: 700;
+            font-size: 15px;
+            color: #0f172a;
+        }
+
         .qr-wrapper {
             background: #ffffff;
             border: 1px solid var(--border);
@@ -441,15 +496,70 @@
             <!-- TAB 2: Billetera Virtual -->
             <div class="tab-content" id="tab-wallet">
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-                    Podés abonar debitando el importe directamente de una Billetera Virtual registrada en la plataforma.
+                    Aboná debitando el saldo directamente desde tu Billetera Virtual registrada en la plataforma.
                 </p>
-                <form id="walletForm" onsubmit="handleWalletPay(event)">
-                    <div class="form-group">
-                        <label for="payerWalletId">ID de Billetera Pagadora</label>
-                        <input type="text" id="payerWalletId" class="form-control" placeholder="UUID de tu billetera (origen)" required>
+
+                <!-- Vista para usuario con sesión activa -->
+                <div id="walletLoggedView" style="display: none;">
+                    <div class="auth-card">
+                        <div class="auth-user-bar">
+                            <div class="user-tag">
+                                <span>👤</span>
+                                <span id="authEmailText">usuario@gmail.com</span>
+                            </div>
+                            <button type="button" class="btn-link" onclick="logoutWallet()">Cerrar sesión</button>
+                        </div>
+                        <div class="wallet-stat">
+                            <span style="color: var(--text-muted);">Saldo disponible en cuenta:</span>
+                            <span class="wallet-stat-val" id="authWalletBalance">$ 0,00 ARS</span>
+                        </div>
+                        <div class="wallet-stat" style="margin-bottom: 0;">
+                            <span style="color: var(--text-muted);">Monto a pagar:</span>
+                            <span class="wallet-stat-val" id="authPaymentTotal" style="color: var(--primary);">$ 0,00 ARS</span>
+                        </div>
                     </div>
-                    <button type="submit" class="btn-pay" id="btnPayWallet">Pagar desde Billetera</button>
-                </form>
+
+                    <div id="balanceAlert" class="alert alert-danger" style="display: none; margin-bottom: 16px;"></div>
+
+                    <button type="button" class="btn-pay" id="btnPayWalletAuth" onclick="handleWalletPay(event)">
+                        Confirmar y Pagar
+                    </button>
+                </div>
+
+                <!-- Vista para inicio de sesión en el checkout -->
+                <div id="walletLoginView">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <p style="font-size: 12px; color: #1e40af; margin: 0; line-height: 1.4;">
+                            🔒 <strong>Autenticación Requerida:</strong> Por seguridad de tu cuenta, para debitar fondos debés iniciar sesión con tus credenciales.
+                        </p>
+                    </div>
+
+                    <form id="walletLoginForm" onsubmit="handleWalletLogin(event)">
+                        <div class="form-group">
+                            <label for="walletEmail">Correo Electrónico</label>
+                            <input type="email" id="walletEmail" class="form-control" placeholder="tu@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="walletPassword">Contraseña</label>
+                            <input type="password" id="walletPassword" class="form-control" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn-pay" id="btnWalletLogin">Iniciar Sesión y Continuar</button>
+                    </form>
+
+                    <div style="margin-top: 14px; text-align: center;">
+                        <button type="button" class="btn-link" onclick="toggleTokenInput()">¿Tenés un token JWT de Swagger? Pegalo acá</button>
+                    </div>
+
+                    <div id="tokenManualContainer" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);">
+                        <div class="form-group">
+                            <label for="manualBearerToken">Token Bearer (JWT)</label>
+                            <textarea id="manualBearerToken" class="form-control" rows="2" placeholder="eyJhbGciOi..."></textarea>
+                        </div>
+                        <button type="button" class="btn-preset" style="width: 100%; padding: 10px;" onclick="handleManualTokenApply()">
+                            Aplicar Token JWT
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB 3: Código QR -->
@@ -497,6 +607,9 @@
     <script>
         let currentToken = null;
         let linkData = null;
+        let authToken = sessionStorage.getItem("checkout_jwt") || null;
+        let userEmail = sessionStorage.getItem("checkout_email") || null;
+        let userWallet = null;
 
         function getQueryParam(param) {
             const params = new URLSearchParams(window.location.search);
@@ -512,6 +625,7 @@
                 return;
             }
             await loadLinkDetails(currentToken);
+            await checkActiveSession();
         }
 
         async function loadManualToken() {
@@ -571,10 +685,126 @@
             } else if (tab === 'wallet') {
                 document.querySelectorAll(".tab-btn")[1].classList.add("active");
                 document.getElementById("tab-wallet").classList.add("active");
+                checkActiveSession();
             } else if (tab === 'qr') {
                 document.querySelectorAll(".tab-btn")[2].classList.add("active");
                 document.getElementById("tab-qr").classList.add("active");
             }
+        }
+
+        async function checkActiveSession() {
+            if (!authToken) {
+                document.getElementById("walletLoginView").style.display = "block";
+                document.getElementById("walletLoggedView").style.display = "none";
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/wallets/me", {
+                    headers: { "Authorization": `Bearer ${authToken}` }
+                });
+
+                if (res.status === 401) {
+                    logoutWallet();
+                    return;
+                }
+
+                if (!res.ok) {
+                    document.getElementById("walletLoginView").style.display = "block";
+                    document.getElementById("walletLoggedView").style.display = "none";
+                    return;
+                }
+
+                userWallet = await res.json();
+                document.getElementById("authEmailText").textContent = userEmail || "Usuario Autenticado";
+                document.getElementById("authWalletBalance").textContent = `$ ${userWallet.balance.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${userWallet.currency}`;
+
+                if (linkData) {
+                    document.getElementById("authPaymentTotal").textContent = `$ ${linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${linkData.currency}`;
+                    const balanceAlert = document.getElementById("balanceAlert");
+                    const btnPay = document.getElementById("btnPayWalletAuth");
+
+                    if (userWallet.balance < linkData.amount) {
+                        balanceAlert.textContent = `⚠️ Saldo insuficiente ($ ${userWallet.balance.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${userWallet.currency} disponible vs $ ${linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })} requerido).`;
+                        balanceAlert.style.display = "block";
+                        btnPay.disabled = true;
+                        btnPay.textContent = "Saldo Insuficiente";
+                    } else {
+                        balanceAlert.style.display = "none";
+                        btnPay.disabled = false;
+                        btnPay.textContent = `Confirmar y Pagar ($ ${linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${linkData.currency})`;
+                    }
+                }
+
+                document.getElementById("walletLoginView").style.display = "none";
+                document.getElementById("walletLoggedView").style.display = "block";
+            } catch (err) {
+                console.error("Error al validar sesión de billetera:", err);
+            }
+        }
+
+        async function handleWalletLogin(e) {
+            e.preventDefault();
+            hideAlerts();
+            const email = document.getElementById("walletEmail").value.trim();
+            const password = document.getElementById("walletPassword").value;
+            const btn = document.getElementById("btnWalletLogin");
+
+            btn.disabled = true;
+            btn.textContent = "Iniciando sesión...";
+
+            try {
+                const res = await fetch("/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    showError(data.detail || data.title || "Credenciales incorrectas.");
+                    btn.disabled = false;
+                    btn.textContent = "Iniciar Sesión y Continuar";
+                    return;
+                }
+
+                authToken = data.accessToken;
+                userEmail = email;
+                sessionStorage.setItem("checkout_jwt", authToken);
+                sessionStorage.setItem("checkout_email", userEmail);
+
+                await checkActiveSession();
+            } catch (err) {
+                showError("Error de red al intentar iniciar sesión.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Iniciar Sesión y Continuar";
+            }
+        }
+
+        function logoutWallet() {
+            authToken = null;
+            userEmail = null;
+            userWallet = null;
+            sessionStorage.removeItem("checkout_jwt");
+            sessionStorage.removeItem("checkout_email");
+            document.getElementById("walletLoginView").style.display = "block";
+            document.getElementById("walletLoggedView").style.display = "none";
+        }
+
+        function toggleTokenInput() {
+            const container = document.getElementById("tokenManualContainer");
+            container.style.display = container.style.display === "none" ? "block" : "none";
+        }
+
+        async function handleManualTokenApply() {
+            const rawToken = document.getElementById("manualBearerToken").value.trim();
+            if (!rawToken) return;
+            authToken = rawToken.replace(/^Bearer\s+/i, "");
+            userEmail = "Usuario Autenticado";
+            sessionStorage.setItem("checkout_jwt", authToken);
+            sessionStorage.setItem("checkout_email", userEmail);
+            await checkActiveSession();
         }
 
         function fillCard(type) {
@@ -622,29 +852,33 @@
         }
 
         async function handleWalletPay(e) {
-            e.preventDefault();
+            if (e) e.preventDefault();
             hideAlerts();
-            const btn = document.getElementById("btnPayWallet");
+            const btn = document.getElementById("btnPayWalletAuth");
             btn.disabled = true;
             btn.textContent = "Transfiriendo fondos...";
 
             const payload = {
                 token: currentToken,
-                paymentMethod: 0, // Wallet
-                payerWalletId: document.getElementById("payerWalletId").value.trim()
+                paymentMethod: 0 // Wallet
             };
 
-            await executePayment(payload, btn, "Pagar desde Billetera");
+            await executePayment(payload, btn, "Confirmar y Pagar", authToken);
         }
 
-        async function executePayment(payload, btn, defaultText) {
+        async function executePayment(payload, btn, defaultText, bearerToken = null) {
             try {
+                const headers = {
+                    "Content-Type": "application/json",
+                    "Idempotency-Key": crypto.randomUUID()
+                };
+                if (bearerToken) {
+                    headers["Authorization"] = `Bearer ${bearerToken}`;
+                }
+
                 const res = await fetch("/api/v1/checkout/pay", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Idempotency-Key": crypto.randomUUID()
-                    },
+                    headers: headers,
                     body: JSON.stringify(payload)
                 });
 

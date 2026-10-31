@@ -22,7 +22,7 @@ public sealed class WalletBalanceTests
         var wallet = DomainWallet.Create(user.Id, instant);
         var balance = decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture);
         // Sólo fixture; no agrego operaciones de carga de saldo en esta historia.
-        typeof(DomainWallet).GetProperty(nameof(DomainWallet.Balance))!.SetValue(wallet, balance);
+        typeof(DomainWallet).GetProperty(nameof(DomainWallet.Balance))!.SetValue(wallet, Wallet.Domain.Money.From(balance));
         host.Wallets.Items[user.Id] = wallet;
         using var client = host.Client();
         client.DefaultRequestHeaders.Authorization = new("Bearer", host.Token(user));

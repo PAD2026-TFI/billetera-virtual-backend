@@ -26,7 +26,7 @@ public sealed class TransferAtomicityTests
         var source = DomainWallet.Create(Guid.NewGuid(), DateTimeOffset.UtcNow);
         var destination = DomainWallet.Create(Guid.NewGuid(), DateTimeOffset.UtcNow);
         source.Credit(100m); destination.Credit(MoneyRules.MaxBalance);
-        Assert.Throws<ArgumentException>(() => Create(source, destination, 20m).ApplyTo(source, destination));
+        Assert.Throws<InvalidOperationException>(() => Create(source, destination, 20m).ApplyTo(source, destination));
         Assert.Equal(100m, source.Balance); Assert.Equal(MoneyRules.MaxBalance, destination.Balance);
     }
     [Fact]
@@ -35,7 +35,7 @@ public sealed class TransferAtomicityTests
         var source = DomainWallet.Create(Guid.NewGuid(), DateTimeOffset.UtcNow);
         var destination = DomainWallet.Create(Guid.NewGuid(), DateTimeOffset.UtcNow);
         source.Credit(10m);
-        Assert.Throws<ArgumentException>(() => Create(source, destination, 20m).ApplyTo(source, destination));
+        Assert.Throws<InvalidOperationException>(() => Create(source, destination, 20m).ApplyTo(source, destination));
         Assert.Equal(10m, source.Balance); Assert.Equal(0m, destination.Balance);
     }
     [Fact]

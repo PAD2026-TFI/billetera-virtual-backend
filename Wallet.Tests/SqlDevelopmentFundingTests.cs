@@ -98,7 +98,7 @@ public sealed class SqlDevelopmentFundingTests
             var movements = await db.Movements.Where(m => m.WalletId == wallet.Id).ToListAsync();
             Assert.Equal(9, movements.Count);
             Assert.Equal(90m, movements.Sum(m => m.Amount));
-            Assert.Equal(Enumerable.Range(1, 9).Select(i => i * 10m), movements.Select(m => m.BalanceAfter).OrderBy(x => x));
+            Assert.Equal(Enumerable.Range(1, 9).Select(i => i * 10m), movements.Select(m => m.BalanceAfter.Amount).OrderBy(x => x));
         }
         finally { await Cleanup(user.Id, wallet.Id); }
     }

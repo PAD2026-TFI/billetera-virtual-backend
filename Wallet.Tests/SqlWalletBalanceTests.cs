@@ -23,7 +23,7 @@ public sealed class SqlWalletBalanceTests
         user.SetPasswordHash(new IdentityPasswordService().Hash(user, IdentityTestHost.Password));
         var wallet = DomainWallet.Create(user.Id, DateTimeOffset.UtcNow);
         // Sólo fixture: esta historia no implementa cargas de saldo.
-        typeof(DomainWallet).GetProperty(nameof(DomainWallet.Balance))!.SetValue(wallet, 12345.67m);
+        typeof(DomainWallet).GetProperty(nameof(DomainWallet.Balance))!.SetValue(wallet, Wallet.Domain.Money.From(12345.67m));
         try
         {
             await using (var db = NewDb())

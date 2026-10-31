@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application;
 using Wallet.Domain;
+
 namespace Wallet.Infrastructure;
 
 public sealed class SqlUserRepository(WalletDbContext db) : IUserRepository

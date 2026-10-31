@@ -22,6 +22,98 @@ namespace Wallet.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Wallet.Domain.Address", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ExternalPlaceId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Street")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTimeOffset?>("ValidatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Addresses", (string)null);
+                });
+
+            modelBuilder.Entity("Wallet.Domain.CardRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AddressId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddressId");
+
+                    b.ToTable("CardRequests", (string)null);
+                });
+
             modelBuilder.Entity("Wallet.Domain.DevelopmentFunding", b =>
                 {
                     b.Property<Guid>("Id")
@@ -36,8 +128,10 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.Property<string>("Currency")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(3)
-                        .HasColumnType("char(3)");
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("ARS");
 
                     b.Property<Guid>("IdempotencyKey")
                         .HasColumnType("uniqueidentifier");
@@ -136,8 +230,10 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.Property<string>("Currency")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(3)
-                        .HasColumnType("char(3)");
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("ARS");
 
                     b.Property<Guid>("DestinationWalletId")
                         .HasColumnType("uniqueidentifier");
@@ -177,13 +273,109 @@ namespace Wallet.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Wallet.Domain.User", b =>
+            modelBuilder.Entity("Wallet.Domain.Wallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Balance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("ARS");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("OwnerId");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId")
+                        .IsUnique();
+
+                    b.ToTable("Wallets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Wallets_Balance", "[Balance] >= 0");
+
+                            t.HasCheckConstraint("CK_Wallets_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+                        });
+                });
+
+            modelBuilder.Entity("Wallet.Domain.WalletOwner", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WalletOwners", (string)null);
+
+                    b.UseTptMappingStrategy();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.ExternalClient", b =>
+                {
+                    b.HasBaseType("Wallet.Domain.WalletOwner");
+
+                    b.Property<string>("ApiKeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("LastRotatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasIndex("ApiKeyHash")
+                        .IsUnique()
+                        .HasFilter("[ApiKeyHash] IS NOT NULL");
+
+                    b.ToTable("ExternalClients", (string)null);
+                });
+
+            modelBuilder.Entity("Wallet.Domain.User", b =>
+                {
+                    b.HasBaseType("Wallet.Domain.WalletOwner");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -194,9 +386,6 @@ namespace Wallet.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -219,60 +408,23 @@ namespace Wallet.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
                     b.Property<int>("SessionVersion")
                         .HasColumnType("int");
 
-                    b.HasKey("Id");
-
                     b.HasIndex("NormalizedEmail")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("Wallet.Domain.Wallet", b =>
+            modelBuilder.Entity("Wallet.Domain.CardRequest", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Balance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("char(3)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Wallets", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Wallets_Balance", "[Balance] >= 0");
-
-                            t.HasCheckConstraint("CK_Wallets_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
-                        });
+                    b.HasOne("Wallet.Domain.Address", null)
+                        .WithMany()
+                        .HasForeignKey("AddressId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Wallet.Domain.DevelopmentFunding", b =>
@@ -320,10 +472,28 @@ namespace Wallet.Infrastructure.Migrations
 
             modelBuilder.Entity("Wallet.Domain.Wallet", b =>
                 {
-                    b.HasOne("Wallet.Domain.User", null)
+                    b.HasOne("Wallet.Domain.WalletOwner", null)
                         .WithOne()
-                        .HasForeignKey("Wallet.Domain.Wallet", "UserId")
+                        .HasForeignKey("Wallet.Domain.Wallet", "OwnerId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.ExternalClient", b =>
+                {
+                    b.HasOne("Wallet.Domain.WalletOwner", null)
+                        .WithOne()
+                        .HasForeignKey("Wallet.Domain.ExternalClient", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.User", b =>
+                {
+                    b.HasOne("Wallet.Domain.WalletOwner", null)
+                        .WithOne()
+                        .HasForeignKey("Wallet.Domain.User", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

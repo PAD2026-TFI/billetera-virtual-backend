@@ -16,7 +16,7 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
             {
                 await using var db = new WalletDbContext(options);
                 await using var transaction = await db.Database.BeginTransactionAsync(ct);
-                var sourceId = await db.Wallets.AsNoTracking().Where(w => w.UserId == command.SourceUserId)
+                var sourceId = await db.Wallets.AsNoTracking().Where(w => w.OwnerId == command.SourceUserId)
                     .Select(w => w.Id).SingleOrDefaultAsync(ct);
                 if (sourceId == Guid.Empty) throw new TransferRejectedException("SOURCE_WALLET_NOT_FOUND");
 
@@ -38,15 +38,15 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
                 if (previous is not null) return Replay(previous, command, hash);
 
                 var source = locked[sourceId]; var destination = locked[command.DestinationWalletId];
-                foreach (var userId in new[] { source.UserId, destination.UserId }.Distinct().OrderBy(id => id))
+                foreach (var ownerId in new[] { source.OwnerId, destination.OwnerId }.Distinct().OrderBy(id => id))
                 {
-                    var user = await db.Users.FromSqlInterpolated(
-                        $"SELECT * FROM [Users] WITH (HOLDLOCK) WHERE [Id] = {userId}").SingleAsync(ct);
-                    if (!user.IsActive) throw new TransferRejectedException(userId == source.UserId ? "INVALID_SESSION" : "DESTINATION_UNAVAILABLE");
+                    var isActive = await db.Database.SqlQuery<bool>(
+                        $"SELECT [IsActive] AS [Value] FROM [WalletOwners] WITH (HOLDLOCK) WHERE [Id] = {ownerId}").SingleAsync(ct);
+                    if (!isActive) throw new TransferRejectedException(ownerId == source.OwnerId ? "INVALID_SESSION" : "DESTINATION_UNAVAILABLE");
                 }
                 if (source.Currency != "ARS" || destination.Currency != "ARS") throw new TransferRejectedException("DESTINATION_UNAVAILABLE");
                 if (source.Balance < command.Amount) throw new TransferRejectedException("INSUFFICIENT_FUNDS");
-                if (command.Amount > MoneyRules.MaxBalance - destination.Balance) throw new TransferRejectedException("DESTINATION_BALANCE_LIMIT");
+                if (command.Amount.Amount > Money.MaxAllowedAmount - destination.Balance.Amount) throw new TransferRejectedException("DESTINATION_BALANCE_LIMIT");
 
                 var transfer = Transfer.Complete(source.Id, destination.Id, command.Amount, command.IdempotencyKey, hash, clock.GetUtcNow());
                 ct.ThrowIfCancellationRequested();

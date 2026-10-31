@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Wallet.Application;
 using Wallet.Domain;
+
 namespace Wallet.Infrastructure;
 
 public sealed class IdentityPasswordService : IPasswordService

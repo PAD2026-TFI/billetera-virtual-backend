@@ -27,6 +27,7 @@ coverage.opencover.xml
 # Logs y archivos temporales
 [Ll]ogs/
 *.log
+repomix*.xml
 *.tmp
 *.temp
 *.bak

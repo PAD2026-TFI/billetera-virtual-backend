@@ -1,4 +1,5 @@
 using Wallet.Domain;
+
 namespace Wallet.Application;
 
 public interface IUserRepository

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using Wallet.Application;
 using Wallet.Domain;
+
 namespace Wallet.Api.Security;
 
 public sealed class JwtTokenService(JwtSettings settings, TimeProvider clock) : ITokenService

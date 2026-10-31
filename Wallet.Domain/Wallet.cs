@@ -3,35 +3,64 @@ namespace Wallet.Domain;
 public sealed class Wallet
 {
     public Guid Id { get; private set; }
-    public Guid UserId { get; private set; }
-    public decimal Balance { get; private set; }
-    public string Currency { get; private set; } = "ARS";
+    public Guid OwnerId { get; private set; }
+    public Guid UserId => OwnerId;
+    public Money Balance { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = [];
 
-    private Wallet() { } // Materialización EF Core.
+    public string Currency { get; private set; } = Money.DefaultCurrency;
 
-    public void Debit(decimal amount)
+    private Wallet() { } // Required for EF Core materialization
+
+    private Wallet(Guid id, Guid ownerId, Money initialBalance, DateTimeOffset createdAt)
     {
-        MoneyRules.ValidatePositive(amount);
-        if (amount > Balance) throw new ArgumentException("Saldo insuficiente.", nameof(amount));
-        Balance -= amount;
+        if (id == Guid.Empty)
+            throw new ArgumentException("Wallet identifier cannot be empty.", nameof(id));
+
+        if (ownerId == Guid.Empty)
+            throw new ArgumentException("Owner identifier cannot be empty.", nameof(ownerId));
+
+        Id = id;
+        OwnerId = ownerId;
+        Balance = initialBalance;
+        CreatedAt = createdAt.ToUniversalTime();
     }
 
-    public void Credit(decimal amount)
+    public static Wallet Create(Guid ownerId, DateTimeOffset now, string currency = Money.DefaultCurrency)
     {
-        MoneyRules.ValidatePositive(amount);
-        if (amount > MoneyRules.MaxBalance - Balance) throw new ArgumentException("El saldo excedería su capacidad.", nameof(amount));
+        return new Wallet(Guid.NewGuid(), ownerId, Money.Zero(currency), now);
+    }
+
+    public void Credit(Money amount)
+    {
+        if (amount.Amount <= 0)
+            throw new ArgumentException("Credit amount must be strictly greater than zero.", nameof(amount));
+
+        if (amount.Currency != Balance.Currency)
+            throw new InvalidOperationException($"Currency mismatch: cannot credit {amount.Currency} into a {Balance.Currency} wallet.");
+
+        if (Balance.Amount + amount.Amount > Money.MaxAllowedAmount)
+            throw new ArgumentException("Balance cannot exceed operational limit.", nameof(amount));
+
         Balance += amount;
     }
 
-    public static Wallet Create(Guid userId, DateTimeOffset now)
+    public void Credit(decimal amount) => Credit(Money.Positive(amount, Balance.Currency));
+
+    public void Debit(Money amount)
     {
-        if (userId == Guid.Empty) throw new ArgumentException("Titular inválido.", nameof(userId));
-        return new Wallet
-        {
-            Id = Guid.NewGuid(), UserId = userId, Balance = 0m,
-            Currency = "ARS", CreatedAt = now.ToUniversalTime()
-        };
+        if (amount.Amount <= 0)
+            throw new ArgumentException("Debit amount must be strictly greater than zero.", nameof(amount));
+
+        if (amount.Currency != Balance.Currency)
+            throw new InvalidOperationException($"Currency mismatch: cannot debit {amount.Currency} from a {Balance.Currency} wallet.");
+
+        if (amount > Balance)
+            throw new InvalidOperationException("Insufficient funds for debit operation.");
+
+        Balance -= amount;
     }
+
+    public void Debit(decimal amount) => Debit(Money.Positive(amount, Balance.Currency));
 }

@@ -79,6 +79,7 @@ if (enabled)
 
     builder.Services.AddScoped<IdentityService>();
     builder.Services.AddScoped<WalletService>();
+    builder.Services.AddScoped<GatewayService>();
     builder.Services.AddDataProtection();
     builder.Services.AddScoped<IMovementCursorCodec, MovementCursorCodec>();
     builder.Services.AddScoped<MovementHistoryService>();
@@ -166,7 +167,9 @@ if (enabled)
                     }
                 }
             };
-        });
+        })
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+            ApiKeyAuthenticationHandler.SchemeName, null);
 
     builder.Services.AddAuthorization(o =>
     {
@@ -178,6 +181,11 @@ if (enabled)
         o.AddPolicy("Client", p =>
             p.RequireAuthenticatedUser()
              .RequireRole("Client"));
+
+        o.AddPolicy("ExternalClient", p =>
+            p.AddAuthenticationSchemes(ApiKeyAuthenticationHandler.SchemeName)
+             .RequireAuthenticatedUser()
+             .RequireRole("ExternalClient"));
     });
 }
 

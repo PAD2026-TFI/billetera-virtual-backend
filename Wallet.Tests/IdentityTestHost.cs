@@ -10,8 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Wallet.Application;
-using Wallet.Domain;
 using Wallet.Infrastructure;
+using Wallet.Domain;
 
 namespace Wallet.Tests;
 

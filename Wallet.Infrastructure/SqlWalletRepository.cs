@@ -11,7 +11,7 @@ public sealed class SqlWalletRepository(WalletDbContext db) : IWalletRepository
     {
         try
         {
-            var existing = await GetByUserIdAsync(candidate.UserId, ct);
+            var existing = await GetByUserIdAsync(candidate.OwnerId, ct);
             if (existing is not null) return new(existing, false);
 
             db.Wallets.Add(candidate);
@@ -24,7 +24,7 @@ public sealed class SqlWalletRepository(WalletDbContext db) : IWalletRepository
             {
                 // Otra solicitud pudo crearla entre el SELECT y el INSERT.
                 db.Entry(candidate).State = EntityState.Detached;
-                existing = await GetByUserIdAsync(candidate.UserId, ct);
+                existing = await GetByUserIdAsync(candidate.OwnerId, ct);
                 if (existing is null) throw new StorageUnavailableException(e);
                 return new(existing, false);
             }
@@ -43,7 +43,7 @@ public sealed class SqlWalletRepository(WalletDbContext db) : IWalletRepository
     {
         try
         {
-            return await db.Wallets.AsNoTracking().SingleOrDefaultAsync(w => w.UserId == userId, ct);
+            return await db.Wallets.AsNoTracking().SingleOrDefaultAsync(w => w.OwnerId == userId, ct);
         }
         catch (SqlException e)
         {

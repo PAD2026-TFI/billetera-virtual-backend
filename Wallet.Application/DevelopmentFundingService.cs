@@ -23,7 +23,7 @@ public sealed class DevelopmentFundingService(IDevelopmentFundingStore store)
 {
     public Task<DevelopmentFundingResult> FundAsync(DevelopmentFundingRequest request, CancellationToken ct)
     {
-        MoneyRules.ValidatePositive(request.Amount);
+        Money.Positive(request.Amount);
         if (request.WalletId == Guid.Empty || request.IdempotencyKey == Guid.Empty)
             throw new ArgumentException("Identificador inválido.");
         return store.FundAsync(request, Fingerprint(request), ct);

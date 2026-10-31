@@ -23,7 +23,7 @@ public sealed class WalletService(IWalletRepository wallets, ICurrentUser curren
     }
 
     private static WalletResponse Map(DomainWallet wallet) =>
-        new(wallet.Id, wallet.Balance, wallet.Currency, wallet.CreatedAt);
+        new(wallet.Id, wallet.Balance.Amount, wallet.Currency, wallet.CreatedAt);
 
     public async Task<CreateWalletResult> CreateAsync(CancellationToken ct)
     {

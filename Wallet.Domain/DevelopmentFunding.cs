@@ -1,82 +1,86 @@
 namespace Wallet.Domain;
 
-public static class MoneyRules
-{
-    public const decimal MaxBalance = 9999999999999999.99m;
-    public static void ValidatePositive(decimal amount)
-    {
-        if (amount <= 0 || amount > MaxBalance || decimal.Round(amount, 2) != amount)
-            throw new ArgumentException("Importe positivo de hasta dos decimales fuera de rango.", nameof(amount));
-    }
-}
-
 public sealed class DevelopmentFunding
 {
     public Guid Id { get; private set; }
     public Guid WalletId { get; private set; }
-    public decimal Amount { get; private set; }
-    public string Currency { get; private set; } = "ARS";
+    public Money Amount { get; private set; }
     public Guid IdempotencyKey { get; private set; }
     public string RequestHash { get; private set; } = "";
     public DateTimeOffset CreatedAt { get; private set; }
+
+    public string Currency { get; private set; } = Money.DefaultCurrency;
+
     private DevelopmentFunding() { }
 
-    public static DevelopmentFunding Create(Guid walletId, decimal amount, Guid key, string requestHash, DateTimeOffset now)
+    private DevelopmentFunding(
+        Guid id,
+        Guid walletId,
+        Money amount,
+        Guid idempotencyKey,
+        string requestHash,
+        DateTimeOffset createdAt)
     {
-        MoneyRules.ValidatePositive(amount);
-        if (walletId == Guid.Empty || key == Guid.Empty) throw new ArgumentException("Identificador inválido.");
-        if (requestHash.Length != 64 || !requestHash.All(Uri.IsHexDigit)) throw new ArgumentException("Huella inválida.");
-        return new() { Id = Guid.NewGuid(), WalletId = walletId, Amount = amount,
-            IdempotencyKey = key, RequestHash = requestHash, CreatedAt = now.ToUniversalTime() };
-    }
-}
+        if (walletId == Guid.Empty)
+            throw new ArgumentException("Wallet identifier cannot be empty.", nameof(walletId));
 
-public enum MovementType { Debit, Credit }
-public enum MovementSource { Transfer, Payment, DevelopmentFunding }
+        if (idempotencyKey == Guid.Empty)
+            throw new ArgumentException("Idempotency key cannot be empty.", nameof(idempotencyKey));
 
-public sealed class Movement
-{
-    public Guid Id { get; private set; }
-    public Guid WalletId { get; private set; }
-    public MovementType Type { get; private set; }
-    public decimal Amount { get; private set; }
-    public decimal BalanceAfter { get; private set; }
-    public MovementSource Source { get; private set; }
-    public Guid? TransferId { get; private set; }
-    public Guid? DevelopmentFundingId { get; private set; }
-    public DateTimeOffset CreatedAt { get; private set; }
-    private Movement() { }
+        if (amount.Amount <= 0)
+            throw new ArgumentException("Funding amount must be strictly greater than zero.", nameof(amount));
 
-    public static IReadOnlyList<Movement> ForCompletedTransfer(Transfer transfer, Wallet source, Wallet destination)
-    {
-        if (transfer.Status != TransferStatus.Completed || source.Id != transfer.SourceWalletId
-            || destination.Id != transfer.DestinationWalletId || source.Currency != transfer.Currency
-            || destination.Currency != transfer.Currency)
-            throw new ArgumentException("Las billeteras no corresponden a la transferencia completada.");
-        return Array.AsReadOnly(new[]
-        {
-            ForTransfer(transfer, true, source.Balance),
-            ForTransfer(transfer, false, destination.Balance)
-        });
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestHash);
+        var trimmed = requestHash.Trim();
+        if (trimmed.Length != 64 || !trimmed.All(Uri.IsHexDigit))
+            throw new ArgumentException("Request hash must be a 64-character SHA-256 hexadecimal string.", nameof(requestHash)); 
+
+        Id = id;
+        WalletId = walletId;
+        Amount = amount;
+        IdempotencyKey = idempotencyKey;
+        RequestHash = trimmed;
+        CreatedAt = createdAt.ToUniversalTime();
     }
 
-    public static Movement ForTransfer(Transfer transfer, bool debit, decimal balanceAfter)
+    public static DevelopmentFunding Create(
+        Guid walletId,
+        Money amount,
+        Guid idempotencyKey,
+        string requestHash,
+        DateTimeOffset now)
     {
-        if (balanceAfter < 0 || balanceAfter > MoneyRules.MaxBalance || decimal.Round(balanceAfter, 2) != balanceAfter
-            || !debit && balanceAfter < transfer.Amount)
-            throw new ArgumentException("Saldo posterior inválido.");
-        return new() { Id = Guid.NewGuid(), WalletId = debit ? transfer.SourceWalletId : transfer.DestinationWalletId,
-            Type = debit ? MovementType.Debit : MovementType.Credit, Amount = transfer.Amount,
-            BalanceAfter = balanceAfter, Source = MovementSource.Transfer, TransferId = transfer.Id,
-            CreatedAt = transfer.CreatedAt };
+        return new DevelopmentFunding(
+            Guid.NewGuid(),
+            walletId,
+            amount,
+            idempotencyKey,
+            requestHash,
+            now);
     }
 
-    public static Movement ForDevelopmentFunding(DevelopmentFunding funding, decimal balanceAfter)
+    public static DevelopmentFunding Create(
+        Guid walletId,
+        decimal amount,
+        Guid idempotencyKey,
+        string requestHash,
+        DateTimeOffset now)
     {
-        if (balanceAfter < funding.Amount || balanceAfter > MoneyRules.MaxBalance || decimal.Round(balanceAfter, 2) != balanceAfter)
-            throw new ArgumentException("Saldo posterior inválido.");
-        return new() { Id = Guid.NewGuid(), WalletId = funding.WalletId, Type = MovementType.Credit,
-            Amount = funding.Amount, BalanceAfter = balanceAfter, Source = MovementSource.DevelopmentFunding,
-            DevelopmentFundingId = funding.Id, CreatedAt = funding.CreatedAt };
+        return Create(
+            walletId,
+            Money.Positive(amount),
+            idempotencyKey,
+            requestHash,
+            now);
     }
+
+    public bool MatchesRequest(Guid walletId, Money amount, string requestHash)
+    {
+        return WalletId == walletId
+            && Amount == amount
+            && string.Equals(RequestHash, requestHash?.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public bool MatchesRequest(Guid walletId, decimal amount, string requestHash) =>
+        MatchesRequest(walletId, Money.From(amount, Currency), requestHash);
 }

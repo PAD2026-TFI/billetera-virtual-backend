@@ -43,7 +43,7 @@ public sealed class TransferTests
     public void Debit_cannot_make_balance_negative_and_fingerprint_is_canonical()
     {
         var wallet = DomainWallet.Create(Guid.NewGuid(), DateTimeOffset.UtcNow); wallet.Credit(10m);
-        Assert.Throws<ArgumentException>(() => wallet.Debit(10.01m));
+        Assert.Throws<InvalidOperationException>(() => wallet.Debit(10.01m));
         Assert.Equal(10m, wallet.Balance);
         var destination = Guid.NewGuid();
         Assert.Equal(TransferService.Fingerprint(destination, 1m), TransferService.Fingerprint(destination, 1.00m));

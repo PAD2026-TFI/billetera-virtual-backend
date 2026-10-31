@@ -20,9 +20,9 @@ public sealed class SqlDevelopmentFundingStore(DbContextOptions<WalletDbContext>
                 var wallet = await db.Wallets.FromSqlInterpolated(
                     $"SELECT * FROM [Wallets] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {request.WalletId}")
                     .SingleOrDefaultAsync(ct) ?? throw new FundingRejectedException("WALLET_NOT_FOUND");
-                var owner = await db.WalletOwners.FromSqlInterpolated(
-                    $"SELECT * FROM [WalletOwners] WITH (HOLDLOCK) WHERE [Id] = {wallet.OwnerId}").SingleAsync(ct);
-                if (!owner.IsActive) throw new FundingRejectedException("USER_INACTIVE");
+                var isActive = await db.Database.SqlQuery<bool>(
+                    $"SELECT [IsActive] AS [Value] FROM [WalletOwners] WITH (HOLDLOCK) WHERE [Id] = {wallet.OwnerId}").SingleAsync(ct);
+                if (!isActive) throw new FundingRejectedException("USER_INACTIVE");
 
                 var previous = await db.DevelopmentFundings.AsNoTracking()
                     .SingleOrDefaultAsync(f => f.IdempotencyKey == request.IdempotencyKey, ct);

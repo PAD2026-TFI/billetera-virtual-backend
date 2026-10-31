@@ -1,26 +1,31 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Wallet.Domain;
 
-namespace Wallet.Infrastructure.Configurations
+namespace Wallet.Infrastructure.Configurations;
+
+public class WalletConfiguration : IEntityTypeConfiguration<Domain.Wallet>
 {
-    public class WalletConfiguration : IEntityTypeConfiguration<Domain.Wallet>
+    public void Configure(EntityTypeBuilder<Domain.Wallet> builder) 
     {
-        public void Configure(EntityTypeBuilder<Domain.Wallet> builder) 
+        builder.ToTable("Wallets", table =>
         {
-            builder.ToTable("Wallets", table =>
-            {
-                table.HasCheckConstraint("CK_Wallets_Balance", "[Balance] >= 0");
-                table.HasCheckConstraint("CK_Wallets_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
-            });
-            builder.HasKey(wallet => wallet.Id);
-            builder.Property(wallet => wallet.Id).ValueGeneratedNever();
-            builder.Property(wallet => wallet.Balance).HasPrecision(18, 2);
-            builder.Property(wallet => wallet.Currency).HasColumnType("char(3)").HasMaxLength(3).IsRequired();
-            builder.Property(wallet => wallet.RowVersion).IsRowVersion();
-            builder.HasIndex(wallet => wallet.UserId).IsUnique();
-            builder.HasOne<User>().WithOne().HasForeignKey<global::Wallet.Domain.Wallet>(x => x.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-        }
+            table.HasCheckConstraint("CK_Wallets_Balance", "[Balance] >= 0");
+            table.HasCheckConstraint("CK_Wallets_Currency", "[Currency] COLLATE Latin1_General_100_BIN2 = 'ARS'");
+        });
+        builder.HasKey(wallet => wallet.Id);
+        builder.Property(wallet => wallet.Id).ValueGeneratedNever();
+        builder.Property(wallet => wallet.Balance)
+            .HasConversion(b => b.Amount, a => Money.From(a, Money.DefaultCurrency))
+            .HasPrecision(18, 2);
+        builder.Property<string>("Currency")
+            .HasColumnType("char(3)")
+            .HasMaxLength(3)
+            .HasDefaultValue(Money.DefaultCurrency);
+        builder.Property(wallet => wallet.RowVersion).IsRowVersion();
+        builder.Property(wallet => wallet.OwnerId).HasColumnName("UserId");
+        builder.HasIndex(wallet => wallet.OwnerId).IsUnique();
+        builder.HasOne<User>().WithOne().HasForeignKey<Domain.Wallet>(x => x.OwnerId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

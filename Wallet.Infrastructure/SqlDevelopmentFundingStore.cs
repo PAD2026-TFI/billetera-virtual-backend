@@ -21,7 +21,7 @@ public sealed class SqlDevelopmentFundingStore(DbContextOptions<WalletDbContext>
                     $"SELECT * FROM [Wallets] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {request.WalletId}")
                     .SingleOrDefaultAsync(ct) ?? throw new FundingRejectedException("WALLET_NOT_FOUND");
                 var owner = await db.Users.FromSqlInterpolated(
-                    $"SELECT * FROM [Users] WITH (HOLDLOCK) WHERE [Id] = {wallet.UserId}").SingleAsync(ct);
+                    $"SELECT * FROM [Users] WITH (HOLDLOCK) WHERE [Id] = {wallet.OwnerId}").SingleAsync(ct);
                 if (!owner.IsActive) throw new FundingRejectedException("USER_INACTIVE");
 
                 var previous = await db.DevelopmentFundings.AsNoTracking()
@@ -29,10 +29,10 @@ public sealed class SqlDevelopmentFundingStore(DbContextOptions<WalletDbContext>
                 if (previous is not null)
                 {
                     if (previous.RequestHash != hash || previous.WalletId != request.WalletId
-                        || previous.Amount != request.Amount || previous.Currency != "ARS") throw new FundingRejectedException("IDEMPOTENCY_CONFLICT");
+                        || previous.Amount.Amount != request.Amount || previous.Currency != "ARS") throw new FundingRejectedException("IDEMPOTENCY_CONFLICT");
                     var movement = await db.Movements.AsNoTracking().SingleAsync(m => m.DevelopmentFundingId == previous.Id, ct);
                     await transaction.CommitAsync(ct);
-                    return Result(previous, movement.BalanceAfter, false);
+                    return Result(previous, movement.BalanceAfter.Amount, false);
                 }
 
                 wallet.Credit(request.Amount);
@@ -41,7 +41,7 @@ public sealed class SqlDevelopmentFundingStore(DbContextOptions<WalletDbContext>
                 db.Movements.Add(Movement.ForDevelopmentFunding(funding, wallet.Balance));
                 await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
-                return Result(funding, wallet.Balance, true);
+                return Result(funding, wallet.Balance.Amount, true);
                 // DisposeAsync revierte cualquier transacción que no llegó a confirmar.
             }
             catch (DbUpdateConcurrencyException) when (attempt < 2) { }
@@ -54,5 +54,5 @@ public sealed class SqlDevelopmentFundingStore(DbContextOptions<WalletDbContext>
     }
 
     private static DevelopmentFundingResult Result(DevelopmentFunding funding, decimal balance, bool created) =>
-        new(funding.Id, funding.WalletId, funding.Amount, funding.Currency, funding.CreatedAt, balance, created);
+        new(funding.Id, funding.WalletId, funding.Amount.Amount, funding.Currency, funding.CreatedAt, balance, created);
 }

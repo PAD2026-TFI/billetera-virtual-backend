@@ -29,9 +29,17 @@ public sealed class MovementHistoryService(IWalletRepository wallets, IMovementH
         if (cursor is not null && before is null)
             return Result<MovementPage>.Failure("INVALID_INPUT", "Cursor inválido para esta billetera.");
         var rows = await history.ReadAsync(wallet.Id, limit + 1, before, ct);
-        var items = rows.Take(limit).Select(m => new MovementResponse(m.Id, m.Type.ToString(), m.Amount,
-            wallet.Currency, m.BalanceAfter, m.Source.ToString(),
-            m.TransferId ?? m.DevelopmentFundingId ?? throw new InvalidOperationException("Movimiento sin referencia."), m.CreatedAt)).ToArray();
+        var items = rows.Take(limit).Select(m => new MovementResponse(
+          m.Id,
+          m.Type.ToString(),
+          m.Amount.Amount,
+          m.Amount.Currency,
+          m.BalanceAfter.Amount,
+          m.Source.ToString(),
+          m.TransferId ?? m.DevelopmentFundingId
+         ?? throw new InvalidOperationException("Movimiento sin referencia."),
+     m.CreatedAt
+ )).ToArray();
         var next = rows.Count > limit
             ? cursors.Encode(wallet.Id, new(items[^1].CreatedAt, items[^1].Id)) : null;
         return Result<MovementPage>.Success(new(items, next));

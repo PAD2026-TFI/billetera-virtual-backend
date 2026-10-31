@@ -11,12 +11,16 @@ public sealed class TransferRequest
     [Required] public Guid? DestinationWalletId { get; init; }
     [Required] public decimal? Amount { get; init; }
 }
-public sealed record TransferCommand(Guid SourceUserId, Guid DestinationWalletId, decimal Amount, Guid IdempotencyKey);
+public sealed record TransferCommand(Guid SourceUserId, Guid DestinationWalletId, Money Amount, Guid IdempotencyKey)
+{
+    public TransferCommand(Guid sourceUserId, Guid destinationWalletId, decimal amount, Guid idempotencyKey)
+        : this(sourceUserId, destinationWalletId, Money.Positive(amount), idempotencyKey) { }
+}
 public sealed record TransferResponse(Guid Id, Guid SourceWalletId, Guid DestinationWalletId,
     decimal Amount, string Currency, string Status, DateTimeOffset CreatedAt)
 {
     public static TransferResponse From(Transfer t) =>
-        new(t.Id, t.SourceWalletId, t.DestinationWalletId, t.Amount, t.Currency, t.Status.ToString(), t.CreatedAt);
+        new(t.Id, t.SourceWalletId, t.DestinationWalletId, t.Amount.Amount, t.Amount.Currency, t.Status.ToString(), t.CreatedAt);
 }
 public sealed record TransferExecution(TransferResponse Transfer, bool Created);
 public sealed class TransferRejectedException(string code) : Exception(code)
@@ -34,9 +38,12 @@ public sealed class TransferService(ITransferStore store, ICurrentUser currentUs
         if (request.DestinationWalletId is not Guid destination || destination == Guid.Empty || request.Amount is not decimal amount
             || !Guid.TryParse(key, out var parsedKey) || parsedKey == Guid.Empty)
             throw new TransferRejectedException("INVALID_INPUT");
-        try { Transfer.ValidateAmount(amount); }
-        catch (ArgumentException) { throw new TransferRejectedException("INVALID_AMOUNT"); }
-        var command = new TransferCommand(currentUser.Id, destination, amount, parsedKey);
+        Money monetaryAmount;
+        try { 
+            monetaryAmount = Money.Positive(amount);
+            Transfer.ValidateAmount(monetaryAmount);
+        } catch (ArgumentException) { throw new TransferRejectedException("INVALID_AMOUNT"); }
+        var command = new TransferCommand(currentUser.Id, destination, monetaryAmount, parsedKey);
         return store.ExecuteAsync(command, Fingerprint(destination, amount), ct);
     }
     public static string Fingerprint(Guid destination, decimal amount) =>

@@ -7,9 +7,12 @@ public sealed class WalletDbContextFactory : IDesignTimeDbContextFactory<WalletD
 {
     public WalletDbContext CreateDbContext(string[] args)
     {
+        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("WALLET_TEST_CONNECTION")
+            ?? "Server=localhost,1433;Database=WalletDb;User Id=sa;Password=Your_Strong_Password123!;TrustServerCertificate=True;";
+
         var optionsBuilder = new DbContextOptionsBuilder<WalletDbContext>();
-        // Cadena ficticia para diseño y generación de migraciones
-        optionsBuilder.UseSqlServer("Server=localhost;Database=WalletDev;User Id=sa;Password=DesignPassword123!;TrustServerCertificate=True");
+        optionsBuilder.UseSqlServer(connectionString);
         return new WalletDbContext(optionsBuilder.Options);
     }
 }

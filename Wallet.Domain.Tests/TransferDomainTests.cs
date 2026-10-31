@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Wallet.Domain;
 using Xunit;
 using DomainWallet = Wallet.Domain.Wallet;
@@ -209,7 +209,7 @@ public sealed class TransferDomainTests
             ValidHash,
             DateTimeOffset.UtcNow);
 
-        Assert.Throws<OverflowException>(() => transfer.ApplyTo(sourceWallet, destinationWallet));
+        Assert.Throws<InvalidOperationException>(() => transfer.ApplyTo(sourceWallet, destinationWallet));
 
         // El balance de la billetera origen no debería sufrir un débito
         Assert.Equal(1000m, sourceWallet.Balance.Amount);

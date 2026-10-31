@@ -1,4 +1,4 @@
-﻿
+
 using Wallet.Domain;
 using Xunit;
 
@@ -93,7 +93,7 @@ public sealed class WalletDomainTests
         var wallet = Wallet.Domain.Wallet.Create(Guid.NewGuid(), DateTimeOffset.UtcNow);
         wallet.Credit(Money.MaxAllowedAmount);
 
-        Assert.Throws<OverflowException>(() => wallet.Credit(0.01m));
+        Assert.Throws<ArgumentException>(() => wallet.Credit(0.01m));
         Assert.Equal(Money.MaxAllowedAmount, wallet.Balance.Amount);
     }
 

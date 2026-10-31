@@ -74,10 +74,15 @@ public sealed class GatewayController(
     [ProducesResponseType<ProblemDetails>(422)]
     public async Task<ActionResult<TransferResponse>> ProcessPayment(
         TransferRequest request,
-        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         [FromHeader(Name = "X-Api-Key")] string? apiKey,
         CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            idempotencyKey = Guid.NewGuid().ToString("D");
+        }
+
         try
         {
             var result = await transfers.ExecuteAsync(request, idempotencyKey, ct);

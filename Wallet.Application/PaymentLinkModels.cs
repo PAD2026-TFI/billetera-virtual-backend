@@ -62,6 +62,8 @@ public sealed record CheckoutPublicDetailsDto(
 
 public sealed class ProcessCheckoutRequest
 {
+    public string? Token { get; init; }
+
     [Required]
     public CheckoutPaymentMethod PaymentMethod { get; init; } = CheckoutPaymentMethod.Card;
 

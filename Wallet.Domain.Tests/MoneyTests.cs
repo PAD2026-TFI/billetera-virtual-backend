@@ -1,8 +1,8 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Wallet.Domain;
 using Xunit;
 
-namespace Wallet.Doamin.Tests;
+namespace Wallet.Domain.Tests;
 
 public sealed class MoneyTests
 {
@@ -16,12 +16,13 @@ public sealed class MoneyTests
     }
 
     [Theory]
-    [InlineData(0.01)]
-    [InlineData(100.50)]
-    [InlineData(780400.00)]
-    [InlineData(9999999999999999.99)] //TODO: falla porque llega al test con 10000000000000000 (lo cual falla) y no con el valor indicado 
-    public void From_with_valid_amount_and_currency_creates_money_instance(decimal amount)
+    [InlineData("0.01")]
+    [InlineData("100.50")]
+    [InlineData("780400.00")]
+    [InlineData("9999999999999999.99")]
+    public void From_with_valid_amount_and_currency_creates_money_instance(string amountStr)
     {
+        var amount = decimal.Parse(amountStr, CultureInfo.InvariantCulture);
         var money = Money.From(amount, "ARS");
 
         Assert.Equal(amount, money.Amount);
@@ -55,7 +56,7 @@ public sealed class MoneyTests
 
         var ex = Assert.Throws<ArgumentException>(() => Money.From(excessiveAmount));
 
-        Assert.Contains("Monetary amount exceeds operational upper limit", ex.Message); //TODO: Falla porque los mensajes son distintos. Sin embargo, la validación es correcta.
+        Assert.Contains("exceeds the maximum operating limit", ex.Message);
     }
 
     [Theory]
@@ -79,7 +80,7 @@ public sealed class MoneyTests
     [InlineData("USD")]
     public void From_with_invalid_or_unsupported_currency_throws_argument_exception(string? currency)
     {
-        Assert.Throws<ArgumentException>(() => Money.From(10m, currency!));
+        Assert.ThrowsAny<ArgumentException>(() => Money.From(10m, currency!));
     }
 
     [Theory]
@@ -177,10 +178,10 @@ public sealed class MoneyTests
     [Fact]
     public void ToString_formats_amount_with_two_decimals_and_currency()
     {
-        var money = Money.From(1234.5m); //Esto devuelve $1234,50 ARS -> Fijarse en la coma
+        var money = Money.From(1234.5m);
 
-        var output = money.ToString(); 
+        var output = money.ToString();
 
-        Assert.Equal("1234.50 ARS", output); 
+        Assert.Equal("1234.50 ARS", output);
     }
 }

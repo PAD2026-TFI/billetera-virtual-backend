@@ -214,6 +214,7 @@ else
     app.UseHsts();
 }
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 app.UseStatusCodePages(async context =>
 {

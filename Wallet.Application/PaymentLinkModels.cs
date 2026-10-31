@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Wallet.Domain;
 
 namespace Wallet.Application;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum CheckoutPaymentMethod
 {
     Wallet,
@@ -12,25 +14,42 @@ public enum CheckoutPaymentMethod
 public sealed class CreatePaymentLinkRequest
 {
     [Required]
-    [Range(0.01, 9999999999999999.99)]
     public decimal Amount { get; init; }
 
+    public string? Currency { get; init; } = "ARS";
+
     [Required]
-    [StringLength(128, MinimumLength = 1)]
     public string Title { get; init; } = string.Empty;
 
-    [StringLength(512)]
     public string? Description { get; init; }
 
     public PaymentLinkType Type { get; init; } = PaymentLinkType.SingleUse;
 
-    [Range(1, 43200)] // Hasta 30 días
     public int? TtlMinutes { get; init; }
 
     public Guid? DestinationWalletId { get; init; }
 
-    [EmailAddress]
     public string? MerchantEmail { get; init; }
+
+    public CreatePaymentLinkRequest() { }
+
+    public CreatePaymentLinkRequest(
+        decimal amount,
+        string title,
+        string? description = null,
+        PaymentLinkType type = PaymentLinkType.SingleUse,
+        int? ttlMinutes = null,
+        Guid? destinationWalletId = null,
+        string? merchantEmail = null)
+    {
+        Amount = amount;
+        Title = title;
+        Description = description;
+        Type = type;
+        TtlMinutes = ttlMinutes;
+        DestinationWalletId = destinationWalletId;
+        MerchantEmail = merchantEmail;
+    }
 }
 
 public sealed record PaymentLinkDto(
@@ -62,14 +81,27 @@ public sealed record CheckoutPublicDetailsDto(
 
 public sealed class ProcessCheckoutRequest
 {
-    public string? Token { get; init; }
-
-    [Required]
     public CheckoutPaymentMethod PaymentMethod { get; init; } = CheckoutPaymentMethod.Card;
+
+    public string? Token { get; init; }
 
     public CardPaymentDetails? Card { get; init; }
 
     public Guid? PayerWalletId { get; init; }
+
+    public ProcessCheckoutRequest() { }
+
+    public ProcessCheckoutRequest(
+        CheckoutPaymentMethod paymentMethod,
+        string? token = null,
+        CardPaymentDetails? card = null,
+        Guid? payerWalletId = null)
+    {
+        PaymentMethod = paymentMethod;
+        Token = token;
+        Card = card;
+        PayerWalletId = payerWalletId;
+    }
 }
 
 public sealed record CheckoutReceiptDto(

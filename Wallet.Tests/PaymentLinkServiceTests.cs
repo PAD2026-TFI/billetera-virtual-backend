@@ -36,14 +36,12 @@ public sealed class PaymentLinkServiceTests
     {
         _currentUser.Id = Guid.NewGuid();
 
-        var request = new CreatePaymentLinkRequest
-        {
-            Amount = 1250.75m,
-            Title = "Servicio de Consultoría",
-            Description = "Hora de asesoría técnica",
-            Type = PaymentLinkType.SingleUse,
-            TtlMinutes = 60
-        };
+        var request = new CreatePaymentLinkRequest(
+            1250.75m,
+            "Servicio de Consultoría",
+            "Hora de asesoría técnica",
+            PaymentLinkType.SingleUse,
+            60);
 
         var result = await _service.CreateLinkAsync(request, CancellationToken.None);
 
@@ -65,13 +63,14 @@ public sealed class PaymentLinkServiceTests
     {
         _currentUser.Id = Guid.Empty;
 
-        var request = new CreatePaymentLinkRequest
-        {
-            Amount = 500m,
-            Title = "Venta informal",
-            MerchantEmail = "vendedor@externo.com",
-            Type = PaymentLinkType.SingleUse
-        };
+        var request = new CreatePaymentLinkRequest(
+            500m,
+            "Venta informal",
+            null,
+            PaymentLinkType.SingleUse,
+            null,
+            null,
+            "vendedor@externo.com");
 
         var result = await _service.CreateLinkAsync(request, CancellationToken.None);
 
@@ -96,11 +95,10 @@ public sealed class PaymentLinkServiceTests
             _clock.GetUtcNow());
         await _links.CreateAsync(link, CancellationToken.None);
 
-        var checkoutReq = new ProcessCheckoutRequest
-        {
-            PaymentMethod = CheckoutPaymentMethod.Card,
-            Card = new CardPaymentDetails("4532015112830366", "Juan Perez", 12, 2030, "123")
-        };
+        var checkoutReq = new ProcessCheckoutRequest(
+            CheckoutPaymentMethod.Card,
+            null,
+            new CardPaymentDetails("4532015112830366", "Juan Perez", 12, 2030, "123"));
 
         var receipt = await _service.ProcessCheckoutAsync(link.Token, checkoutReq, Guid.NewGuid().ToString(), CancellationToken.None);
 

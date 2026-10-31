@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout Seguro — Pasarela de Pago</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #ca8a04;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 14px;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        .checkout-container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .checkout-header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: #ffffff;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+        }
+
+        .checkout-header .brand {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .checkout-header .title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .checkout-header .description {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin-bottom: 16px;
+        }
+
+        .checkout-header .amount-box {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 12px 20px;
+            display: inline-block;
+        }
+
+        .checkout-header .amount-val {
+            font-size: 26px;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .checkout-header .amount-cur {
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-left: 4px;
+        }
+
+        .checkout-body {
+            padding: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            background: #ffffff;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .card-presets {
+            background: #f8fafc;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 18px;
+        }
+
+        .card-presets .presets-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-preset {
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-preset:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-pay {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-pay:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-pay:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .qr-section {
+            text-align: center;
+            padding: 16px 0 8px;
+        }
+
+        .qr-wrapper {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: inline-block;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .qr-wrapper svg {
+            width: 180px;
+            height: 180px;
+            display: block;
+        }
+
+        .qr-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            color: var(--success);
+            border: 1px solid #bbf7d0;
+        }
+
+        .receipt-card {
+            display: none;
+            text-align: center;
+            padding: 32px 24px;
+        }
+
+        .receipt-icon {
+            width: 56px;
+            height: 56px;
+            background: #dcfce7;
+            color: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 26px;
+        }
+
+        .receipt-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .receipt-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .receipt-details {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: left;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .receipt-row:last-child {
+            margin-bottom: 0;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border);
+            font-weight: 700;
+        }
+
+        .receipt-label {
+            color: var(--text-muted);
+        }
+
+        .token-prompt {
+            padding: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="checkout-container">
+        <!-- Header con detalles del pago -->
+        <div class="checkout-header" id="checkoutHeader">
+            <div class="brand">Pasarela de Pago Segura</div>
+            <div class="title" id="checkoutTitle">Cargando cobro...</div>
+            <div class="description" id="checkoutDesc">Verificando link de pago...</div>
+            <div class="amount-box">
+                <span class="amount-val" id="checkoutAmount">0.00</span>
+                <span class="amount-cur" id="checkoutCurrency">ARS</span>
+            </div>
+        </div>
+
+        <!-- Alertas de error o estado -->
+        <div style="padding: 16px 24px 0;">
+            <div class="alert alert-danger" id="errorAlert"></div>
+            <div class="alert alert-success" id="successAlert"></div>
+        </div>
+
+        <!-- Pantalla para ingresar token si no viene en URL -->
+        <div class="token-prompt" id="tokenPrompt" style="display: none;">
+            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">
+                Ingresá el token del link de pago para continuar:
+            </p>
+            <div class="form-group">
+                <input type="text" id="manualToken" class="form-control" placeholder="Ej: 9f8a3c... (token de 32 caracteres)">
+            </div>
+            <button class="btn-pay" onclick="loadManualToken()">Cargar Cobro</button>
+        </div>
+
+        <!-- Formulario de Checkout -->
+        <div class="checkout-body" id="checkoutBody" style="display: none;">
+            <div class="tabs">
+                <button type="button" class="tab-btn active" onclick="switchTab('card')">💳 Tarjeta (Simulador)</button>
+                <button type="button" class="tab-btn" onclick="switchTab('wallet')">🏦 Billetera Virtual</button>
+                <button type="button" class="tab-btn" onclick="switchTab('qr')">📱 Código QR</button>
+            </div>
+
+            <!-- TAB 1: Tarjeta simulada -->
+            <div class="tab-content active" id="tab-card">
+                <div class="card-presets">
+                    <div class="presets-title">⚡ Pruebas rápidas (Presets financieros):</div>
+                    <div class="preset-buttons">
+                        <button type="button" class="btn-preset" onclick="fillCard('ok')">✅ Aprobada</button>
+                        <button type="button" class="btn-preset" onclick="fillCard('insufficient')">⚠️ Sin Fondos</button>
+                        <button type="button" class="btn-preset" onclick="fillCard('blocked')">🚫 Bloqueada</button>
+                    </div>
+                </div>
+
+                <form id="cardForm" onsubmit="handleCardPay(event)">
+                    <div class="form-group">
+                        <label for="cardNumber">Número de Tarjeta</label>
+                        <input type="text" id="cardNumber" class="form-control" placeholder="4532 0151 1283 0366" maxlength="19" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cardHolder">Titular de la Tarjeta</label>
+                        <input type="text" id="cardHolder" class="form-control" placeholder="Juan Pérez" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expMonth">Mes Venc.</label>
+                            <input type="number" id="expMonth" class="form-control" placeholder="MM" min="1" max="12" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expYear">Año Venc.</label>
+                            <input type="number" id="expYear" class="form-control" placeholder="AAAA" min="2026" max="2040" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardCvv">CVV</label>
+                            <input type="password" id="cardCvv" class="form-control" placeholder="123" maxlength="4" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-pay" id="btnPayCard">Pagar con Tarjeta</button>
+                </form>
+            </div>
+
+            <!-- TAB 2: Billetera Virtual -->
+            <div class="tab-content" id="tab-wallet">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                    Podés abonar debitando el importe directamente de una Billetera Virtual registrada en la plataforma.
+                </p>
+                <form id="walletForm" onsubmit="handleWalletPay(event)">
+                    <div class="form-group">
+                        <label for="payerWalletId">ID de Billetera Pagadora</label>
+                        <input type="text" id="payerWalletId" class="form-control" placeholder="UUID de tu billetera (origen)" required>
+                    </div>
+                    <button type="submit" class="btn-pay" id="btnPayWallet">Pagar desde Billetera</button>
+                </form>
+            </div>
+
+            <!-- TAB 3: Código QR -->
+            <div class="tab-content" id="tab-qr">
+                <div class="qr-section">
+                    <div class="qr-wrapper" id="qrContainer">
+                        <p style="font-size: 13px; color: var(--text-muted);">Generando QR...</p>
+                    </div>
+                    <p class="qr-hint">Escaneá este código QR desde tu celular para abrir este checkout o compartirlo.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Recibo Exitoso -->
+        <div class="receipt-card" id="receiptCard">
+            <div class="receipt-icon">✓</div>
+            <h3>¡Pago Aprobado!</h3>
+            <p>La operación fue procesada exitosamente en el ledger financiero.</p>
+            <div class="receipt-details">
+                <div class="receipt-row">
+                    <span class="receipt-label">Concepto</span>
+                    <span id="recTitle">-</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Medio de Pago</span>
+                    <span id="recMethod">-</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Cód. Autorización</span>
+                    <span id="recAuthCode">-</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">ID de Transacción</span>
+                    <span id="recId" style="font-family: monospace; font-size: 11px;">-</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Total Abonado</span>
+                    <span id="recTotal">-</span>
+                </div>
+            </div>
+            <button class="btn-pay" onclick="location.reload()">Realizar otro pago</button>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = null;
+        let linkData = null;
+
+        function getQueryParam(param) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(param);
+        }
+
+        async function init() {
+            currentToken = getQueryParam("token");
+            if (!currentToken) {
+                document.getElementById("checkoutTitle").textContent = "Ingreso a Checkout";
+                document.getElementById("checkoutDesc").textContent = "Especificá el link para pagar";
+                document.getElementById("tokenPrompt").style.display = "block";
+                return;
+            }
+            await loadLinkDetails(currentToken);
+        }
+
+        async function loadManualToken() {
+            const token = document.getElementById("manualToken").value.trim();
+            if (token) {
+                window.location.search = `?token=${encodeURIComponent(token)}`;
+            }
+        }
+
+        async function loadLinkDetails(token) {
+            try {
+                const res = await fetch(`/api/v1/checkout/links/${token}`);
+                if (!res.ok) {
+                    showError("El link de pago no existe o ha expirado.");
+                    document.getElementById("checkoutTitle").textContent = "Link Inválido";
+                    document.getElementById("checkoutDesc").textContent = "No pudimos cargar los datos de este cobro.";
+                    return;
+                }
+
+                linkData = await res.json();
+                document.getElementById("checkoutTitle").textContent = linkData.title;
+                document.getElementById("checkoutDesc").textContent = linkData.description || "Cobro a través de Pasarela WaaS";
+                document.getElementById("checkoutAmount").textContent = linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 });
+                document.getElementById("checkoutCurrency").textContent = linkData.currency;
+                document.getElementById("btnPayCard").textContent = `Pagar $ ${linkData.amount.toFixed(2)} ${linkData.currency}`;
+
+                if (!linkData.isPayable) {
+                    showError(`Este link de pago no se encuentra disponible (Estado: ${linkData.status}).`);
+                    return;
+                }
+
+                document.getElementById("checkoutBody").style.display = "block";
+                loadQr(token);
+            } catch (err) {
+                showError("Error al conectar con la pasarela.");
+            }
+        }
+
+        async function loadQr(token) {
+            try {
+                const res = await fetch(`/api/v1/checkout/links/${token}/qr`);
+                if (res.ok) {
+                    const svgText = await res.text();
+                    document.getElementById("qrContainer").innerHTML = svgText;
+                }
+            } catch (e) {
+                document.getElementById("qrContainer").innerHTML = "<p>QR no disponible</p>";
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            if (tab === 'card') {
+                document.querySelectorAll(".tab-btn")[0].classList.add("active");
+                document.getElementById("tab-card").classList.add("active");
+            } else if (tab === 'wallet') {
+                document.querySelectorAll(".tab-btn")[1].classList.add("active");
+                document.getElementById("tab-wallet").classList.add("active");
+            } else if (tab === 'qr') {
+                document.querySelectorAll(".tab-btn")[2].classList.add("active");
+                document.getElementById("tab-qr").classList.add("active");
+            }
+        }
+
+        function fillCard(type) {
+            if (type === 'ok') {
+                document.getElementById("cardNumber").value = "4532015112830366";
+                document.getElementById("cardHolder").value = "Juan Pérez";
+                document.getElementById("expMonth").value = "12";
+                document.getElementById("expYear").value = "2028";
+                document.getElementById("cardCvv").value = "123";
+            } else if (type === 'insufficient') {
+                document.getElementById("cardNumber").value = "4532015112830366";
+                document.getElementById("cardHolder").value = "Carlos Sin Fondos";
+                document.getElementById("expMonth").value = "10";
+                document.getElementById("expYear").value = "2029";
+                document.getElementById("cardCvv").value = "999";
+            } else if (type === 'blocked') {
+                document.getElementById("cardNumber").value = "5555555555559999";
+                document.getElementById("cardHolder").value = "Ana Bloqueada";
+                document.getElementById("expMonth").value = "11";
+                document.getElementById("expYear").value = "2030";
+                document.getElementById("cardCvv").value = "456";
+            }
+        }
+
+        async function handleCardPay(e) {
+            e.preventDefault();
+            hideAlerts();
+            const btn = document.getElementById("btnPayCard");
+            btn.disabled = true;
+            btn.textContent = "Procesando pago con tarjeta...";
+
+            const payload = {
+                token: currentToken,
+                paymentMethod: 1, // Card
+                card: {
+                    cardNumber: document.getElementById("cardNumber").value.replace(/\s+/g, ""),
+                    cardHolderName: document.getElementById("cardHolder").value,
+                    expirationMonth: parseInt(document.getElementById("expMonth").value),
+                    expirationYear: parseInt(document.getElementById("expYear").value),
+                    cvv: document.getElementById("cardCvv").value
+                }
+            };
+
+            await executePayment(payload, btn, "Pagar con Tarjeta");
+        }
+
+        async function handleWalletPay(e) {
+            e.preventDefault();
+            hideAlerts();
+            const btn = document.getElementById("btnPayWallet");
+            btn.disabled = true;
+            btn.textContent = "Transfiriendo fondos...";
+
+            const payload = {
+                token: currentToken,
+                paymentMethod: 0, // Wallet
+                payerWalletId: document.getElementById("payerWalletId").value.trim()
+            };
+
+            await executePayment(payload, btn, "Pagar desde Billetera");
+        }
+
+        async function executePayment(payload, btn, defaultText) {
+            try {
+                const res = await fetch("/api/v1/checkout/pay", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Idempotency-Key": crypto.randomUUID()
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    showError(data.detail || data.title || "No se pudo procesar el cobro.");
+                    btn.disabled = false;
+                    btn.textContent = defaultText;
+                    return;
+                }
+
+                showReceipt(data);
+            } catch (err) {
+                showError("Ocurrió un error inesperado de red al contactar al servidor.");
+                btn.disabled = false;
+                btn.textContent = defaultText;
+            }
+        }
+
+        function showReceipt(data) {
+            document.getElementById("checkoutHeader").style.display = "none";
+            document.getElementById("checkoutBody").style.display = "none";
+            document.getElementById("receiptCard").style.display = "block";
+
+            document.getElementById("recTitle").textContent = linkData.title;
+            document.getElementById("recMethod").textContent = data.paymentMethod === 'Card' ? "Tarjeta Simulada" : "Billetera Virtual";
+            document.getElementById("recAuthCode").textContent = data.authorizationCode || "APROBADO";
+            document.getElementById("recId").textContent = data.paymentId;
+            document.getElementById("recTotal").textContent = `$ ${data.amount.toFixed(2)} ${data.currency}`;
+        }
+
+        function showError(msg) {
+            const el = document.getElementById("errorAlert");
+            el.textContent = msg;
+            el.style.display = "block";
+        }
+
+        function hideAlerts() {
+            document.getElementById("errorAlert").style.display = "none";
+            document.getElementById("successAlert").style.display = "none";
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

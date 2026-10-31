@@ -46,6 +46,16 @@ El proyecto está organizado en capas desacopladas orientadas al dominio:
   - Ejecución de pagos y transferencias hacia otras billeteras (`/payments`) con garantía de reintento seguro (`Idempotency-Key` y cabecera de respuesta `Idempotency-Replayed`).
   - Auditoría contable de movimientos (`/movements`) para conciliación en tiempo real.
 
+### C. Módulo Omnicanal — Links de Pago, Códigos QR y Checkout Web Híbrido
+- **Generación de Cobros (`/api/v1/checkout/links`)**:
+  - Permite a usuarios registrados o vendedores invitados (no registrados) generar links de cobro instantáneos y códigos QR (SVG vectorial).
+  - Soporta links de un solo uso (`SingleUse`) o recurrentes (`MultiUse`), con tiempo de expiración configurable (`ttlMinutes`).
+- **Interfaz Web de Checkout (`/checkout/index.html?token=...`)**:
+  - Pantalla responsiva alojada en los archivos estáticos de la API para visualización y liquidación del cobro.
+- **Múltiples Métodos de Liquidación (`/api/v1/checkout/pay`)**:
+  - **Saldo en Billetera Virtual (B2C)**: Débito directo de fondos con validación de saldo.
+  - **Tarjetas Artificiales (Simulador Financiero)**: Motor de simulación con validación de algoritmo de Luhn, fecha de expiración y códigos de prueba predefinidos (aprobado, fondos insuficientes, tarjeta bloqueada, sospecha de fraude). Acreditación y ledger contable atómico en la billetera receptora.
+
 ---
 
 ## 3. Reglas de Negocio e Invariantes Financieras
@@ -78,6 +88,15 @@ El proyecto está organizado en capas desacopladas orientadas al dominio:
 | `POST` | `/api/v1/gateway/wallet` | `X-Api-Key` | Creación de billetera si el cliente aún no posee una. |
 | `POST` | `/api/v1/gateway/payments` | `X-Api-Key`, `Idempotency-Key` | Ejecución de pagos/transferencias entre billeteras. |
 | `GET` | `/api/v1/gateway/movements` | `X-Api-Key` | Historial paginado del libro mayor (Ledger). |
+
+### Checkout Omnicanal & QR (Público / Híbrido)
+| Método | Endpoint | Cabeceras | Descripción |
+|---|---|---|---|
+| `POST` | `/api/v1/checkout/links` | Opcional `Bearer` | Creación de link de pago (usuarios registrados o comercio invitado). |
+| `GET` | `/api/v1/checkout/links/{token}` | Público | Obtención pública de datos del link para el checkout. |
+| `GET` | `/api/v1/checkout/links/{token}/qr` | Público | Renderizado del código QR en formato vectorial SVG. |
+| `POST` | `/api/v1/checkout/pay` | `Idempotency-Key` | Liquidación del cobro vía Tarjeta Artificial o Billetera Virtual. |
+| `GET` | `/checkout/index.html?token={token}` | Público | Interfaz Web de Checkout interactiva lista para clientes. |
 
 ---
 

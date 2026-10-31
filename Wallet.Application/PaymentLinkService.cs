@@ -27,11 +27,12 @@ public sealed class PaymentLinkService(
         Guid destinationWalletId;
         Guid? merchantOwnerId = null;
 
-        if (currentUser.Id != Guid.Empty)
+        var currentUserId = TryGetCurrentUserId();
+        if (currentUserId.HasValue)
         {
-            merchantOwnerId = currentUser.Id;
-            var userWallet = await wallets.GetByUserIdAsync(currentUser.Id, ct)
-                ?? (await wallets.CreateOrGetAsync(DomainWallet.Create(currentUser.Id, now), ct)).Wallet;
+            merchantOwnerId = currentUserId.Value;
+            var userWallet = await wallets.GetByUserIdAsync(currentUserId.Value, ct)
+                ?? (await wallets.CreateOrGetAsync(DomainWallet.Create(currentUserId.Value, now), ct)).Wallet;
             destinationWalletId = userWallet.Id;
         }
         else if (request.DestinationWalletId.HasValue && request.DestinationWalletId.Value != Guid.Empty)
@@ -153,9 +154,10 @@ public sealed class PaymentLinkService(
         else // CheckoutPaymentMethod.Wallet
         {
             Guid payerUserId;
-            if (currentUser.Id != Guid.Empty)
+            var currentUserId = TryGetCurrentUserId();
+            if (currentUserId.HasValue)
             {
-                payerUserId = currentUser.Id;
+                payerUserId = currentUserId.Value;
             }
             else if (request.PayerWalletId.HasValue && request.PayerWalletId.Value != Guid.Empty)
             {
@@ -205,6 +207,19 @@ public sealed class PaymentLinkService(
             link.ExpiresAt,
             checkoutUrl,
             checkoutUrl);
+    }
+
+    private Guid? TryGetCurrentUserId()
+    {
+        try
+        {
+            var id = currentUser.Id;
+            return id != Guid.Empty ? id : null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static string FingerprintFunding(DevelopmentFundingRequest req)

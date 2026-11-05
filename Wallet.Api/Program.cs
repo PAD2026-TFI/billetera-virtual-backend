@@ -194,8 +194,7 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
-{
+
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint(
@@ -205,11 +204,7 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = "swagger";
         options.InjectJavascript("/swagger/wallet-tools.js");
     });
-}
-else
-{
-    app.UseHsts();
-}
+
 app.UseHttpsRedirection();
 
 app.UseStatusCodePages(async context =>

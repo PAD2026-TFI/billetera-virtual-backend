@@ -249,7 +249,7 @@ if (enabled)
     app.UseAuthorization();
 }
 
-if (app.Environment.IsDevelopment())
+if (true) // Habilitar OpenAPI y herramientas de Swagger en todos los entornos (desarrollo y despliegue)
 {
     app.MapOpenApi().AllowAnonymous();
     app.MapGet("/swagger/wallet-tools.js", () => Results.Stream(
@@ -257,6 +257,7 @@ if (app.Environment.IsDevelopment())
         "application/javascript")).AllowAnonymous().ExcludeFromDescription();
 }
 
+app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous().ExcludeFromDescription();
 app.MapControllers();
 
 app.Run();

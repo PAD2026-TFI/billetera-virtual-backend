@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wallet.Application;
+
 namespace Wallet.Infrastructure;
 
 public static class DependencyInjection
@@ -11,9 +12,12 @@ public static class DependencyInjection
             sql => sql.CommandTimeout(15)));
         services.AddScoped<IMovementHistoryReader, SqlMovementHistoryReader>();
         services.AddScoped<ITransferStore, SqlTransferStore>();
+        services.AddScoped<IDevelopmentFundingStore, SqlDevelopmentFundingStore>();
         services.AddScoped<IWalletRepository, SqlWalletRepository>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
         services.AddScoped<IExternalClientRepository, SqlExternalClientRepository>();
+        services.AddScoped<IPaymentLinkRepository, SqlPaymentLinkRepository>();
+        services.AddScoped<IPaymentRepository, SqlPaymentRepository>();
         services.AddScoped<IPasswordService, IdentityPasswordService>();
         return services;
     }

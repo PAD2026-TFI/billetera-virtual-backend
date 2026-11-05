@@ -17,9 +17,20 @@
     }
 
     function fillParam(path, method, input, value) {
-        input.value = value;
+        try {
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+            if (nativeSetter) {
+                nativeSetter.call(input, value);
+            } else {
+                input.value = value;
+            }
+        } catch {
+            input.value = value;
+        }
+
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.dispatchEvent(new Event("change", { bubbles: true }));
+
         try {
             if (window.ui?.getSystem?.()?.specActions?.changeParam) {
                 window.ui.getSystem().specActions.changeParam(
@@ -38,9 +49,11 @@
         const path = pathEl.getAttribute("data-path") || pathEl.textContent.trim();
         const method = methodEl.textContent.trim().toLowerCase();
 
-        const row = Array.from(operation.querySelectorAll("tr")).find(r =>
-            r.dataset.paramName === "Idempotency-Key" ||
-            r.querySelector(".parameter__name")?.textContent.includes("Idempotency-Key"));
+        const row = Array.from(operation.querySelectorAll("tr")).find(r => {
+            const paramName = (r.dataset.paramName || "").toLowerCase();
+            const textContent = (r.querySelector(".parameter__name")?.textContent || "").toLowerCase();
+            return paramName.includes("idempotency") || textContent.includes("idempotency");
+        });
 
         if (!row) return;
 
@@ -75,9 +88,21 @@
         button.type = "button";
         button.className = "btn";
         button.style.fontSize = "12px";
-        button.style.padding = "4px 8px";
-        button.textContent = "🔄 Generar nueva clave";
-        button.title = "Generar una nueva clave de idempotencia automáticamente";
+        button.style.padding = "4px 10px";
+        button.style.backgroundColor = "#2563eb";
+        button.style.color = "#ffffff";
+        button.style.border = "none";
+        button.style.borderRadius = "4px";
+        button.style.cursor = "pointer";
+        button.style.fontWeight = "600";
+        button.textContent = "🔄 Generar nueva Idempotency-Key";
+        button.title = "Genera un nuevo UUID para enviar una nueva transacción sin colisión";
+
+        const hint = document.createElement("span");
+        hint.style.fontSize = "12px";
+        hint.style.color = "#666";
+        hint.textContent = "Clave generada automáticamente. Clic para renovar.";
+
         button.addEventListener("click", (e) => {
             e.preventDefault();
             const freshKey = crypto.randomUUID();
@@ -85,16 +110,17 @@
             const currentInput = row.querySelector("input");
             if (currentInput && !currentInput.disabled) {
                 fillParam(path, method, currentInput, freshKey);
+                hint.textContent = "✅ Nueva clave asignada";
+                hint.style.color = "#16a34a";
+                setTimeout(() => {
+                    hint.textContent = "Clave generada automáticamente. Clic para renovar.";
+                    hint.style.color = "#666";
+                }, 2500);
             }
         });
 
-        const hint = document.createElement("span");
-        hint.style.fontSize = "12px";
-        hint.style.color = "#666";
-        hint.textContent = "Clave generada automáticamente. Hacé clic para renovarla.";
-
         tools.append(button, hint);
-        (row.querySelector("td:last-child") || input.parentElement).append(tools);
+        (input.parentElement || row.querySelector("td:last-child")).append(tools);
     }
 
     function enhance() {

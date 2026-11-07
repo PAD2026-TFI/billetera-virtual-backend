@@ -5,9 +5,11 @@ namespace Wallet.Domain.Tests;
 
 public sealed class CardRequestTests
 {
+    private static readonly Guid OwnerId = Guid.NewGuid();
+
     private static Address CreateValidAddress()
     {
-        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "C1043", DateTimeOffset.UtcNow);
+        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "C1043", DateTimeOffset.UtcNow, userId: OwnerId);
         address.MarkValid(-34.6037m, -58.3816m, "place_abc", DateTimeOffset.UtcNow);
         return address;
     }
@@ -15,7 +17,7 @@ public sealed class CardRequestTests
     [Fact]
     public void Create_with_valid_address_initializes_card_request_in_pending_status()
     {
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var address = CreateValidAddress();
         var now = DateTimeOffset.UtcNow;
 
@@ -33,7 +35,7 @@ public sealed class CardRequestTests
     [Fact]
     public void Create_with_credit_type_initializes_correctly()
     {
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var address = CreateValidAddress();
         var now = DateTimeOffset.UtcNow;
 
@@ -46,8 +48,8 @@ public sealed class CardRequestTests
     [Fact]
     public void Create_with_unvalidated_address_throws_invalid_operation_exception()
     {
-        var userId = Guid.NewGuid();
-        var pendingAddress = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "C1043", DateTimeOffset.UtcNow);
+        var userId = OwnerId;
+        var pendingAddress = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "C1043", DateTimeOffset.UtcNow, userId: OwnerId);
 
         Assert.Throws<InvalidOperationException>(() =>
             CardRequest.Create(userId, pendingAddress, DateTimeOffset.UtcNow));
@@ -65,7 +67,7 @@ public sealed class CardRequestTests
     [Fact]
     public void CardRequest_lifecycle_from_Pending_to_Delivered_succeeds()
     {
-        var request = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
+        var request = CardRequest.Create(OwnerId, CreateValidAddress(), DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Pending, request.Status);
 
         request.Process(DateTimeOffset.UtcNow);
@@ -84,11 +86,11 @@ public sealed class CardRequestTests
     [Fact]
     public void CardRequest_can_be_cancelled_from_Pending_or_Processing()
     {
-        var req1 = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
+        var req1 = CardRequest.Create(OwnerId, CreateValidAddress(), DateTimeOffset.UtcNow);
         req1.Cancel(DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Cancelled, req1.Status);
 
-        var req2 = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
+        var req2 = CardRequest.Create(OwnerId, CreateValidAddress(), DateTimeOffset.UtcNow);
         req2.Process(DateTimeOffset.UtcNow);
         req2.Cancel(DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Cancelled, req2.Status);
@@ -97,7 +99,7 @@ public sealed class CardRequestTests
     [Fact]
     public void CardRequest_can_be_rejected_from_Pending()
     {
-        var request = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
+        var request = CardRequest.Create(OwnerId, CreateValidAddress(), DateTimeOffset.UtcNow);
         request.Reject(DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Rejected, request.Status);
     }
@@ -105,7 +107,7 @@ public sealed class CardRequestTests
     [Fact]
     public void CardRequest_invalid_transition_throws_invalid_operation_exception()
     {
-        var request = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
+        var request = CardRequest.Create(OwnerId, CreateValidAddress(), DateTimeOffset.UtcNow);
         request.Reject(DateTimeOffset.UtcNow);
 
         Assert.Throws<InvalidOperationException>(() => request.Process(DateTimeOffset.UtcNow));
@@ -114,7 +116,7 @@ public sealed class CardRequestTests
     [Fact]
     public void UpdateStatus_transitions_to_any_valid_state()
     {
-        var request = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
+        var request = CardRequest.Create(OwnerId, CreateValidAddress(), DateTimeOffset.UtcNow);
         request.UpdateStatus(CardRequestStatus.Processing, DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Processing, request.Status);
 

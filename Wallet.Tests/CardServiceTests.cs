@@ -67,27 +67,17 @@ public sealed class CardServiceTests
 
     private sealed class InMemoryAddressRepository : IAddressRepository
     {
-        private readonly ConcurrentDictionary<Guid, Address> _addresses = new();
-
-        public void Add(Address address) => _addresses[address.Id] = address;
-
-        public Task<Address?> FindByIdAsync(Guid id, CancellationToken ct)
-        {
-            _addresses.TryGetValue(id, out var a);
-            return Task.FromResult(a);
-        }
-
-        public Task<Address?> FindValidAddressAsync(Guid addressId, CancellationToken ct)
-        {
-            return Task.FromResult(_addresses.Values.FirstOrDefault(a => a.Id == addressId && a.ValidationStatus == AddressValidationStatus.Valid));
-        }
-
-        public Task<Address?> FindDefaultValidAddressAsync(CancellationToken ct)
-        {
-            return Task.FromResult(_addresses.Values.FirstOrDefault(a => a.ValidationStatus == AddressValidationStatus.Valid));
-        }
+        private readonly List<Address> _addresses = [];
+        public void Add(Address address) => _addresses.Add(address);
+        public Task<Address?> FindByIdAsync(Guid id, Guid userId, CancellationToken ct) =>
+            Task.FromResult(_addresses.FirstOrDefault(a => a.Id == id && a.UserId == userId));
+        public Task<Address?> FindValidAddressAsync(Guid addressId, Guid userId, CancellationToken ct) =>
+            Task.FromResult(_addresses.FirstOrDefault(a => a.Id == addressId && a.UserId == userId && a.ValidationStatus == AddressValidationStatus.Valid));
+        public Task<Address?> FindDefaultValidAddressAsync(Guid userId, CancellationToken ct) =>
+            Task.FromResult(_addresses.FirstOrDefault(a => a.UserId == userId && a.ValidationStatus == AddressValidationStatus.Valid));
     }
 
+    private static readonly Guid OwnerId = Guid.NewGuid();
     private readonly InMemoryCardRepository _cardRepo = new();
     private readonly InMemoryCardRequestRepository _requestRepo = new();
     private readonly InMemoryAddressRepository _addressRepo = new();
@@ -102,11 +92,11 @@ public sealed class CardServiceTests
     [Fact]
     public async Task CreateCardRequestAsync_defaults_to_debit_when_not_specified()
     {
-        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow());
+        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow(), userId: OwnerId);
         address.MarkValid(-34.6037m, -58.3816m, "place_123", _clock.GetUtcNow());
         _addressRepo.Add(address);
 
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var request = new CreateCardRequestRequest { AddressId = address.Id };
 
         var result = await _service.CreateCardRequestAsync(userId, request, CancellationToken.None);
@@ -121,11 +111,11 @@ public sealed class CardServiceTests
     [Fact]
     public async Task CreateCardRequestAsync_supports_credit_card()
     {
-        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow());
+        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow(), userId: OwnerId);
         address.MarkValid(-34.6037m, -58.3816m, "place_123", _clock.GetUtcNow());
         _addressRepo.Add(address);
 
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var request = new CreateCardRequestRequest { AddressId = address.Id, Type = CardType.Credit };
 
         var result = await _service.CreateCardRequestAsync(userId, request, CancellationToken.None);
@@ -137,11 +127,11 @@ public sealed class CardServiceTests
     [Fact]
     public async Task CreateCardRequestAsync_throws_when_address_is_invalid()
     {
-        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow());
+        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow(), userId: OwnerId);
         address.MarkInvalid(_clock.GetUtcNow());
         _addressRepo.Add(address);
 
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var request = new CreateCardRequestRequest { AddressId = address.Id };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -151,11 +141,11 @@ public sealed class CardServiceTests
     [Fact]
     public async Task GetCardRequestStatusAsync_returns_tracking_information()
     {
-        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow());
+        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow(), userId: OwnerId);
         address.MarkValid(-34.6037m, -58.3816m, "place_123", _clock.GetUtcNow());
         _addressRepo.Add(address);
 
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var created = await _service.CreateCardRequestAsync(userId, new CreateCardRequestRequest { AddressId = address.Id }, CancellationToken.None);
 
         var status = await _service.GetCardRequestStatusAsync(created.Id, userId, CancellationToken.None);
@@ -168,11 +158,11 @@ public sealed class CardServiceTests
     [Fact]
     public async Task GetCardRequestStatusAsync_returns_null_when_user_does_not_own_request()
     {
-        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow());
+        var address = Address.CreateDraft("Av. Corrientes", "1234", "CABA", "Buenos Aires", "1043", _clock.GetUtcNow(), userId: OwnerId);
         address.MarkValid(-34.6037m, -58.3816m, "place_123", _clock.GetUtcNow());
         _addressRepo.Add(address);
 
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var created = await _service.CreateCardRequestAsync(userId, new CreateCardRequestRequest { AddressId = address.Id }, CancellationToken.None);
 
         var otherUserStatus = await _service.GetCardRequestStatusAsync(created.Id, Guid.NewGuid(), CancellationToken.None);
@@ -183,7 +173,7 @@ public sealed class CardServiceTests
     [Fact]
     public async Task AddCardAsync_and_GetUserCardsAsync_manage_saved_cards()
     {
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var command = new CreateCardCommand
         {
             CardHolderName = "Juan Perez",
@@ -207,7 +197,7 @@ public sealed class CardServiceTests
     [Fact]
     public async Task AddCardAsync_throws_for_expired_card()
     {
-        var userId = Guid.NewGuid();
+        var userId = OwnerId;
         var command = new CreateCardCommand
         {
             CardHolderName = "Juan Perez",
@@ -220,5 +210,29 @@ public sealed class CardServiceTests
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
             _service.AddCardAsync(userId, command, CancellationToken.None));
+    }
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Request_cannot_use_another_users_address(bool explicitAddress)
+    {
+        var address = Address.CreateDraft("Calle", "1", "Ciudad", "Provincia", "1000", _clock.GetUtcNow(), userId: Guid.NewGuid());
+        address.MarkValid(0, 0, null, _clock.GetUtcNow());
+        _addressRepo.Add(address);
+        var request = new CreateCardRequestRequest { AddressId = explicitAddress ? address.Id : null };
+        if (explicitAddress)
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.CreateCardRequestAsync(OwnerId, request, CancellationToken.None));
+        else
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CreateCardRequestAsync(OwnerId, request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Default_address_is_selected_only_from_requesting_user()
+    {
+        var address = Address.CreateDraft("Calle", "1", "Ciudad", "Provincia", "1000", _clock.GetUtcNow(), userId: OwnerId);
+        address.MarkValid(0, 0, null, _clock.GetUtcNow());
+        _addressRepo.Add(address);
+        var result = await _service.CreateCardRequestAsync(OwnerId, new(), CancellationToken.None);
+        Assert.Equal(address.Id, result.AddressId);
     }
 }

@@ -72,6 +72,9 @@ namespace Wallet.Infrastructure.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("ValidatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -81,6 +84,8 @@ namespace Wallet.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Addresses", (string)null);
                 });
@@ -696,6 +701,14 @@ namespace Wallet.Infrastructure.Migrations
                         .HasFilter("[NormalizedEmail] IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Address", b =>
+                {
+                    b.HasOne("Wallet.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Wallet.Domain.Card", b =>

@@ -59,14 +59,14 @@ public sealed class Card
         ArgumentException.ThrowIfNullOrWhiteSpace(brand);
 
         var trimmedLast4 = cardNumberLast4?.Trim() ?? string.Empty;
-        if (trimmedLast4.Length != 4 || !trimmedLast4.All(char.IsDigit))
+        if (trimmedLast4.Length != 4 || !trimmedLast4.All(c => c is >= '0' and <= '9'))
             throw new ArgumentException("Last 4 digits must contain exactly 4 numeric characters.", nameof(cardNumberLast4));
 
         if (expirationMonth is < 1 or > 12)
             throw new ArgumentOutOfRangeException(nameof(expirationMonth), "Expiration month must be between 1 and 12.");
 
-        if (expirationYear < 2026)
-            throw new ArgumentOutOfRangeException(nameof(expirationYear), "Expiration year cannot be in the past.");
+        if (expirationYear is < 1 or > 9999 || expirationYear < now.UtcDateTime.Year || (expirationYear == now.UtcDateTime.Year && expirationMonth < now.UtcDateTime.Month))
+            throw new ArgumentOutOfRangeException(nameof(expirationYear), "Card expiration must be a valid year and must not precede the current UTC month.");
 
         var token = string.IsNullOrWhiteSpace(cardToken)
             ? $"tok_{Guid.NewGuid():N}"
@@ -97,10 +97,7 @@ public sealed class Card
 
     public bool IsExpired(DateTimeOffset now)
     {
-        var expiry = new DateTimeOffset(ExpirationYear, ExpirationMonth, 1, 0, 0, 0, TimeSpan.Zero)
-            .AddMonths(1)
-            .AddTicks(-1);
-
-        return now.ToUniversalTime() > expiry;
+        var utc = now.ToUniversalTime();
+        return ExpirationYear < utc.Year || (ExpirationYear == utc.Year && ExpirationMonth < utc.Month);
     }
 }

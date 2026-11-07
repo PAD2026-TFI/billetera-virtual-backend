@@ -21,12 +21,12 @@ public sealed class CardService(
         Address? address;
         if (request.AddressId.HasValue && request.AddressId.Value != Guid.Empty)
         {
-            address = await addressRepository.FindByIdAsync(request.AddressId.Value, ct)
+            address = await addressRepository.FindByIdAsync(request.AddressId.Value, userId, ct)
                 ?? throw new KeyNotFoundException($"Delivery address '{request.AddressId.Value}' was not found.");
         }
         else
         {
-            address = await addressRepository.FindDefaultValidAddressAsync(ct)
+            address = await addressRepository.FindDefaultValidAddressAsync(userId, ct)
                 ?? throw new InvalidOperationException("Cannot request a card with an unvalidated address.");
         }
 

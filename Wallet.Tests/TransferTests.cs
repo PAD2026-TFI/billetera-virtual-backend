@@ -184,7 +184,7 @@ public sealed class TransferTests
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("STORAGE_UNAVAILABLE", body.RootElement.GetProperty("code").GetString());
         using var openapi = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
-        var operation = openapi.RootElement.GetProperty("paths").GetProperty("/api/transfers").GetProperty("post");
+        var operation = openapi.RootElement.GetProperty("paths").GetProperty("/api/transfers/wallet-id").GetProperty("post");
         Assert.True(operation.TryGetProperty("security", out _));
         Assert.Contains(operation.GetProperty("parameters").EnumerateArray(), p =>
             p.GetProperty("name").GetString() == "Idempotency-Key" && p.GetProperty("required").GetBoolean());

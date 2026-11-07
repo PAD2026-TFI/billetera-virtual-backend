@@ -9,6 +9,7 @@ namespace Wallet.Api.Controllers;
 public sealed class TransfersController(TransferService transfers) : ControllerBase
 {
     [HttpPost]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<TransferResponse>(201)]
     [ProducesResponseType<TransferResponse>(200)]
     [ProducesResponseType<ProblemDetails>(400)]
@@ -47,7 +48,7 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
     [ProducesResponseType<ProblemDetails>(503)]
     public async Task<ActionResult<TransferResponse>> CreateByCvu(
         [FromBody] TransferByCvuRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        [FromHeader(Name = "Idempotency-Key"), Required] string? idempotencyKey,
         CancellationToken ct)
     {
         var key = string.IsNullOrWhiteSpace(idempotencyKey) ? Guid.NewGuid().ToString() : idempotencyKey;
@@ -75,7 +76,7 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
     [ProducesResponseType<ProblemDetails>(503)]
     public async Task<ActionResult<TransferResponse>> CreateByAlias(
         [FromBody] TransferByAliasRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        [FromHeader(Name = "Idempotency-Key"), Required] string? idempotencyKey,
         CancellationToken ct)
     {
         var key = string.IsNullOrWhiteSpace(idempotencyKey) ? Guid.NewGuid().ToString() : idempotencyKey;
@@ -103,7 +104,7 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
     [ProducesResponseType<ProblemDetails>(503)]
     public async Task<ActionResult<TransferResponse>> CreateByWalletId(
         [FromBody] TransferByWalletIdRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        [FromHeader(Name = "Idempotency-Key"), Required] string? idempotencyKey,
         CancellationToken ct)
     {
         var key = string.IsNullOrWhiteSpace(idempotencyKey) ? Guid.NewGuid().ToString() : idempotencyKey;

@@ -1,8 +1,10 @@
-﻿namespace Wallet.Domain;
+namespace Wallet.Domain;
 
 public sealed class Address
 {
     public Guid Id { get; private set; }
+    // Null is reserved for legacy addresses; they cannot be used for new card requests.
+    public Guid? UserId { get; private set; }
     public string Street { get; private set; } = "";
     public string Number { get; private set; } = "";
     public string City { get; private set; } = "";
@@ -25,8 +27,14 @@ public sealed class Address
         string state,
         string postalCode,
         DateTimeOffset now,
-        string country = "Argentina")
+        string country = "Argentina",
+        Guid? userId = null)
     {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User identifier cannot be empty.", nameof(userId));
+        if (country?.Trim().Length > 100)
+            throw new ArgumentException("Country cannot exceed 100 characters.", nameof(country));
+
         ValidateStreet(street);
         ValidateNumber(number);
         ValidateCity(city);
@@ -36,6 +44,7 @@ public sealed class Address
         return new Address
         {
             Id = Guid.NewGuid(),
+            UserId = userId,
             Street = street.Trim(),
             Number = number.Trim(),
             City = city.Trim(),

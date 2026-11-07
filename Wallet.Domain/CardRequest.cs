@@ -67,6 +67,11 @@ public sealed class CardRequest
         if (address.ValidationStatus != AddressValidationStatus.Valid)
             throw new InvalidOperationException("Cannot request a card with an unvalidated address.");
 
+        if (address.UserId != userId)
+            throw new InvalidOperationException("Delivery address must belong to the requesting user.");
+        if (!Enum.IsDefined(type))
+            throw new ArgumentOutOfRangeException(nameof(type));
+
         return new CardRequest(Guid.NewGuid(), userId, address.Id, type, now);
     }
 

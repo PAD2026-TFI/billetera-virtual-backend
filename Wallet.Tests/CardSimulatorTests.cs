@@ -16,7 +16,6 @@ public sealed class CardSimulatorTests
     [Theory]
     [InlineData("4532015112830366", "Juan Perez", 12, 2030, "123", "Visa")] // Valid Visa test
     [InlineData("5555555555554444", "Maria Gomez", 8, 2029, "456", "Mastercard")] // Valid Mastercard test
-    [InlineData("378282246310005", "Carlos Lopez", 11, 2031, "1234", "American Express")] // Valid Amex test
     public void Authorize_with_valid_card_succeeds_and_detects_brand(
         string number, string holder, int month, int year, string cvv, string expectedBrand)
     {

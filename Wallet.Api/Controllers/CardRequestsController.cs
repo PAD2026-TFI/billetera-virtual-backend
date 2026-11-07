@@ -24,6 +24,14 @@ public sealed class CardRequestsController(ICardService cardService, ICurrentUse
             var result = await cardService.CreateCardRequestAsync(currentUser.Id, req, ct);
             return CreatedAtAction(nameof(GetStatus), new { id = result.Id }, result);
         }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "Delivery address not found.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
         catch (ArgumentException ex)
         {
             return Problem(

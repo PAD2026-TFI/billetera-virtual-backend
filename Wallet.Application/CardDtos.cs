@@ -41,13 +41,13 @@ public sealed class CreateCardCommand
     public CardType Type { get; init; } = CardType.Debit;
 
     [Required]
-    [RegularExpression(@"^\d{4}$")]
+    [RegularExpression(@"^[0-9]{4}$")]
     public string CardNumberLast4 { get; init; } = string.Empty;
 
     [Range(1, 12)]
     public int ExpirationMonth { get; init; }
 
-    [Range(2026, 2045)]
+    [Range(1, 9999)]
     public int ExpirationYear { get; init; }
 
     public string? CardToken { get; init; }
@@ -58,5 +58,6 @@ public sealed class PayWithSavedCardRequest
     [Required]
     public Guid CardId { get; init; }
 
+    [RegularExpression(@"^[0-9]{3}$")]
     public string? Cvv { get; init; }
 }

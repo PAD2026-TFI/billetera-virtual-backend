@@ -19,18 +19,6 @@ namespace Wallet.Infrastructure.Migrations
                 name: "IX_Users_NormalizedEmail",
                 table: "Users");
 
-            migrationBuilder.DropColumn(
-                name: "CreatedAt",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "IsActive",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "RowVersion",
-                table: "Users");
-
             migrationBuilder.RenameColumn(
                 name: "UserId",
                 table: "Wallets",
@@ -111,7 +99,20 @@ namespace Wallet.Infrastructure.Migrations
                     table.PrimaryKey("PK_WalletOwners", x => x.Id);
                 });
 
-            migrationBuilder.Sql("IF EXISTS (SELECT * FROM sys.tables WHERE name = 'Users') INSERT INTO [WalletOwners] ([Id], [IsActive], [CreatedAt]) SELECT [Id], 1, SYSUTCDATETIME() FROM [Users] WHERE [Id] NOT IN (SELECT [Id] FROM [WalletOwners]);");
+            migrationBuilder.Sql("EXEC(N'INSERT INTO [WalletOwners] ([Id], [IsActive], [CreatedAt]) SELECT [Id], [IsActive], [CreatedAt] FROM [Users] WHERE [Id] NOT IN (SELECT [Id] FROM [WalletOwners]);');");
+
+            migrationBuilder.DropColumn(
+                name: "CreatedAt",
+                table: "Users");
+
+            migrationBuilder.DropColumn(
+                name: "IsActive",
+                table: "Users");
+
+            migrationBuilder.DropColumn(
+                name: "RowVersion",
+                table: "Users");
+
 
             migrationBuilder.CreateTable(
                 name: "CardRequests",

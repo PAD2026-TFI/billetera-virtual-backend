@@ -645,7 +645,7 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.HasIndex("Cuit")
                         .IsUnique()
-                        .HasFilter("[Cuit] IS NOT NULL");
+                        .HasFilter("[Cuit] <> ''");
 
                     b.ToTable("ExternalClients", (string)null);
                 });

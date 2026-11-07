@@ -11,7 +11,7 @@ public class ExternalClientConfiguration : IEntityTypeConfiguration<ExternalClie
         builder.ToTable("ExternalClients");
         builder.Property(x => x.CompanyName).HasMaxLength(150).IsRequired();
         builder.Property(x => x.Cuit).HasMaxLength(11).IsRequired();
-        builder.HasIndex(x => x.Cuit).IsUnique();
+        builder.HasIndex(x => x.Cuit).IsUnique().HasFilter("[Cuit] <> ''");
         builder.Property(x => x.ContactEmail).HasMaxLength(254).IsRequired();
         builder.Property(x => x.ApiKeyHash).HasMaxLength(64).IsFixedLength();
         builder.HasIndex(x => x.ApiKeyHash).IsUnique().HasFilter("[ApiKeyHash] IS NOT NULL");

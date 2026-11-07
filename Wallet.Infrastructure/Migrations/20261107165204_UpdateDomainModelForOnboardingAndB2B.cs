@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -63,6 +63,9 @@ namespace Wallet.Infrastructure.Migrations
                 maxLength: 2048,
                 nullable: true);
 
+            // Populate identifiers before adding unique indexes on existing wallets.
+            migrationBuilder.Sql("EXEC(N'" + HostedUpgradeDataSql.WalletIdentifiers.Replace("'", "''") + "');");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Wallets_Alias",
                 table: "Wallets",
@@ -80,7 +83,7 @@ namespace Wallet.Infrastructure.Migrations
                 table: "ExternalClients",
                 column: "Cuit",
                 unique: true,
-                filter: "[Cuit] IS NOT NULL");
+                filter: "[Cuit] <> ''");
         }
 
         /// <inheritdoc />

@@ -76,7 +76,6 @@ public sealed class CreatePaymentLinkRequest
     /// <summary>
     /// [OPCIONAL] GUID de la billetera destino. Se puede omitir si se provee CVU, Alias, email del comercio o si se está autenticado.
     /// </summary>
-    [JsonConverter(typeof(LenientNullableGuidConverter))]
     public Guid? DestinationWalletId { get; init; }
 
     /// <summary>
@@ -167,7 +166,8 @@ public sealed record CheckoutPublicDetailsDto(
     string Status,
     string Type,
     DateTimeOffset? ExpiresAt,
-    bool IsPayable);
+    bool IsPayable,
+    Guid Id);
 
 public sealed class ProcessCheckoutRequest
 {

@@ -98,11 +98,12 @@
         .checkout-header .amount-val {
             font-size: 26px;
             font-weight: 700;
+            letter-spacing: -0.5px;
             color: #38bdf8;
         }
 
         .checkout-header .amount-cur {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: #94a3b8;
             margin-left: 4px;
@@ -125,20 +126,23 @@
             flex: 1;
             border: none;
             background: transparent;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 10px 8px;
             font-size: 13px;
             font-weight: 600;
             color: var(--text-muted);
+            border-radius: 7px;
             cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
         .tab-btn.active {
-            background: #ffffff;
-            color: var(--primary);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: var(--card-bg);
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .tab-content {
@@ -147,41 +151,41 @@
 
         .tab-content.active {
             display: block;
+            animation: fadeIn 0.25s ease-out;
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .form-group label {
             display: block;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
-            color: var(--text-muted);
+            color: var(--text-main);
             margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .form-control {
             width: 100%;
-            padding: 12px 14px;
+            padding: 10px 14px;
             border: 1px solid var(--border);
             border-radius: 8px;
             font-size: 14px;
             color: var(--text-main);
-            outline: none;
-            transition: border-color 0.2s;
+            background: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .form-control:focus {
+            outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
         .form-row {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
 
         .form-row .form-group {
@@ -193,10 +197,10 @@
             border: 1px dashed var(--border);
             border-radius: 8px;
             padding: 12px;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
         }
 
-        .card-presets .presets-title {
+        .presets-title {
             font-size: 11px;
             font-weight: 600;
             color: var(--text-muted);
@@ -352,6 +356,82 @@
             border: 1px solid #bbf7d0;
         }
 
+        /* Estilos para tarjetas guardadas */
+        .saved-card-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #ffffff;
+        }
+
+        .saved-card-item:hover {
+            border-color: #93c5fd;
+            background: #f8fafc;
+        }
+
+        .saved-card-item.selected {
+            border-color: var(--primary);
+            background: #eff6ff;
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+
+        .saved-card-radio {
+            accent-color: var(--primary);
+            width: 18px;
+            height: 18px;
+        }
+
+        .saved-card-info {
+            flex: 1;
+        }
+
+        .saved-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .saved-card-brand {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-type {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .saved-card-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .cvv-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 14px;
+        }
+
         .receipt-card {
             display: none;
             text-align: center;
@@ -450,47 +530,137 @@
         <!-- Formulario de Checkout -->
         <div class="checkout-body" id="checkoutBody" style="display: none;">
             <div class="tabs">
-                <button type="button" class="tab-btn active" onclick="switchTab('card')">💳 Tarjeta (Simulador)</button>
+                <button type="button" class="tab-btn active" onclick="switchTab('card')">💳 Tarjeta Guardada</button>
                 <button type="button" class="tab-btn" onclick="switchTab('wallet')">🏦 Billetera Virtual</button>
                 <button type="button" class="tab-btn" onclick="switchTab('qr')">📱 Código QR</button>
             </div>
 
-            <!-- TAB 1: Tarjeta simulada -->
+            <!-- TAB 1: Tarjetas Guardadas (Autenticado) -->
             <div class="tab-content active" id="tab-card">
-                <div class="card-presets">
-                    <div class="presets-title">⚡ Pruebas rápidas (Presets financieros):</div>
-                    <div class="preset-buttons">
-                        <button type="button" class="btn-preset" onclick="fillCard('ok')">✅ Aprobada</button>
-                        <button type="button" class="btn-preset" onclick="fillCard('insufficient')">⚠️ Sin Fondos</button>
-                        <button type="button" class="btn-preset" onclick="fillCard('blocked')">🚫 Bloqueada</button>
+                <!-- Vista de usuario autenticado con sus tarjetas -->
+                <div id="cardLoggedView" style="display: none;">
+                    <div class="auth-card">
+                        <div class="auth-user-bar">
+                            <div class="user-tag">
+                                <span>👤</span>
+                                <span id="cardAuthEmailText">usuario@gmail.com</span>
+                            </div>
+                            <button type="button" class="btn-link" onclick="logoutWallet()">Cerrar sesión</button>
+                        </div>
+
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                            Seleccioná una de tus tarjetas guardadas e ingresá su código de seguridad:
+                        </p>
+
+                        <div id="cardsLoadingText" style="text-align: center; padding: 12px; font-size: 13px; color: var(--text-muted);">
+                            Cargando tus tarjetas registradas...
+                        </div>
+
+                        <div id="savedCardsList" style="display: none;"></div>
+
+                        <!-- Confirmación de CVV -->
+                        <div class="cvv-box" id="savedCardCvvBox" style="display: none;">
+                            <label for="savedCardCvv" style="font-size: 13px; font-weight: 700; color: #0f172a; display: block; margin-bottom: 6px;">
+                                Código de Seguridad (CVV) <span style="color: var(--danger);">*</span>
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <input type="password" id="savedCardCvv" class="form-control" maxlength="4" placeholder="123" required style="width: 100px; font-size: 16px; font-weight: 700; letter-spacing: 2px; text-align: center;">
+                                <span style="font-size: 12px; color: var(--text-muted); line-height: 1.3;">
+                                    Confirmá los 3 dígitos al dorso de tu tarjeta para autorizar el cobro.
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 6px; margin-top: 10px;">
+                                <button type="button" class="btn-preset" onclick="document.getElementById('savedCardCvv').value = '123'">✅ CVV 123 (Aprobada)</button>
+                                <button type="button" class="btn-preset" onclick="document.getElementById('savedCardCvv').value = '999'">⚠️ CVV 999 (Sin Fondos)</button>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-pay" id="btnPaySavedCard" onclick="handleSavedCardPay(event)" style="margin-top: 16px;">
+                            Pagar con Tarjeta
+                        </button>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button type="button" class="btn-link" onclick="toggleGuestCardForm()">¿Querés probar el simulador de tarjeta manual? Clic acá</button>
                     </div>
                 </div>
 
-                <form id="cardForm" onsubmit="handleCardPay(event)">
-                    <div class="form-group">
-                        <label for="cardNumber">Número de Tarjeta</label>
-                        <input type="text" id="cardNumber" class="form-control" placeholder="4532 0151 1283 0366" maxlength="19" required>
+                <!-- Vista de Login para Tab Tarjeta -->
+                <div id="cardLoginView">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <p style="font-size: 12px; color: #1e40af; margin: 0; line-height: 1.4;">
+                            🔒 <strong>Autenticación Requerida:</strong> Iniciá sesión con tu cuenta de billetera para recuperar y pagar con tus tarjetas guardadas.
+                        </p>
                     </div>
-                    <div class="form-group">
-                        <label for="cardHolder">Titular de la Tarjeta</label>
-                        <input type="text" id="cardHolder" class="form-control" placeholder="Juan Pérez" required>
-                    </div>
-                    <div class="form-row">
+
+                    <form id="cardLoginForm" onsubmit="handleAuthLogin(event, 'card')">
                         <div class="form-group">
-                            <label for="expMonth">Mes Venc.</label>
-                            <input type="number" id="expMonth" class="form-control" placeholder="MM" min="1" max="12" required>
+                            <label for="cardLoginEmail">Correo Electrónico</label>
+                            <input type="email" id="cardLoginEmail" class="form-control" placeholder="tu@email.com" required>
                         </div>
                         <div class="form-group">
-                            <label for="expYear">Año Venc.</label>
-                            <input type="number" id="expYear" class="form-control" placeholder="AAAA" min="2026" max="2040" required>
+                            <label for="cardLoginPassword">Contraseña</label>
+                            <input type="password" id="cardLoginPassword" class="form-control" placeholder="••••••••" required>
                         </div>
+                        <button type="submit" class="btn-pay" id="btnCardLogin">Iniciar Sesión y Ver Tarjetas</button>
+                    </form>
+
+                    <div style="margin-top: 14px; text-align: center;">
+                        <button type="button" class="btn-link" onclick="toggleTokenInput('card')">¿Tenés un token JWT de Swagger? Pegalo acá</button>
+                    </div>
+
+                    <div id="tokenManualCardContainer" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);">
                         <div class="form-group">
-                            <label for="cardCvv">CVV</label>
-                            <input type="password" id="cardCvv" class="form-control" placeholder="123" maxlength="4" required>
+                            <label for="manualBearerTokenCard">Token Bearer (JWT)</label>
+                            <textarea id="manualBearerTokenCard" class="form-control" rows="2" placeholder="eyJhbGciOi..."></textarea>
+                        </div>
+                        <button type="button" class="btn-preset" style="width: 100%; padding: 10px;" onclick="handleManualTokenApply('card')">
+                            Aplicar Token JWT
+                        </button>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border);">
+                        <button type="button" class="btn-link" onclick="toggleGuestCardForm()">O pagar como invitado con tarjeta de prueba en el simulador</button>
+                    </div>
+                </div>
+
+                <!-- Formulario Simulador Guest Desplegable -->
+                <div id="guestCardContainer" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                    <div class="card-presets">
+                        <div class="presets-title">⚡ Simulador rápido (Presets financieros):</div>
+                        <div class="preset-buttons">
+                            <button type="button" class="btn-preset" onclick="fillCard('ok')">✅ Aprobada</button>
+                            <button type="button" class="btn-preset" onclick="fillCard('insufficient')">⚠️ Sin Fondos</button>
+                            <button type="button" class="btn-preset" onclick="fillCard('blocked')">🚫 Bloqueada</button>
                         </div>
                     </div>
-                    <button type="submit" class="btn-pay" id="btnPayCard">Pagar con Tarjeta</button>
-                </form>
+
+                    <form id="guestCardForm" onsubmit="handleGuestCardPay(event)">
+                        <div class="form-group">
+                            <label for="cardNumber">Número de Tarjeta</label>
+                            <input type="text" id="cardNumber" class="form-control" placeholder="4532 0151 1283 0366" maxlength="19" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardHolder">Titular de la Tarjeta</label>
+                            <input type="text" id="cardHolder" class="form-control" placeholder="Juan Pérez" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="expMonth">Mes Venc.</label>
+                                <input type="number" id="expMonth" class="form-control" placeholder="MM" min="1" max="12" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expYear">Año Venc.</label>
+                                <input type="number" id="expYear" class="form-control" placeholder="AAAA" min="2026" max="2040" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="cardCvv">CVV</label>
+                                <input type="password" id="cardCvv" class="form-control" placeholder="123" maxlength="4" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-pay" id="btnPayGuestCard">Pagar como Invitado</button>
+                    </form>
+                </div>
             </div>
 
             <!-- TAB 2: Billetera Virtual -->
@@ -534,7 +704,7 @@
                         </p>
                     </div>
 
-                    <form id="walletLoginForm" onsubmit="handleWalletLogin(event)">
+                    <form id="walletLoginForm" onsubmit="handleAuthLogin(event, 'wallet')">
                         <div class="form-group">
                             <label for="walletEmail">Correo Electrónico</label>
                             <input type="email" id="walletEmail" class="form-control" placeholder="tu@email.com" required>
@@ -547,15 +717,15 @@
                     </form>
 
                     <div style="margin-top: 14px; text-align: center;">
-                        <button type="button" class="btn-link" onclick="toggleTokenInput()">¿Tenés un token JWT de Swagger? Pegalo acá</button>
+                        <button type="button" class="btn-link" onclick="toggleTokenInput('wallet')">¿Tenés un token JWT de Swagger? Pegalo acá</button>
                     </div>
 
-                    <div id="tokenManualContainer" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);">
+                    <div id="tokenManualWalletContainer" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);">
                         <div class="form-group">
-                            <label for="manualBearerToken">Token Bearer (JWT)</label>
-                            <textarea id="manualBearerToken" class="form-control" rows="2" placeholder="eyJhbGciOi..."></textarea>
+                            <label for="manualBearerTokenWallet">Token Bearer (JWT)</label>
+                            <textarea id="manualBearerTokenWallet" class="form-control" rows="2" placeholder="eyJhbGciOi..."></textarea>
                         </div>
-                        <button type="button" class="btn-preset" style="width: 100%; padding: 10px;" onclick="handleManualTokenApply()">
+                        <button type="button" class="btn-preset" style="width: 100%; padding: 10px;" onclick="handleManualTokenApply('wallet')">
                             Aplicar Token JWT
                         </button>
                     </div>
@@ -610,6 +780,8 @@
         let authToken = sessionStorage.getItem("checkout_jwt") || null;
         let userEmail = sessionStorage.getItem("checkout_email") || null;
         let userWallet = null;
+        let userCards = [];
+        let selectedCardId = null;
 
         function getQueryParam(param) {
             const params = new URLSearchParams(window.location.search);
@@ -650,7 +822,6 @@
                 document.getElementById("checkoutDesc").textContent = linkData.description || "Cobro a través de Pasarela WaaS";
                 document.getElementById("checkoutAmount").textContent = linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 });
                 document.getElementById("checkoutCurrency").textContent = linkData.currency;
-                document.getElementById("btnPayCard").textContent = `Pagar $ ${linkData.amount.toFixed(2)} ${linkData.currency}`;
 
                 if (!linkData.isPayable) {
                     showError(`Este link de pago no se encuentra disponible (Estado: ${linkData.status}).`);
@@ -685,7 +856,6 @@
             } else if (tab === 'wallet') {
                 document.querySelectorAll(".tab-btn")[1].classList.add("active");
                 document.getElementById("tab-wallet").classList.add("active");
-                checkActiveSession();
             } else if (tab === 'qr') {
                 document.querySelectorAll(".tab-btn")[2].classList.add("active");
                 document.getElementById("tab-qr").classList.add("active");
@@ -694,11 +864,120 @@
 
         async function checkActiveSession() {
             if (!authToken) {
+                document.getElementById("cardLoginView").style.display = "block";
+                document.getElementById("cardLoggedView").style.display = "none";
                 document.getElementById("walletLoginView").style.display = "block";
                 document.getElementById("walletLoggedView").style.display = "none";
                 return;
             }
 
+            // Actualizar vista de usuario en ambos tabs
+            document.getElementById("cardAuthEmailText").textContent = userEmail || "Usuario Autenticado";
+            document.getElementById("authEmailText").textContent = userEmail || "Usuario Autenticado";
+            document.getElementById("cardLoginView").style.display = "none";
+            document.getElementById("cardLoggedView").style.display = "block";
+            document.getElementById("walletLoginView").style.display = "none";
+            document.getElementById("walletLoggedView").style.display = "block";
+
+            // 1. Cargar tarjetas guardadas para el Tab 1
+            await loadUserCards();
+
+            // 2. Cargar balance de billetera para el Tab 2
+            await loadUserWalletBalance();
+        }
+
+        async function loadUserCards() {
+            const listContainer = document.getElementById("savedCardsList");
+            const loadingText = document.getElementById("cardsLoadingText");
+            const cvvBox = document.getElementById("savedCardCvvBox");
+            const btnPay = document.getElementById("btnPaySavedCard");
+
+            try {
+                const res = await fetch("/api/v1/cards", {
+                    headers: { "Authorization": `Bearer ${authToken}` }
+                });
+
+                if (res.status === 401) {
+                    logoutWallet();
+                    return;
+                }
+
+                if (!res.ok) {
+                    loadingText.textContent = "No se pudieron obtener las tarjetas guardadas.";
+                    return;
+                }
+
+                userCards = await res.json();
+                loadingText.style.display = "none";
+
+                if (!userCards || userCards.length === 0) {
+                    listContainer.innerHTML = "<p style='font-size: 13px; color: var(--text-muted);'>No tenés tarjetas activas asociadas a tu cuenta.</p>";
+                    listContainer.style.display = "block";
+                    cvvBox.style.display = "none";
+                    btnPay.disabled = true;
+                    return;
+                }
+
+                // Renderizar tarjetas
+                listContainer.innerHTML = "";
+                selectedCardId = userCards[0].id; // Seleccionar primera por defecto
+
+                userCards.forEach((card, index) => {
+                    const isSelected = index === 0;
+                    const cardDiv = document.createElement("div");
+                    cardDiv.className = `saved-card-item ${isSelected ? 'selected' : ''}`;
+                    cardDiv.setAttribute("data-card-id", card.id);
+                    cardDiv.onclick = () => selectCard(card.id);
+
+                    const expFormatted = `${String(card.expirationMonth).padStart(2, '0')}/${card.expirationYear}`;
+                    const typeLabel = card.type === 'Debit' ? 'Débito' : 'Crédito';
+
+                    cardDiv.innerHTML = `
+                        <input type="radio" name="savedCardRadio" class="saved-card-radio" ${isSelected ? 'checked' : ''}>
+                        <div class="saved-card-info">
+                            <div class="saved-card-header">
+                                <span class="saved-card-brand">💳 ${card.brand} •••• ${card.cardNumberLast4}</span>
+                                <span class="badge-type">${typeLabel}</span>
+                            </div>
+                            <div class="saved-card-sub">
+                                <span>Titular: <strong>${card.cardHolderName}</strong></span>
+                                <span>Vence: <strong>${expFormatted}</strong></span>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(cardDiv);
+                });
+
+                listContainer.style.display = "block";
+                cvvBox.style.display = "block";
+                btnPay.disabled = false;
+
+                if (linkData) {
+                    btnPay.textContent = `Pagar $ ${linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${linkData.currency} con Tarjeta`;
+                }
+            } catch (err) {
+                console.error("Error al cargar tarjetas:", err);
+                loadingText.textContent = "Error de red al cargar tarjetas.";
+            }
+        }
+
+        function selectCard(cardId) {
+            selectedCardId = cardId;
+            document.querySelectorAll(".saved-card-item").forEach(item => {
+                const id = item.getAttribute("data-card-id");
+                const radio = item.querySelector("input[type='radio']");
+                if (id === cardId) {
+                    item.classList.add("selected");
+                    if (radio) radio.checked = true;
+                } else {
+                    item.classList.remove("selected");
+                    if (radio) radio.checked = false;
+                }
+            });
+            document.getElementById("savedCardCvv").focus();
+        }
+
+        async function loadUserWalletBalance() {
             try {
                 const res = await fetch("/api/wallets/me", {
                     headers: { "Authorization": `Bearer ${authToken}` }
@@ -709,14 +988,9 @@
                     return;
                 }
 
-                if (!res.ok) {
-                    document.getElementById("walletLoginView").style.display = "block";
-                    document.getElementById("walletLoggedView").style.display = "none";
-                    return;
-                }
+                if (!res.ok) return;
 
                 userWallet = await res.json();
-                document.getElementById("authEmailText").textContent = userEmail || "Usuario Autenticado";
                 document.getElementById("authWalletBalance").textContent = `$ ${userWallet.balance.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${userWallet.currency}`;
 
                 if (linkData) {
@@ -735,26 +1009,23 @@
                         btnPay.textContent = `Confirmar y Pagar ($ ${linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${linkData.currency})`;
                     }
                 }
-
-                document.getElementById("walletLoginView").style.display = "none";
-                document.getElementById("walletLoggedView").style.display = "block";
             } catch (err) {
-                console.error("Error al validar sesión de billetera:", err);
+                console.error("Error al cargar balance de billetera:", err);
             }
         }
 
-        async function handleWalletLogin(e) {
+        async function handleAuthLogin(e, source) {
             e.preventDefault();
             hideAlerts();
-            const email = document.getElementById("walletEmail").value.trim();
-            const password = document.getElementById("walletPassword").value;
-            const btn = document.getElementById("btnWalletLogin");
+            const email = source === 'card' ? document.getElementById("cardLoginEmail").value.trim() : document.getElementById("walletEmail").value.trim();
+            const password = source === 'card' ? document.getElementById("cardLoginPassword").value : document.getElementById("walletPassword").value;
+            const btn = source === 'card' ? document.getElementById("btnCardLogin") : document.getElementById("btnWalletLogin");
 
             btn.disabled = true;
             btn.textContent = "Iniciando sesión...";
 
             try {
-                const res = await fetch("/api/auth/login", {
+                const res = await fetch("/api/v1/auth/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email, password })
@@ -764,7 +1035,7 @@
                 if (!res.ok) {
                     showError(data.detail || data.title || "Credenciales incorrectas.");
                     btn.disabled = false;
-                    btn.textContent = "Iniciar Sesión y Continuar";
+                    btn.textContent = source === 'card' ? "Iniciar Sesión y Ver Tarjetas" : "Iniciar Sesión y Continuar";
                     return;
                 }
 
@@ -778,7 +1049,7 @@
                 showError("Error de red al intentar iniciar sesión.");
             } finally {
                 btn.disabled = false;
-                btn.textContent = "Iniciar Sesión y Continuar";
+                btn.textContent = source === 'card' ? "Iniciar Sesión y Ver Tarjetas" : "Iniciar Sesión y Continuar";
             }
         }
 
@@ -786,25 +1057,90 @@
             authToken = null;
             userEmail = null;
             userWallet = null;
+            userCards = [];
+            selectedCardId = null;
             sessionStorage.removeItem("checkout_jwt");
             sessionStorage.removeItem("checkout_email");
+
+            document.getElementById("cardLoginView").style.display = "block";
+            document.getElementById("cardLoggedView").style.display = "none";
             document.getElementById("walletLoginView").style.display = "block";
             document.getElementById("walletLoggedView").style.display = "none";
         }
 
-        function toggleTokenInput() {
-            const container = document.getElementById("tokenManualContainer");
+        function toggleTokenInput(source) {
+            const container = source === 'card' ? document.getElementById("tokenManualCardContainer") : document.getElementById("tokenManualWalletContainer");
             container.style.display = container.style.display === "none" ? "block" : "none";
         }
 
-        async function handleManualTokenApply() {
-            const rawToken = document.getElementById("manualBearerToken").value.trim();
+        async function handleManualTokenApply(source) {
+            const rawToken = (source === 'card' ? document.getElementById("manualBearerTokenCard").value : document.getElementById("manualBearerTokenWallet").value).trim();
             if (!rawToken) return;
             authToken = rawToken.replace(/^Bearer\s+/i, "");
             userEmail = "Usuario Autenticado";
             sessionStorage.setItem("checkout_jwt", authToken);
             sessionStorage.setItem("checkout_email", userEmail);
             await checkActiveSession();
+        }
+
+        function toggleGuestCardForm() {
+            const container = document.getElementById("guestCardContainer");
+            container.style.display = container.style.display === "none" ? "block" : "none";
+            if (container.style.display === "block") {
+                container.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        async function handleSavedCardPay(e) {
+            if (e) e.preventDefault();
+            hideAlerts();
+
+            if (!selectedCardId) {
+                showError("Por favor seleccioná una tarjeta para continuar.");
+                return;
+            }
+
+            const cvv = document.getElementById("savedCardCvv").value.trim();
+            if (!cvv || cvv.length < 3) {
+                showError("Por favor ingresá el código de seguridad (CVV) de 3 dígitos de tu tarjeta.");
+                document.getElementById("savedCardCvv").focus();
+                return;
+            }
+
+            const btn = document.getElementById("btnPaySavedCard");
+            btn.disabled = true;
+            btn.textContent = "Autorizando cobro con tarjeta...";
+
+            try {
+                // Endpoint autenticado: POST /api/v1/checkout/{paymentIntentId}/pay
+                const targetId = (linkData && linkData.id) ? linkData.id : currentToken;
+                const res = await fetch(`/api/v1/checkout/${targetId}/pay`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`,
+                        "Idempotency-Key": crypto.randomUUID()
+                    },
+                    body: JSON.stringify({
+                        cardId: selectedCardId,
+                        cvv: cvv
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    showError(data.detail || data.title || "El pago con tu tarjeta fue rechazado.");
+                    btn.disabled = false;
+                    btn.textContent = `Pagar $ ${linkData.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })} ${linkData.currency} con Tarjeta`;
+                    return;
+                }
+
+                showReceipt(data, "Tarjeta Guardada");
+            } catch (err) {
+                showError("Ocurrió un error inesperado al procesar el cobro.");
+                btn.disabled = false;
+                btn.textContent = `Pagar con Tarjeta Guardada`;
+            }
         }
 
         function fillCard(type) {
@@ -829,12 +1165,12 @@
             }
         }
 
-        async function handleCardPay(e) {
+        async function handleGuestCardPay(e) {
             e.preventDefault();
             hideAlerts();
-            const btn = document.getElementById("btnPayCard");
+            const btn = document.getElementById("btnPayGuestCard");
             btn.disabled = true;
-            btn.textContent = "Procesando pago con tarjeta...";
+            btn.textContent = "Procesando pago como invitado...";
 
             const payload = {
                 token: currentToken,
@@ -848,7 +1184,7 @@
                 }
             };
 
-            await executePayment(payload, btn, "Pagar con Tarjeta");
+            await executeGuestPayment(payload, btn, "Pagar como Invitado");
         }
 
         async function handleWalletPay(e) {
@@ -863,10 +1199,10 @@
                 paymentMethod: 0 // Wallet
             };
 
-            await executePayment(payload, btn, "Confirmar y Pagar", authToken);
+            await executeGuestPayment(payload, btn, "Confirmar y Pagar", authToken);
         }
 
-        async function executePayment(payload, btn, defaultText, bearerToken = null) {
+        async function executeGuestPayment(payload, btn, defaultText, bearerToken = null) {
             try {
                 const headers = {
                     "Content-Type": "application/json",
@@ -890,7 +1226,7 @@
                     return;
                 }
 
-                showReceipt(data);
+                showReceipt(data, payload.paymentMethod === 0 ? "Billetera Virtual" : "Tarjeta Simulada");
             } catch (err) {
                 showError("Ocurrió un error inesperado de red al contactar al servidor.");
                 btn.disabled = false;
@@ -898,13 +1234,13 @@
             }
         }
 
-        function showReceipt(data) {
+        function showReceipt(data, customMethod = null) {
             document.getElementById("checkoutHeader").style.display = "none";
             document.getElementById("checkoutBody").style.display = "none";
             document.getElementById("receiptCard").style.display = "block";
 
             document.getElementById("recTitle").textContent = linkData.title;
-            document.getElementById("recMethod").textContent = data.paymentMethod === 'Card' ? "Tarjeta Simulada" : "Billetera Virtual";
+            document.getElementById("recMethod").textContent = customMethod || (data.paymentMethod === 'Card' ? "Tarjeta" : "Billetera Virtual");
             document.getElementById("recAuthCode").textContent = data.authorizationCode || "APROBADO";
             document.getElementById("recId").textContent = data.paymentId;
             document.getElementById("recTotal").textContent = `$ ${data.amount.toFixed(2)} ${data.currency}`;
@@ -914,6 +1250,7 @@
             const el = document.getElementById("errorAlert");
             el.textContent = msg;
             el.style.display = "block";
+            el.scrollIntoView({ behavior: 'smooth' });
         }
 
         function hideAlerts() {

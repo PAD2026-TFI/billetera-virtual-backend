@@ -128,7 +128,8 @@ public sealed class PaymentLinkService(
             link.Status.ToString(),
             link.Type.ToString(),
             link.ExpiresAt,
-            isPayable);
+            isPayable,
+            link.Id);
     }
 
     public async Task<PaymentLinkDto?> GetByIdAsync(Guid id, Guid merchantOwnerId, CancellationToken ct)

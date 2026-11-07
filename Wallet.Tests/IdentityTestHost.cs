@@ -25,6 +25,9 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
     internal TestTransferStore Transfers { get; } = new();
     internal TestMovementHistory History { get; } = new();
     internal TestUnitOfWork UnitOfWork { get; } = new();
+    internal TestExternalClientRepository Clients { get; } = new();
+    internal TestPaymentLinkRepository Links { get; } = new();
+    internal TestCardRepository Cards { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -50,6 +53,12 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
                 s.AddSingleton<IMovementHistoryReader>(History);
                 s.RemoveAll<IUnitOfWork>();
                 s.AddSingleton<IUnitOfWork>(UnitOfWork);
+                s.RemoveAll<IExternalClientRepository>();
+                s.AddSingleton<IExternalClientRepository>(Clients);
+                s.RemoveAll<IPaymentLinkRepository>();
+                s.AddSingleton<IPaymentLinkRepository>(Links);
+                s.RemoveAll<ICardRepository>();
+                s.AddSingleton<ICardRepository>(Cards);
             });
     }
 
@@ -147,6 +156,21 @@ internal sealed class TestWalletRepository : IWalletRepository
         var actual = Items.GetOrAdd(candidate.UserId, candidate);
         return Task.FromResult(new WalletCreation(actual, ReferenceEquals(actual, candidate)));
     }
+    public Task<global::Wallet.Domain.Wallet?> FindByCvuAsync(string cvu, CancellationToken ct) =>
+        Task.FromResult(Items.Values.FirstOrDefault(w => w.Cvu == cvu));
+    public Task<global::Wallet.Domain.Wallet?> FindByAliasAsync(string alias, CancellationToken ct) =>
+        Task.FromResult(Items.Values.FirstOrDefault(w => w.Alias.Equals(alias, StringComparison.OrdinalIgnoreCase)));
+    public Task<global::Wallet.Domain.Wallet?> FindByIdAsync(Guid id, CancellationToken ct) =>
+        Task.FromResult(Items.Values.FirstOrDefault(w => w.Id == id));
+    public Task CreateAsync(global::Wallet.Domain.Wallet wallet, CancellationToken ct)
+    {
+        Items[wallet.UserId] = wallet;
+        return Task.CompletedTask;
+    }
+    public Task<bool> ExistsCvuAsync(string cvu, CancellationToken ct) =>
+        Task.FromResult(Items.Values.Any(w => w.Cvu == cvu));
+    public Task<bool> ExistsAliasAsync(string alias, CancellationToken ct) =>
+        Task.FromResult(Items.Values.Any(w => w.Alias.Equals(alias, StringComparison.OrdinalIgnoreCase)));
 }
 
 internal sealed class TestTransferStore : ITransferStore
@@ -188,5 +212,82 @@ internal sealed class TestUnitOfWork : IUnitOfWork
         public Task CommitAsync(CancellationToken ct) => Task.CompletedTask;
         public Task RollbackAsync(CancellationToken ct) => Task.CompletedTask;
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+}
+
+internal sealed class TestExternalClientRepository : IExternalClientRepository
+{
+    private readonly ConcurrentDictionary<Guid, ExternalClient> _byId = new();
+    private readonly ConcurrentDictionary<string, ExternalClient> _byHash = new(StringComparer.OrdinalIgnoreCase);
+
+    public Task<ExternalClient?> FindByApiKeyHashAsync(string apiKeyHash, CancellationToken ct) =>
+        Task.FromResult(_byHash.GetValueOrDefault(apiKeyHash));
+
+    public Task<ExternalClient?> FindByIdAsync(Guid id, CancellationToken ct) =>
+        Task.FromResult(_byId.GetValueOrDefault(id));
+
+    public Task CreateAsync(ExternalClient client, CancellationToken ct)
+    {
+        _byId[client.Id] = client;
+        if (!string.IsNullOrEmpty(client.ApiKeyHash))
+            _byHash[client.ApiKeyHash] = client;
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(ExternalClient client, CancellationToken ct)
+    {
+        _byId[client.Id] = client;
+        if (!string.IsNullOrEmpty(client.ApiKeyHash))
+            _byHash[client.ApiKeyHash] = client;
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class TestPaymentLinkRepository : IPaymentLinkRepository
+{
+    private readonly ConcurrentDictionary<string, PaymentLink> _byToken = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<Guid, PaymentLink> _byId = new();
+
+    public Task<PaymentLink?> FindByTokenAsync(string token, CancellationToken ct) =>
+        Task.FromResult(_byToken.TryGetValue(token, out var val) ? val : null);
+
+    public Task<PaymentLink?> FindByIdAsync(Guid id, CancellationToken ct) =>
+        Task.FromResult(_byId.TryGetValue(id, out var val) ? val : null);
+
+    public Task CreateAsync(PaymentLink link, CancellationToken ct)
+    {
+        _byToken[link.Token] = link;
+        _byId[link.Id] = link;
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(PaymentLink link, CancellationToken ct)
+    {
+        _byToken[link.Token] = link;
+        _byId[link.Id] = link;
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class TestCardRepository : ICardRepository
+{
+    private readonly ConcurrentDictionary<Guid, Card> _cards = new();
+
+    public Task<Card?> FindByIdAsync(Guid id, CancellationToken ct) =>
+        Task.FromResult(_cards.GetValueOrDefault(id));
+
+    public Task<IReadOnlyList<Card>> GetByUserIdAsync(Guid userId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Card>>(_cards.Values.Where(c => c.UserId == userId).ToList());
+
+    public Task CreateAsync(Card card, CancellationToken ct)
+    {
+        _cards[card.Id] = card;
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(Card card, CancellationToken ct)
+    {
+        _cards[card.Id] = card;
+        return Task.CompletedTask;
     }
 }

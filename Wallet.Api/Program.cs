@@ -187,6 +187,10 @@ if (enabled)
             p.RequireAuthenticatedUser()
              .RequireRole("Client"));
 
+        o.AddPolicy("Admin", p =>
+            p.RequireAuthenticatedUser()
+             .RequireRole("Admin"));
+
         o.AddPolicy("ExternalClient", p =>
             p.AddAuthenticationSchemes(ApiKeyAuthenticationHandler.SchemeName)
              .RequireAuthenticatedUser()

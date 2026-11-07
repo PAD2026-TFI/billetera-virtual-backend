@@ -16,7 +16,8 @@ public sealed class UserRegistrationService(
     ICvuGenerator cvuGenerator,
     IAliasGenerator aliasGenerator,
     IUnitOfWork unitOfWork,
-    TimeProvider clock)
+    TimeProvider clock,
+    ICardRepository? cards = null)
 {
     private static bool IsValid(object request) => Validator.TryValidateObject(
         request, new ValidationContext(request), new List<ValidationResult>(), true);
@@ -72,11 +73,29 @@ public sealed class UserRegistrationService(
         var wallet = DomainWallet.CreateForUser(user.Id, cvu, alias, now);
         user.LinkWallet(wallet.Id);
 
+        var last4 = $"{Random.Shared.Next(1000, 9999)}";
+        var cardHolder = $"{user.FirstName} {user.LastName}".Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(cardHolder)) cardHolder = "CLIENTE TITULAR";
+
+        var card = Card.Create(
+            user.Id,
+            cardHolder,
+            "VISA DÉBITO",
+            CardType.Debit,
+            last4,
+            12,
+            now.Year + 5,
+            now);
+
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         try
         {
             await users.AddAsync(user, ct);
             await wallets.CreateAsync(wallet, ct);
+            if (cards is not null)
+            {
+                await cards.CreateAsync(card, ct);
+            }
             await unitOfWork.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         }

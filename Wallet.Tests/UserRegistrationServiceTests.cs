@@ -108,8 +108,28 @@ public sealed class UserRegistrationServiceTests
         }
     }
 
+    private sealed class InMemoryCardRepository : ICardRepository
+    {
+        public readonly List<Card> Cards = [];
+
+        public Task<Card?> FindByIdAsync(Guid id, CancellationToken ct) =>
+            Task.FromResult(Cards.FirstOrDefault(c => c.Id == id));
+
+        public Task<IReadOnlyList<Card>> GetByUserIdAsync(Guid userId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<Card>>(Cards.Where(c => c.UserId == userId).ToList());
+
+        public Task CreateAsync(Card card, CancellationToken ct)
+        {
+            Cards.Add(card);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(Card card, CancellationToken ct) => Task.CompletedTask;
+    }
+
     private readonly InMemoryUserRepository _users = new();
     private readonly InMemoryWalletRepository _wallets = new();
+    private readonly InMemoryCardRepository _cards = new();
     private readonly FakePasswordService _passwords = new();
     private readonly ICvuGenerator _cvuGenerator = new CvuGenerator();
     private readonly IAliasGenerator _aliasGenerator = new AliasGenerator();
@@ -126,7 +146,8 @@ public sealed class UserRegistrationServiceTests
             _cvuGenerator,
             _aliasGenerator,
             _uow,
-            _clock);
+            _clock,
+            _cards);
     }
 
     [Fact]
@@ -164,6 +185,13 @@ public sealed class UserRegistrationServiceTests
         Assert.NotNull(savedWallet);
         Assert.Equal(result.Value.Cvu, savedWallet.Cvu);
         Assert.Equal(result.Value.Alias, savedWallet.Alias);
+
+        var userCards = await _cards.GetByUserIdAsync(result.Value.UserId, CancellationToken.None);
+        Assert.Single(userCards);
+        var debitCard = userCards[0];
+        Assert.Equal(CardType.Debit, debitCard.Type);
+        Assert.True(debitCard.IsActive);
+        Assert.Equal(4, debitCard.CardNumberLast4.Length);
     }
 
     [Fact]

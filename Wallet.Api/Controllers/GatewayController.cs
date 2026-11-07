@@ -15,8 +15,22 @@ public sealed class GatewayController(
     PaymentLinkService paymentLinks,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Registro y onboarding de clientes externos / comercios B2B.
+    /// Crea la entidad ExternalClient, su billetera atómica con CVU/Alias, y emite la API Key en texto plano una única vez.
+    /// </summary>
+    [HttpPost("/api/v1/merchants/register")]
+    [AllowAnonymous]
+    [ProducesResponseType<RegisterExternalClientResponse>(201)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    public async Task<ActionResult<RegisterExternalClientResponse>> RegisterMerchant(
+        RegisterExternalClientRequest request,
+        CancellationToken ct) =>
+        await RegisterClient(request, ct);
+
     [HttpPost("clients")]
     [AllowAnonymous]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<RegisterExternalClientResponse>(201)]
     [ProducesResponseType<ProblemDetails>(400)]
     public async Task<ActionResult<RegisterExternalClientResponse>> RegisterClient(
@@ -119,6 +133,7 @@ public sealed class GatewayController(
 
     [HttpPost("wallet")]
     [Authorize(Policy = "ExternalClient")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<WalletResponse>(201)]
     [ProducesResponseType<WalletResponse>(200)]
     public async Task<ActionResult<WalletResponse>> CreateWallet(

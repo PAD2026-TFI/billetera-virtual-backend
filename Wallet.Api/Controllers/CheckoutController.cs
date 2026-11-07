@@ -10,12 +10,21 @@ namespace Wallet.Api.Controllers;
 [Route("api/v1/checkout")]
 public sealed class CheckoutController(ICheckoutService checkoutService, ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Genera un nuevo link o intención de cobro omnicanal.
+    /// Requiere autenticación mediante API Key (X-Api-Key) del comercio B2B (ExternalClient).
+    /// Campos obligatorios: Amount y Title. Todos los demás campos son opcionales.
+    /// La billetera destino se vincula automáticamente al comercio autenticado.
+    /// </summary>
     [HttpPost("links")]
-    [AllowAnonymous]
+    [Authorize(Policy = "ExternalClient")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<PaymentLinkDto>(201)]
     [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
     public async Task<ActionResult<PaymentLinkDto>> CreateLink(
         [FromBody] CreatePaymentLinkRequest request,
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
         CancellationToken ct)
     {
         try

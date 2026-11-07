@@ -32,10 +32,10 @@ public sealed class WalletBalanceTests
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
             Assert.True(response.Headers.CacheControl?.NoStore);
-            Assert.Equal(new WalletResponse(wallet.Id, balance, "ARS", instant),
+            Assert.Equal(new WalletResponse(wallet.Id, balance, "ARS", instant, wallet.Cvu, wallet.Alias),
                 await response.Content.ReadFromJsonAsync<WalletResponse>());
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            Assert.Equal(new[] { "balance", "createdAt", "currency", "id" },
+            Assert.Equal(new[] { "alias", "balance", "createdAt", "currency", "cvu", "id" },
                 json.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToArray());
         }
         Assert.Equal(0, host.Wallets.Creates);

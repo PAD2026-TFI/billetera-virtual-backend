@@ -11,24 +11,87 @@ public enum CheckoutPaymentMethod
     Card
 }
 
+public sealed class LenientNullableGuidConverter : JsonConverter<Guid?>
+{
+    public override Guid? Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+    {
+        if (reader.TokenType == System.Text.Json.JsonTokenType.Null)
+            return null;
+
+        if (reader.TokenType == System.Text.Json.JsonTokenType.String)
+        {
+            var str = reader.GetString();
+            if (string.IsNullOrWhiteSpace(str))
+                return null;
+
+            return Guid.TryParse(str.Trim(), out var guid) ? guid : null;
+        }
+
+        return null;
+    }
+
+    public override void Write(System.Text.Json.Utf8JsonWriter writer, Guid? value, System.Text.Json.JsonSerializerOptions options)
+    {
+        if (value.HasValue)
+            writer.WriteStringValue(value.Value);
+        else
+            writer.WriteNullValue();
+    }
+}
+
 public sealed class CreatePaymentLinkRequest
 {
+    /// <summary>
+    /// [OBLIGATORIO] Monto a cobrar en la moneda especificada (debe ser mayor a 0).
+    /// </summary>
     [Required]
     public decimal Amount { get; init; }
 
+    /// <summary>
+    /// [OPCIONAL] Código de moneda ISO de 3 letras. Por defecto: "ARS".
+    /// </summary>
     public string? Currency { get; init; } = "ARS";
 
+    /// <summary>
+    /// [OBLIGATORIO] Título o concepto del cobro visible para el pagador.
+    /// </summary>
     [Required]
     public string Title { get; init; } = string.Empty;
 
+    /// <summary>
+    /// [OPCIONAL] Descripción detallada de los ítems o el servicio.
+    /// </summary>
     public string? Description { get; init; }
 
+    /// <summary>
+    /// [OPCIONAL] Modalidad de cobro: 0 = SingleUse (un único cobro), 1 = Reusable (múltiples cobros). Por defecto: 0.
+    /// </summary>
     public PaymentLinkType Type { get; init; } = PaymentLinkType.SingleUse;
 
+    /// <summary>
+    /// [OPCIONAL] Minutos de validez antes de que expire el link. Si se omite, no tiene expiración por TTL.
+    /// </summary>
     public int? TtlMinutes { get; init; }
 
+    /// <summary>
+    /// [OPCIONAL] GUID de la billetera destino. Se puede omitir si se provee CVU, Alias, email del comercio o si se está autenticado.
+    /// </summary>
+    [JsonConverter(typeof(LenientNullableGuidConverter))]
     public Guid? DestinationWalletId { get; init; }
 
+    /// <summary>
+    /// [OPCIONAL] CVU de 22 dígitos de la cuenta que recibirá los fondos.
+    /// </summary>
+    public string? DestinationCvu { get; init; }
+
+    /// <summary>
+    /// [OPCIONAL] Alias bancario/virtual de la cuenta que recibirá los fondos.
+    /// </summary>
+    public string? DestinationAlias { get; init; }
+
+    /// <summary>
+    /// [OPCIONAL] Email del comercio si no se está autenticado (crea o enlaza el comercio invitado automáticamente).
+    /// </summary>
     public string? MerchantEmail { get; init; }
 
     public CreatePaymentLinkRequest() { }
@@ -40,7 +103,9 @@ public sealed class CreatePaymentLinkRequest
         PaymentLinkType type = PaymentLinkType.SingleUse,
         int? ttlMinutes = null,
         Guid? destinationWalletId = null,
-        string? merchantEmail = null)
+        string? merchantEmail = null,
+        string? destinationCvu = null,
+        string? destinationAlias = null)
     {
         Amount = amount;
         Title = title;
@@ -49,6 +114,8 @@ public sealed class CreatePaymentLinkRequest
         TtlMinutes = ttlMinutes;
         DestinationWalletId = destinationWalletId;
         MerchantEmail = merchantEmail;
+        DestinationCvu = destinationCvu;
+        DestinationAlias = destinationAlias;
     }
 }
 
@@ -66,7 +133,30 @@ public sealed record PaymentLinkDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? ExpiresAt,
     string CheckoutUrl,
-    string QrPayload);
+    string QrPayload,
+    string? QrCodeUrl = null);
+
+public sealed record CreatePaymentIntentRequest(
+    [Required] decimal Amount,
+    [Required] string Title,
+    string? Currency = "ARS",
+    string? Description = null,
+    PaymentLinkType Type = PaymentLinkType.SingleUse,
+    int? TtlMinutes = null);
+
+public sealed record PaymentIntentResponse(
+    Guid Id,
+    string Token,
+    decimal Amount,
+    string Currency,
+    string Title,
+    string? Description,
+    string Status,
+    string Type,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ExpiresAt,
+    string CheckoutUrl,
+    string QrCodeUrl);
 
 public sealed record CheckoutPublicDetailsDto(
     string Token,

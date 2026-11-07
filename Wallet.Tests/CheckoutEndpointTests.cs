@@ -114,6 +114,34 @@ public sealed class CheckoutEndpointTests
         public Task<bool> IsReadyAsync(CancellationToken ct) => Task.FromResult(true);
     }
 
+    private sealed class InMemoryExternalClientRepository : IExternalClientRepository
+    {
+        private readonly ConcurrentDictionary<Guid, ExternalClient> _byId = new();
+        private readonly ConcurrentDictionary<string, ExternalClient> _byHash = new(StringComparer.OrdinalIgnoreCase);
+
+        public Task<ExternalClient?> FindByApiKeyHashAsync(string apiKeyHash, CancellationToken ct) =>
+            Task.FromResult(_byHash.GetValueOrDefault(apiKeyHash));
+
+        public Task<ExternalClient?> FindByIdAsync(Guid id, CancellationToken ct) =>
+            Task.FromResult(_byId.GetValueOrDefault(id));
+
+        public Task CreateAsync(ExternalClient client, CancellationToken ct)
+        {
+            _byId[client.Id] = client;
+            if (!string.IsNullOrEmpty(client.ApiKeyHash))
+                _byHash[client.ApiKeyHash] = client;
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(ExternalClient client, CancellationToken ct)
+        {
+            _byId[client.Id] = client;
+            if (!string.IsNullOrEmpty(client.ApiKeyHash))
+                _byHash[client.ApiKeyHash] = client;
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class FakeFundingStore : IDevelopmentFundingStore
     {
         public Task<DevelopmentFundingResult> FundAsync(DevelopmentFundingRequest request, string hash, CancellationToken ct)
@@ -130,7 +158,18 @@ public sealed class CheckoutEndpointTests
         var paymentsRepo = new InMemoryPaymentRepository();
         var walletRepo = new InMemoryWalletRepository();
         var userRepo = new InMemoryUserRepository();
+        var clientsRepo = new InMemoryExternalClientRepository();
         var fundingStore = new FakeFundingStore();
+
+        var rawApiKey = "test-merchant-api-key-12345";
+        var merchantClient = ExternalClient.Create(
+            "Consultora SAS",
+            "30700000001",
+            "consultor@empresa.com",
+            DateTimeOffset.UtcNow,
+            "Consultoría TI");
+        merchantClient.SetApiKeyHash(GatewayService.HashApiKey(rawApiKey), DateTimeOffset.UtcNow);
+        await clientsRepo.CreateAsync(merchantClient, CancellationToken.None);
 
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
@@ -152,6 +191,9 @@ public sealed class CheckoutEndpointTests
                 services.RemoveAll<IUserRepository>();
                 services.AddSingleton<IUserRepository>(userRepo);
 
+                services.RemoveAll<IExternalClientRepository>();
+                services.AddSingleton<IExternalClientRepository>(clientsRepo);
+
                 services.RemoveAll<IDevelopmentFundingStore>();
                 services.AddSingleton<IDevelopmentFundingStore>(fundingStore);
             });
@@ -159,7 +201,7 @@ public sealed class CheckoutEndpointTests
 
         using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://localhost") });
 
-        // 1. Crear un link de pago como comercio invitado
+        // 1. Intento sin API Key debe ser rechazado con 401 Unauthorized
         var createRequest = new CreatePaymentLinkRequest
         {
             Amount = 2500m,
@@ -168,7 +210,17 @@ public sealed class CheckoutEndpointTests
             MerchantEmail = "consultor@empresa.com"
         };
 
-        var postRes = await client.PostAsJsonAsync("/api/v1/checkout/links", createRequest);
+        var unauthRes = await client.PostAsJsonAsync("/api/v1/checkout/links", createRequest);
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthRes.StatusCode);
+
+        // 2. Crear un link de pago con cabecera X-Api-Key válida
+        using var authorizedRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/checkout/links")
+        {
+            Content = JsonContent.Create(createRequest)
+        };
+        authorizedRequest.Headers.Add("X-Api-Key", rawApiKey);
+
+        var postRes = await client.SendAsync(authorizedRequest);
         Assert.Equal(HttpStatusCode.Created, postRes.StatusCode);
 
         var created = await postRes.Content.ReadFromJsonAsync<PaymentLinkDto>();
@@ -177,7 +229,7 @@ public sealed class CheckoutEndpointTests
         Assert.Equal(2500m, created.Amount);
         Assert.Equal("Active", created.Status);
 
-        // 2. Consultar detalles públicos mediante el token
+        // 3. Consultar detalles públicos mediante el token
         var getRes = await client.GetAsync($"/api/v1/checkout/links/{created.Token}");
         Assert.Equal(HttpStatusCode.OK, getRes.StatusCode);
 
@@ -186,14 +238,14 @@ public sealed class CheckoutEndpointTests
         Assert.Equal("Servicio de Consultoría", details.Title);
         Assert.True(details.IsPayable);
 
-        // 3. Consultar código QR en formato SVG
+        // 4. Consultar código QR en formato SVG
         var qrRes = await client.GetAsync($"/api/v1/checkout/links/{created.Token}/qr");
         Assert.Equal(HttpStatusCode.OK, qrRes.StatusCode);
         Assert.Equal("image/svg+xml", qrRes.Content.Headers.ContentType?.MediaType);
         var svgContent = await qrRes.Content.ReadAsStringAsync();
         Assert.Contains("<svg", svgContent);
 
-        // 4. Pagar con tarjeta simulada con fondos insuficientes (CVV 999)
+        // 5. Pagar con tarjeta simulada con fondos insuficientes (CVV 999)
         var failedPayRequest = new ProcessCheckoutRequest
         {
             Token = created.Token,
@@ -204,7 +256,7 @@ public sealed class CheckoutEndpointTests
         var failedPayRes = await client.PostAsJsonAsync("/api/v1/checkout/pay", failedPayRequest);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, failedPayRes.StatusCode);
 
-        // 5. Pagar con tarjeta simulada exitosa
+        // 6. Pagar con tarjeta simulada exitosa
         var successPayRequest = new ProcessCheckoutRequest
         {
             Token = created.Token,
@@ -221,7 +273,7 @@ public sealed class CheckoutEndpointTests
         Assert.Equal(2500m, receipt.Amount);
         Assert.NotNull(receipt.AuthorizationCode);
 
-        // 6. Intentar pagar nuevamente el mismo link (SingleUse) debe dar conflicto
+        // 7. Intentar pagar nuevamente el mismo link (SingleUse) debe dar conflicto
         var doublePayRes = await client.PostAsJsonAsync("/api/v1/checkout/pay", successPayRequest);
         Assert.Equal(HttpStatusCode.Conflict, doublePayRes.StatusCode);
     }

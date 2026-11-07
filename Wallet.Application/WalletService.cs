@@ -17,13 +17,21 @@ public interface IWalletRepository
 
     Task<DomainWallet?> FindByAliasAsync(string alias, CancellationToken ct) => Task.FromResult<DomainWallet?>(null);
 
+    Task<DomainWallet?> FindByIdAsync(Guid id, CancellationToken ct) => Task.FromResult<DomainWallet?>(null);
+
     Task CreateAsync(DomainWallet wallet, CancellationToken ct) => Task.CompletedTask;
 
     Task UpdateAsync(DomainWallet wallet, CancellationToken ct) => Task.CompletedTask;
 }
 
 public sealed record WalletCreation(DomainWallet Wallet, bool Created);
-public sealed record WalletResponse(Guid Id, decimal Balance, string Currency, DateTimeOffset CreatedAt);
+public sealed record WalletResponse(
+    Guid Id,
+    decimal Balance,
+    string Currency,
+    DateTimeOffset CreatedAt,
+    string Cvu = "",
+    string Alias = "");
 public sealed record CreateWalletResult(WalletResponse Wallet, bool Created);
 
 public sealed record ModifyAliasRequest(string NewAlias);
@@ -37,7 +45,7 @@ public sealed class WalletService(IWalletRepository wallets, ICurrentUser curren
     }
 
     private static WalletResponse Map(DomainWallet wallet) =>
-        new(wallet.Id, wallet.Balance.Amount, wallet.Currency, wallet.CreatedAt);
+        new(wallet.Id, wallet.Balance.Amount, wallet.Currency, wallet.CreatedAt, wallet.Cvu, wallet.Alias);
 
     public async Task<CreateWalletResult> CreateAsync(CancellationToken ct)
     {

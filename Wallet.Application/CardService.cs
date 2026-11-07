@@ -6,7 +6,8 @@ public sealed class CardService(
     ICardRepository cardRepository,
     ICardRequestRepository cardRequestRepository,
     IAddressRepository addressRepository,
-    TimeProvider clock) : ICardService
+    TimeProvider clock,
+    IUserRepository? userRepository = null) : ICardService
 {
     public async Task<CardRequestDto> CreateCardRequestAsync(Guid userId, CreateCardRequestRequest request, CancellationToken ct)
     {
@@ -47,6 +48,29 @@ public sealed class CardService(
     public async Task<IReadOnlyList<CardDto>> GetUserCardsAsync(Guid userId, CancellationToken ct)
     {
         var cards = await cardRepository.GetByUserIdAsync(userId, ct);
+        if (cards.Count == 0)
+        {
+            var user = userRepository is not null ? await userRepository.FindByIdAsync(userId, ct) : null;
+            var holder = user is not null
+                ? $"{user.FirstName} {user.LastName}".Trim().ToUpperInvariant()
+                : "CLIENTE TITULAR";
+            if (string.IsNullOrWhiteSpace(holder)) holder = "CLIENTE TITULAR";
+
+            var now = clock.GetUtcNow();
+            var last4 = $"{Random.Shared.Next(1000, 9999)}";
+            var defaultCard = Card.Create(
+                userId,
+                holder,
+                "VISA DÉBITO",
+                CardType.Debit,
+                last4,
+                12,
+                now.Year + 5,
+                now);
+
+            await cardRepository.CreateAsync(defaultCard, ct);
+            return [MapCard(defaultCard)];
+        }
         return cards.Select(MapCard).ToList();
     }
 

@@ -42,7 +42,7 @@ public sealed class WalletCreationTests
         Assert.Equal("ARS", wallet.Currency);
         Assert.Equal(owner.Id, host.Wallets.Items[owner.Id].UserId);
         using var json = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        Assert.Equal(new[] { "balance", "createdAt", "currency", "id" },
+        Assert.Equal(new[] { "alias", "balance", "createdAt", "currency", "cvu", "id" },
             json.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToArray());
         // Fixture de billetera con fondos futuros: repetir la creación no los modifica.
         typeof(DomainWallet).GetProperty(nameof(DomainWallet.Balance))!.SetValue(host.Wallets.Items[owner.Id], Wallet.Domain.Money.From(125.50m));

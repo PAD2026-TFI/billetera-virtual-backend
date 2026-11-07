@@ -74,6 +74,16 @@ public sealed class User : WalletOwner
     }
 
     /// <summary>
+    /// Fábrica de dominio para registrar un usuario administrador.
+    /// </summary>
+    public static User RegisterAdmin(string dni, string firstName, string lastName, string email, DateTimeOffset now)
+    {
+        var admin = new User(Guid.NewGuid(), dni, firstName, lastName, email, now);
+        admin.Role = "Admin";
+        return admin;
+    }
+
+    /// <summary>
     /// Compatibilidad hacia atrás: registra un usuario asignando un DNI predeterminado si no se especifica.
     /// </summary>
     public static User Create(string firstName, string lastName, string email, DateTimeOffset now, string? dni = null)

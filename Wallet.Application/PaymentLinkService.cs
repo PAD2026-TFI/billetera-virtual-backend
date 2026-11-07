@@ -37,6 +37,20 @@ public sealed class PaymentLinkService(
                 ?? (await wallets.CreateOrGetAsync(DomainWallet.Create(currentUserId.Value, now), ct)).Wallet;
             destinationWalletId = userWallet.Id;
         }
+        else if (!string.IsNullOrWhiteSpace(request.DestinationCvu))
+        {
+            var target = await wallets.FindByCvuAsync(request.DestinationCvu.Trim(), ct)
+                ?? throw new ArgumentException($"No se encontró ninguna billetera con el CVU '{request.DestinationCvu}'.");
+            destinationWalletId = target.Id;
+            merchantOwnerId = target.OwnerId;
+        }
+        else if (!string.IsNullOrWhiteSpace(request.DestinationAlias))
+        {
+            var target = await wallets.FindByAliasAsync(request.DestinationAlias.Trim().ToLowerInvariant(), ct)
+                ?? throw new ArgumentException($"No se encontró ninguna billetera con el Alias '{request.DestinationAlias}'.");
+            destinationWalletId = target.Id;
+            merchantOwnerId = target.OwnerId;
+        }
         else if (!string.IsNullOrWhiteSpace(request.MerchantEmail))
         {
             var email = request.MerchantEmail.Trim();
@@ -66,7 +80,7 @@ public sealed class PaymentLinkService(
         }
         else
         {
-            throw new ArgumentException("Debes estar autenticado o proveer 'merchantEmail' para generar el link.");
+            throw new ArgumentException("Debes estar autenticado con X-Api-Key / Bearer, o indicar 'merchantEmail', 'destinationCvu', 'destinationAlias' o 'destinationWalletId'.");
         }
 
         var ttl = request.TtlMinutes.HasValue ? TimeSpan.FromMinutes(request.TtlMinutes.Value) : (TimeSpan?)null;
@@ -115,6 +129,15 @@ public sealed class PaymentLinkService(
             link.Type.ToString(),
             link.ExpiresAt,
             isPayable);
+    }
+
+    public async Task<PaymentLinkDto?> GetByIdAsync(Guid id, Guid merchantOwnerId, CancellationToken ct)
+    {
+        var link = await links.FindByIdAsync(id, ct);
+        if (link is null || link.MerchantOwnerId != merchantOwnerId)
+            return null;
+
+        return Map(link);
     }
 
     public async Task<CheckoutReceiptDto> ProcessCheckoutAsync(
@@ -442,6 +465,7 @@ public sealed class PaymentLinkService(
     private PaymentLinkDto Map(PaymentLink link)
     {
         var checkoutUrl = $"{_baseUrl.TrimEnd('/')}/checkout/index.html?token={link.Token}";
+        var qrCodeUrl = $"{_baseUrl.TrimEnd('/')}/api/v1/checkout/links/{link.Token}/qr";
         return new PaymentLinkDto(
             link.Id,
             link.Token,
@@ -456,7 +480,8 @@ public sealed class PaymentLinkService(
             link.CreatedAt,
             link.ExpiresAt,
             checkoutUrl,
-            checkoutUrl);
+            checkoutUrl,
+            qrCodeUrl);
     }
 
     private Guid? TryGetCurrentUserId()

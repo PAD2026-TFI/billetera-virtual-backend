@@ -70,6 +70,11 @@ public sealed class SqlWalletRepository(WalletDbContext db) : IWalletRepository
         return db.Wallets.FirstOrDefaultAsync(w => w.Alias == alias, ct);
     }
 
+    public Task<DomainWallet?> FindByIdAsync(Guid id, CancellationToken ct)
+    {
+        return db.Wallets.FirstOrDefaultAsync(w => w.Id == id, ct);
+    }
+
     public Task CreateAsync(DomainWallet wallet, CancellationToken ct)
     {
         db.Wallets.Add(wallet);

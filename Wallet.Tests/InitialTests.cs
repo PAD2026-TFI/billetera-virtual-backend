@@ -53,7 +53,7 @@ public sealed class InitialTests
         using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost") });
         var openApi = await client.GetAsync("/openapi/v1.json");
         Assert.Equal(HttpStatusCode.OK, openApi.StatusCode);
-        Assert.Contains("/api/users/me/profile", await openApi.Content.ReadAsStringAsync());
+        Assert.Contains("/api/v1/me/profile", await openApi.Content.ReadAsStringAsync());
         var live = await client.GetAsync("/health/live");
         Assert.Equal(HttpStatusCode.OK, live.StatusCode);
         Assert.Equal("Healthy", (await live.Content.ReadFromJsonAsync<HealthResponse>())!.Status);

@@ -55,7 +55,8 @@ public sealed class SqlTransferTests
             await db.Transfers.Where(t => ids.Contains(t.SourceWalletId) || ids.Contains(t.DestinationWalletId)).ExecuteDeleteAsync();
             await db.DevelopmentFundings.Where(f => ids.Contains(f.WalletId)).ExecuteDeleteAsync();
             await db.Wallets.Where(w => ids.Contains(w.Id)).ExecuteDeleteAsync();
-            await db.Users.Where(u => u.Id == Sender.Id || u.Id == Receiver.Id).ExecuteDeleteAsync();
+            db.Users.RemoveRange(await db.Users.Where(u => u.Id == Sender.Id || u.Id == Receiver.Id).ToListAsync());
+            await db.SaveChangesAsync();
         }
     }
 

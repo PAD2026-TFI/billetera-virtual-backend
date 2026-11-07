@@ -6,9 +6,10 @@ namespace Wallet.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/cards")]
-[Authorize]
+[Authorize(Policy = "Client")]
 public sealed class CardsController(ICardService cardService, ICurrentUser currentUser) : ControllerBase
 {
+    [HttpGet("/api/v1/me/cards", Order = -1)]
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<CardDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
@@ -18,6 +19,7 @@ public sealed class CardsController(ICardService cardService, ICurrentUser curre
         return Ok(cards);
     }
 
+    [HttpPost("/api/v1/me/cards", Order = -1)]
     [HttpPost]
     [ProducesResponseType<CardDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

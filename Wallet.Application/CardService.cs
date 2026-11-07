@@ -7,7 +7,8 @@ public sealed class CardService(
     ICardRequestRepository cardRequestRepository,
     IAddressRepository addressRepository,
     TimeProvider clock,
-    IUserRepository? userRepository = null) : ICardService
+    IUserRepository? userRepository = null,
+    IAddressGeocoder? geocoder = null) : ICardService
 {
     public async Task<CardRequestDto> CreateCardRequestAsync(Guid userId, CreateCardRequestRequest request, CancellationToken ct)
     {
@@ -18,22 +19,47 @@ public sealed class CardService(
 
         var now = clock.GetUtcNow();
 
-        Address? address;
-        if (request.AddressId.HasValue && request.AddressId.Value != Guid.Empty)
+        if (request.AddressId == Guid.Empty)
+            throw new ArgumentException("AddressId cannot be empty.");
+        if (request.AddressId.HasValue && request.DeliveryAddress is not null)
+            throw new ArgumentException("Provide either AddressId or DeliveryAddress, not both.");
+        if (!Enum.IsDefined(request.Type)) throw new ArgumentOutOfRangeException(nameof(request.Type));
+
+        Address address;
+        var isNewAddress = request.DeliveryAddress is not null;
+        if (request.DeliveryAddress is { } input)
+        {
+            address = Address.CreateDraft(input.Street, input.Number, input.City, input.State,
+                input.PostalCode, now, input.Country, userId);
+            if (geocoder is not null)
+            {
+                var result = await geocoder.ValidateAsync(new(address.Street, address.Number, address.City,
+                    address.State, address.PostalCode, address.Country), ct);
+                if (!result.IsValid || result.Latitude is null || result.Longitude is null)
+                    throw new ArgumentException("The delivery address could not be validated.");
+                address.MarkValid(result.Latitude.Value, result.Longitude.Value, result.ExternalPlaceId, now);
+            }
+        }
+        else if (request.AddressId.HasValue)
         {
             address = await addressRepository.FindByIdAsync(request.AddressId.Value, userId, ct)
-                ?? throw new KeyNotFoundException($"Delivery address '{request.AddressId.Value}' was not found.");
+                ?? throw new KeyNotFoundException("Delivery address not found.");
         }
         else
         {
             address = await addressRepository.FindDefaultValidAddressAsync(userId, ct)
-                ?? throw new InvalidOperationException("Cannot request a card with an unvalidated address.");
+                ?? throw new ArgumentException("Provide DeliveryAddress or the AddressId of your saved address.");
         }
 
-        var cardRequest = CardRequest.Create(userId, address, now, request.Type);
-        await cardRequestRepository.CreateAsync(cardRequest, ct);
+        var cardRequest = address.ValidationStatus == AddressValidationStatus.Pending
+            ? CardRequest.CreateAwaitingAddressValidation(userId, address, now, request.Type)
+            : CardRequest.Create(userId, address, now, request.Type);
+        if (isNewAddress)
+            await cardRequestRepository.CreateWithAddressAsync(cardRequest, address, ct);
+        else
+            await cardRequestRepository.CreateAsync(cardRequest, ct);
 
-        return MapRequest(cardRequest);
+        return MapRequest(cardRequest, address);
     }
 
     public async Task<CardRequestDto?> GetCardRequestStatusAsync(Guid id, Guid userId, CancellationToken ct)
@@ -42,7 +68,8 @@ public sealed class CardService(
         if (cardRequest is null || cardRequest.UserId != userId)
             return null;
 
-        return MapRequest(cardRequest);
+        var address = await addressRepository.FindByIdAsync(cardRequest.AddressId, userId, ct);
+        return MapRequest(cardRequest, address);
     }
 
     public async Task<IReadOnlyList<CardDto>> GetUserCardsAsync(Guid userId, CancellationToken ct)
@@ -108,8 +135,9 @@ public sealed class CardService(
         return MapCard(card);
     }
 
-    private static CardRequestDto MapRequest(CardRequest r) =>
-        new(r.Id, r.UserId, r.AddressId, r.Type.ToString(), r.Status.ToString(), r.RequestedAt, r.UpdatedAt);
+    private static CardRequestDto MapRequest(CardRequest r, Address? address) =>
+        new(r.Id, r.UserId, r.AddressId, r.Type.ToString(), r.Status.ToString(), r.RequestedAt, r.UpdatedAt,
+            address is null ? null : new(address.Id, address.Street, address.Number, address.City, address.State, address.PostalCode, address.Country, address.ValidationStatus.ToString()));
 
     private static CardDto MapCard(Card c) =>
         new(c.Id, c.UserId, c.CardHolderName, c.Brand, c.Type.ToString(), c.CardNumberLast4, c.ExpirationMonth, c.ExpirationYear, c.IsActive, c.CreatedAt);

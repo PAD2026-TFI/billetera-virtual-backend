@@ -120,8 +120,10 @@ public sealed class AuthenticatedCheckoutTests
 
     private sealed class FakeFundingStore : IDevelopmentFundingStore
     {
+        public int Calls { get; private set; }
         public Task<DevelopmentFundingResult> FundAsync(DevelopmentFundingRequest request, string hash, CancellationToken ct)
         {
+            Calls++;
             return Task.FromResult(new DevelopmentFundingResult(
                 Guid.NewGuid(), request.WalletId, request.Amount, "ARS", DateTimeOffset.UtcNow, request.Amount, true));
         }
@@ -157,6 +159,16 @@ public sealed class AuthenticatedCheckoutTests
         public Guid Id { get; set; } = Guid.NewGuid();
     }
 
+    private sealed class FakeDebitPayments : IDebitCardPaymentStore
+    {
+        public DebitCardPaymentCommand? LastCommand { get; private set; }
+        public Task<CheckoutReceiptDto> ExecuteAsync(DebitCardPaymentCommand command, CancellationToken ct)
+        {
+            LastCommand = command;
+            return Task.FromResult(new CheckoutReceiptDto(Guid.NewGuid(), "token", 2500m, "ARS", Guid.NewGuid(), "Card", "Completed", DateTimeOffset.UtcNow, "WALLET-DEBIT"));
+        }
+    }
+    private readonly FakeDebitPayments _debitPayments = new();
     private readonly InMemoryPaymentLinkRepository _links = new();
     private readonly InMemoryPaymentRepository _payments = new();
     private readonly InMemoryWalletRepository _wallets = new();
@@ -182,7 +194,7 @@ public sealed class AuthenticatedCheckoutTests
             _cardSimulator,
             _currentUser,
             _clock,
-            _cards);
+            _cards, debitCardPayments: _debitPayments);
     }
 
     [Fact]
@@ -267,4 +279,32 @@ public sealed class AuthenticatedCheckoutTests
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.PayWithSavedCardAsync(link.Id, request, payerUserId, null, CancellationToken.None));
     }
-}
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Associated_debit_card_uses_wallet_payment_store_for_both_checkout_entry_points(bool publicCheckout)
+    {
+        var merchant = Guid.NewGuid();
+        var link = PaymentLink.Create(Guid.NewGuid(), 2500m, "Compra", null, PaymentLinkType.SingleUse, _clock.GetUtcNow(), merchantOwnerId: merchant);
+        await _links.CreateAsync(link, CancellationToken.None);
+        var card = Card.Create(_currentUser.Id, "Titular", "VISA DEBITO", CardType.Debit, "1234", 12, 2030, _clock.GetUtcNow());
+        _cards.Add(card);
+        var receipt = publicCheckout
+            ? await _service.ProcessCheckoutAsync(link.Token, new() { PaymentMethod = CheckoutPaymentMethod.Card, CardId = card.Id }, "purchase-key", CancellationToken.None)
+            : await _service.PayWithSavedCardAsync(link.Id, new() { CardId = card.Id }, _currentUser.Id, "purchase-key", CancellationToken.None);
+        Assert.Equal("Completed", receipt.Status);
+        Assert.Equal(new DebitCardPaymentCommand(link.Id, card.Id, _currentUser.Id, "purchase-key"), _debitPayments.LastCommand);
+        Assert.Equal(0, _funding.Calls);
+    }
+
+    [Fact]
+    public async Task Debit_payment_requires_idempotency_key_before_debiting()
+    {
+        var link = PaymentLink.Create(Guid.NewGuid(), 2500m, "Compra", null, PaymentLinkType.SingleUse, _clock.GetUtcNow(), merchantOwnerId: Guid.NewGuid());
+        await _links.CreateAsync(link, CancellationToken.None);
+        var card = Card.Create(_currentUser.Id, "Titular", "Visa", CardType.Debit, "1234", 12, 2030, _clock.GetUtcNow());
+        _cards.Add(card);
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.PayWithSavedCardAsync(link.Id, new() { CardId = card.Id }, _currentUser.Id, null, CancellationToken.None));
+        Assert.Null(_debitPayments.LastCommand);
+        Assert.Equal(0, _funding.Calls);
+    }}

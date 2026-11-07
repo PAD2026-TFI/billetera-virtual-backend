@@ -25,7 +25,7 @@ public sealed class UsersController(IdentityService identity) : IdentityControll
     public async Task<ActionResult<UserResponse>> Register(RegisterUserRequest request, CancellationToken ct)
     {
         var result = await identity.RegisterAsync(request, ct);
-        return result.IsSuccess ? Created("/api/users/me", result.Value) : FromResult(result);
+        return result.IsSuccess ? Created("/api/v1/me/profile", result.Value) : FromResult(result);
     }
 
     /// <summary>
@@ -39,6 +39,7 @@ public sealed class UsersController(IdentityService identity) : IdentityControll
     public async Task<ActionResult<UserResponse>> LegacyRegister(RegisterUserRequest request, CancellationToken ct) =>
         await Register(request, ct);
 
+    [HttpGet("/api/v1/me/profile", Order = -1)]
     [HttpGet("me")]
     [ProducesResponseType<UserResponse>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
@@ -46,6 +47,7 @@ public sealed class UsersController(IdentityService identity) : IdentityControll
     public async Task<ActionResult<UserResponse>> GetMe(CancellationToken ct) =>
         FromResult(await identity.GetProfileAsync(ct));
 
+    [HttpPut("/api/v1/me/profile", Order = -1)]
     [HttpPut("me/profile")]
     [Consumes("application/json")]
     [ProducesResponseType<UserResponse>(200)]

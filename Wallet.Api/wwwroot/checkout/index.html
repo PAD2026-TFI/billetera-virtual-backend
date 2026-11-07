@@ -556,7 +556,7 @@
                             Cargando tus tarjetas registradas...
                         </div>
 
-                        <div id="savedCardsList" style="display: none;"></div>
+                        <div id="savedCardsList" style="display: none;"></div><p style="font-size:13px;color:#475569;margin-top:8px">Los pagos con tu tarjeta de débito se descuentan del saldo de tu billetera.</p>
 
                         <!-- Confirmación de CVV -->
                         <div class="cvv-box" id="savedCardCvvBox" style="display: none;">
@@ -564,7 +564,7 @@
                                 Código de Seguridad (CVV) <span style="color: var(--danger);">*</span>
                             </label>
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <input type="password" id="savedCardCvv" class="form-control" maxlength="4" placeholder="123" required style="width: 100px; font-size: 16px; font-weight: 700; letter-spacing: 2px; text-align: center;">
+                                <input type="password" id="savedCardCvv" class="form-control" maxlength="3" placeholder="123" required style="width: 100px; font-size: 16px; font-weight: 700; letter-spacing: 2px; text-align: center;">
                                 <span style="font-size: 12px; color: var(--text-muted); line-height: 1.3;">
                                     Confirmá los 3 dígitos al dorso de tu tarjeta para autorizar el cobro.
                                 </span>
@@ -782,6 +782,7 @@
         let userWallet = null;
         let userCards = [];
         let selectedCardId = null;
+        const savedCardPaymentKeys = new Map();
 
         function getQueryParam(param) {
             const params = new URLSearchParams(window.location.search);
@@ -809,7 +810,7 @@
 
         async function loadLinkDetails(token) {
             try {
-                const res = await fetch(`/api/v1/checkout/links/${token}`);
+                const res = await fetch(`/api/v1/public/payment-links/${token}`);
                 if (!res.ok) {
                     showError("El link de pago no existe o ha expirado.");
                     document.getElementById("checkoutTitle").textContent = "Link Inválido";
@@ -837,7 +838,7 @@
 
         async function loadQr(token) {
             try {
-                const res = await fetch(`/api/v1/checkout/links/${token}/qr`);
+                const res = await fetch(`/api/v1/public/payment-links/${token}/qr`);
                 if (res.ok) {
                     const svgText = await res.text();
                     document.getElementById("qrContainer").innerHTML = svgText;
@@ -893,7 +894,7 @@
             const btnPay = document.getElementById("btnPaySavedCard");
 
             try {
-                const res = await fetch("/api/v1/cards", {
+                const res = await fetch("/api/v1/me/cards", {
                     headers: { "Authorization": `Bearer ${authToken}` }
                 });
 
@@ -949,7 +950,7 @@
                 });
 
                 listContainer.style.display = "block";
-                cvvBox.style.display = "block";
+                cvvBox.style.display = userCards[0].type === "Debit" ? "none" : "block";
                 btnPay.disabled = false;
 
                 if (linkData) {
@@ -974,12 +975,14 @@
                     if (radio) radio.checked = false;
                 }
             });
-            document.getElementById("savedCardCvv").focus();
+            const selected = userCards.find(card => card.id === selectedCardId);
+            document.getElementById("savedCardCvvBox").style.display = selected?.type === "Debit" ? "none" : "block";
+            if (selected?.type !== "Debit") document.getElementById("savedCardCvv").focus();
         }
 
         async function loadUserWalletBalance() {
             try {
-                const res = await fetch("/api/wallets/me", {
+                const res = await fetch("/api/v1/me/wallet", {
                     headers: { "Authorization": `Bearer ${authToken}` }
                 });
 
@@ -1101,7 +1104,8 @@
             }
 
             const cvv = document.getElementById("savedCardCvv").value.trim();
-            if (!cvv || cvv.length < 3) {
+            const isDebit = userCards.find(card => card.id === selectedCardId)?.type === 'Debit';
+            if (!isDebit && !/^[0-9]{3}$/.test(cvv)) {
                 showError("Por favor ingresá el código de seguridad (CVV) de 3 dígitos de tu tarjeta.");
                 document.getElementById("savedCardCvv").focus();
                 return;
@@ -1112,18 +1116,20 @@
             btn.textContent = "Autorizando cobro con tarjeta...";
 
             try {
-                // Endpoint autenticado: POST /api/v1/checkout/{paymentIntentId}/pay
+                // Pago autenticado con tarjeta asociada.
                 const targetId = (linkData && linkData.id) ? linkData.id : currentToken;
-                const res = await fetch(`/api/v1/checkout/${targetId}/pay`, {
+                const paymentKey = targetId + ":" + selectedCardId;
+                if (!savedCardPaymentKeys.has(paymentKey)) savedCardPaymentKeys.set(paymentKey, crypto.randomUUID());
+                const res = await fetch(`/api/v1/me/payment-links/${targetId}/card-payments`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${authToken}`,
-                        "Idempotency-Key": crypto.randomUUID()
+                        "Idempotency-Key": savedCardPaymentKeys.get(paymentKey)
                     },
                     body: JSON.stringify({
                         cardId: selectedCardId,
-                        cvv: cvv
+                        cvv: isDebit ? null : cvv
                     })
                 });
 
@@ -1212,7 +1218,7 @@
                     headers["Authorization"] = `Bearer ${bearerToken}`;
                 }
 
-                const res = await fetch("/api/v1/checkout/pay", {
+                const res = await fetch("/api/v1/public/checkout/payments", {
                     method: "POST",
                     headers: headers,
                     body: JSON.stringify(payload)

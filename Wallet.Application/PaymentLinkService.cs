@@ -17,7 +17,8 @@ public sealed class PaymentLinkService(
     ICurrentUser currentUser,
     TimeProvider clock,
     ICardRepository? cards = null,
-    string? baseUrl = null) : ICheckoutService
+    string? baseUrl = null,
+    IDebitCardPaymentStore? debitCardPayments = null) : ICheckoutService
 {
     private readonly string _baseUrl = baseUrl ?? "https://localhost:7081";
 
@@ -155,6 +156,15 @@ public sealed class PaymentLinkService(
         var link = await links.FindByTokenAsync(token, ct)
             ?? throw new KeyNotFoundException($"No se encontró el link de pago con token '{token}'.");
 
+        if (!Enum.IsDefined(request.PaymentMethod))
+            throw new ArgumentException("Unknown payment method.", nameof(request));
+        if (request.CardId.HasValue)
+        {
+            if (request.PaymentMethod != CheckoutPaymentMethod.Card || request.Card is not null)
+                throw new ArgumentException("Use CardId alone with paymentMethod Card for an associated card.");
+            var payerId = TryGetCurrentUserId() ?? throw new UnauthorizedAccessException("Login required for an associated card.");
+            return await PayWithSavedCardAsync(link.Id, new PayWithSavedCardRequest { CardId = request.CardId.Value }, payerId, idempotencyKey, ct);
+        }
         var now = clock.GetUtcNow();
         link.EnsureIsPayable(now);
 
@@ -246,10 +256,6 @@ public sealed class PaymentLinkService(
             {
                 payerUserId = currentUserId.Value;
             }
-            else if (request.PayerWalletId.HasValue && request.PayerWalletId.Value != Guid.Empty)
-            {
-                payerUserId = request.PayerWalletId.Value;
-            }
             else
             {
                 throw new InvalidOperationException("Para pagar con billetera debés iniciar sesión.");
@@ -299,7 +305,7 @@ public sealed class PaymentLinkService(
     }
 
     public async Task<CheckoutReceiptDto> PayWithSavedCardAsync(
-        Guid paymentIntentId,
+        Guid paymentLinkId,
         PayWithSavedCardRequest request,
         Guid userId,
         string? idempotencyKey,
@@ -307,14 +313,14 @@ public sealed class PaymentLinkService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (paymentIntentId == Guid.Empty)
-            throw new ArgumentException("Payment intent identifier cannot be empty.", nameof(paymentIntentId));
+        if (paymentLinkId == Guid.Empty)
+            throw new ArgumentException("Payment intent identifier cannot be empty.", nameof(paymentLinkId));
 
         if (userId == Guid.Empty)
             throw new ArgumentException("User identifier cannot be empty.", nameof(userId));
 
-        var link = await links.FindByIdAsync(paymentIntentId, ct)
-            ?? throw new KeyNotFoundException($"Payment intent '{paymentIntentId}' not found.");
+        var link = await links.FindByIdAsync(paymentLinkId, ct)
+            ?? throw new KeyNotFoundException($"Payment intent '{paymentLinkId}' not found.");
 
         var now = clock.GetUtcNow();
 
@@ -334,6 +340,15 @@ public sealed class PaymentLinkService(
         if (card.IsExpired(now))
             throw new InvalidOperationException("The specified card is expired.");
 
+        if (card.Type == CardType.Debit)
+        {
+            var key = idempotencyKey?.Trim();
+            if (string.IsNullOrEmpty(key) || key.Length > 128)
+                throw new ArgumentException("Idempotency-Key is required and must not exceed 128 characters.", nameof(idempotencyKey));
+            if (debitCardPayments is null)
+                throw new InvalidOperationException("Debit card payment store is not configured.");
+            return await debitCardPayments.ExecuteAsync(new(link.Id, card.Id, userId, key), ct);
+        }
         var normalizedIdempotencyKey = !string.IsNullOrWhiteSpace(idempotencyKey) ? idempotencyKey.Trim() : null;
         var requestHash = FingerprintPayment(link.Id, link.Amount.Amount, CheckoutPaymentMethod.Card, card.CardNumberLast4, userId);
 
@@ -466,7 +481,7 @@ public sealed class PaymentLinkService(
     private PaymentLinkDto Map(PaymentLink link)
     {
         var checkoutUrl = $"{_baseUrl.TrimEnd('/')}/checkout/index.html?token={link.Token}";
-        var qrCodeUrl = $"{_baseUrl.TrimEnd('/')}/api/v1/checkout/links/{link.Token}/qr";
+        var qrCodeUrl = $"{_baseUrl.TrimEnd('/')}/api/v1/public/payment-links/{link.Token}/qr";
         return new PaymentLinkDto(
             link.Id,
             link.Token,

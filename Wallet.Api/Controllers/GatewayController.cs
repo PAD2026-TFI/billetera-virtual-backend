@@ -19,6 +19,7 @@ public sealed class GatewayController(
     /// Registro y onboarding de clientes externos / comercios B2B.
     /// Crea la entidad ExternalClient, su billetera atómica con CVU/Alias, y emite la API Key en texto plano una única vez.
     /// </summary>
+    [HttpPost("/api/v1/integrations/register", Order = -1)]
     [HttpPost("/api/v1/merchants/register")]
     [AllowAnonymous]
     [ProducesResponseType<RegisterExternalClientResponse>(201)]
@@ -51,6 +52,7 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpGet("/api/v1/integrations/profile", Order = -1)]
     [HttpGet("me")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<ExternalClientDetailsResponse>(200)]
@@ -66,6 +68,7 @@ public sealed class GatewayController(
         return Ok(client);
     }
 
+    [HttpPut("/api/v1/integrations/webhook", Order = -1)]
     [HttpPut("webhook")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<ExternalClientDetailsResponse>(200)]
@@ -95,6 +98,7 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpDelete("/api/v1/integrations/webhook", Order = -1)]
     [HttpDelete("webhook")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<ExternalClientDetailsResponse>(200)]
@@ -114,6 +118,7 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpGet("/api/v1/integrations/wallet", Order = -1)]
     [HttpGet("wallet")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<WalletResponse>(200)]
@@ -144,6 +149,7 @@ public sealed class GatewayController(
         return StatusCode(result.Created ? StatusCodes.Status201Created : StatusCodes.Status200OK, result.Wallet);
     }
 
+    [HttpPost("/api/v1/integrations/transfers", Order = -1)]
     [HttpPost("payments")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<TransferResponse>(201)]
@@ -192,6 +198,7 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpGet("/api/v1/integrations/wallet/movements", Order = -1)]
     [HttpGet("movements")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<MovementPage>(200)]
@@ -209,6 +216,7 @@ public sealed class GatewayController(
             extensions: new Dictionary<string, object?> { ["code"] = result.Error.Code });
     }
 
+    [HttpGet("/api/v1/integrations/received-payments/{paymentId:guid}", Order = -1)]
     [HttpGet("checkout-payments/{paymentId:guid}")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<MerchantPaymentDto>(200)]
@@ -231,6 +239,7 @@ public sealed class GatewayController(
         return Ok(payment);
     }
 
+    [HttpGet("/api/v1/integrations/received-payments", Order = -1)]
     [HttpGet("checkout-payments")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<IReadOnlyList<MerchantPaymentDto>>(200)]

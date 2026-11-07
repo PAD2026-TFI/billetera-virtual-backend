@@ -46,6 +46,13 @@ public sealed class CardServiceTests
             return Task.CompletedTask;
         }
 
+        public Action<Address>? AddressCreated { get; set; }
+        public Task CreateWithAddressAsync(CardRequest request, Address address, CancellationToken ct)
+        {
+            AddressCreated?.Invoke(address);
+            return CreateAsync(request, ct);
+        }
+
         public Task UpdateAsync(CardRequest request, CancellationToken ct)
         {
             _requests[request.Id] = request;
@@ -86,6 +93,7 @@ public sealed class CardServiceTests
 
     public CardServiceTests()
     {
+        _requestRepo.AddressCreated = _addressRepo.Add;
         _service = new CardService(_cardRepo, _requestRepo, _addressRepo, _clock);
     }
 
@@ -223,7 +231,7 @@ public sealed class CardServiceTests
         if (explicitAddress)
             await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.CreateCardRequestAsync(OwnerId, request, CancellationToken.None));
         else
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CreateCardRequestAsync(OwnerId, request, CancellationToken.None));
+            await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateCardRequestAsync(OwnerId, request, CancellationToken.None));
     }
 
     [Fact]
@@ -235,4 +243,27 @@ public sealed class CardServiceTests
         var result = await _service.CreateCardRequestAsync(OwnerId, new(), CancellationToken.None);
         Assert.Equal(address.Id, result.AddressId);
     }
+    [Fact]
+    public async Task Inline_address_is_saved_with_owner_and_returned_as_awaiting_validation()
+    {
+        var result = await _service.CreateCardRequestAsync(OwnerId, new CreateCardRequestRequest
+        {
+            DeliveryAddress = new() { Street = " Corrientes ", Number = "1234", City = "CABA", State = "Buenos Aires", PostalCode = "1043" }
+        }, CancellationToken.None);
+        Assert.Equal("AwaitingAddressValidation", result.Status);
+        Assert.Equal("Pending", result.DeliveryAddress!.ValidationStatus);
+        Assert.Equal("Corrientes", result.DeliveryAddress.Street);
+        Assert.Equal(result.AddressId, result.DeliveryAddress.Id);
+        var stored = await _addressRepo.FindByIdAsync(result.AddressId, OwnerId, CancellationToken.None);
+        Assert.NotNull(stored);
+        var status = await _service.GetCardRequestStatusAsync(result.Id, OwnerId, CancellationToken.None);
+        Assert.Equal(result.DeliveryAddress, status!.DeliveryAddress);
+    }
+
+    [Fact]
+    public async Task Address_id_and_inline_address_are_mutually_exclusive() =>
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateCardRequestAsync(OwnerId, new()
+        {
+            AddressId = Guid.NewGuid(), DeliveryAddress = new()
+        }, CancellationToken.None));
 }

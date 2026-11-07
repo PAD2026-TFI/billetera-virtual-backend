@@ -78,10 +78,36 @@ public sealed class CardRequest
     /// <summary>
     /// Actualiza el estado de la solicitud verificando las transiciones permitidas por la máquina de estados.
     /// </summary>
+    public static CardRequest CreateAwaitingAddressValidation(Guid userId, Address address, DateTimeOffset now, CardType type = CardType.Debit)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+        if (userId == Guid.Empty || address.UserId != userId)
+            throw new ArgumentException("Delivery address must belong to the requesting user.", nameof(userId));
+        if (!Enum.IsDefined(type)) throw new ArgumentOutOfRangeException(nameof(type));
+        if (address.ValidationStatus != AddressValidationStatus.Pending)
+            throw new InvalidOperationException("A pending address is required.");
+        return new CardRequest(Guid.NewGuid(), userId, address.Id, type, now)
+        {
+            Status = CardRequestStatus.AwaitingAddressValidation
+        };
+    }
+
+    public void ConfirmAddressValidation(Address address, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+        if (Status != CardRequestStatus.AwaitingAddressValidation || address.Id != AddressId
+            || address.UserId != UserId || address.ValidationStatus != AddressValidationStatus.Valid)
+            throw new InvalidOperationException("A validated delivery address matching this request is required.");
+        Status = CardRequestStatus.Pending;
+        UpdatedAt = now.ToUniversalTime();
+    }
+
     public void UpdateStatus(CardRequestStatus newStatus, DateTimeOffset now)
     {
         var isValid = (Status, newStatus) switch
         {
+            (CardRequestStatus.AwaitingAddressValidation, CardRequestStatus.Cancelled) => true,
+            (CardRequestStatus.AwaitingAddressValidation, CardRequestStatus.Rejected) => true,
             (CardRequestStatus.Pending, CardRequestStatus.Processing) => true,
             (CardRequestStatus.Pending, CardRequestStatus.Cancelled) => true,
             (CardRequestStatus.Pending, CardRequestStatus.Rejected) => true,

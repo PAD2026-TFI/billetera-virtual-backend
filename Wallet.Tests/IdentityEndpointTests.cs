@@ -50,7 +50,7 @@ public sealed class IdentityEndpointTests
             Email = "ana@example.com", Password = "Frase de prueba 2026!" };
         var registered = await client.PostAsJsonAsync("/api/users", registration);
         Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
-        Assert.Equal("/api/users/me", registered.Headers.Location!.ToString());
+        Assert.Equal("/api/v1/me/profile", registered.Headers.Location!.ToString());
         Assert.DoesNotContain("password", await registered.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/users", registration)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/users/me")).StatusCode);

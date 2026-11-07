@@ -7,9 +7,10 @@ namespace Wallet.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/cards/requests")]
-[Authorize]
+[Authorize(Policy = "Client")]
 public sealed class CardRequestsController(ICardService cardService, ICurrentUser currentUser) : ControllerBase
 {
+    [HttpPost("/api/v1/me/physical-card-orders", Order = -1)]
     [HttpPost]
     [ProducesResponseType<CardRequestDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -41,6 +42,7 @@ public sealed class CardRequestsController(ICardService cardService, ICurrentUse
         }
     }
 
+    [HttpGet("/api/v1/me/physical-card-orders/{id:guid}", Order = -1)]
     [HttpGet("{id:guid}/status")]
     [ProducesResponseType<CardRequestDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

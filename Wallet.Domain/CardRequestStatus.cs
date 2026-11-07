@@ -8,5 +8,6 @@ public enum CardRequestStatus
     InTransit,
     Delivered,
     Cancelled,
-    Rejected
+    Rejected,
+    AwaitingAddressValidation
 }

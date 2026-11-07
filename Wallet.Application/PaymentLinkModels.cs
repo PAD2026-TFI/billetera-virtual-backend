@@ -177,6 +177,9 @@ public sealed class ProcessCheckoutRequest
 
     public CardPaymentDetails? Card { get; init; }
 
+    // Associated cards are identified by ID, never by matching their last four digits.
+    public Guid? CardId { get; init; }
+
     public Guid? PayerWalletId { get; init; }
 
     public ProcessCheckoutRequest() { }

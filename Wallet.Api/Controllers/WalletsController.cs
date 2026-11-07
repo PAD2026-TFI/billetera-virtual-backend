@@ -7,6 +7,7 @@ namespace Wallet.Api.Controllers;
 [ApiController, Route("api/wallets"), Authorize(Policy = "Client")]
 public sealed class WalletsController(WalletService wallets) : ControllerBase
 {
+    [HttpGet("/api/v1/me/wallet", Order = -1)]
     [HttpGet("me")]
     [ProducesResponseType<WalletResponse>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
@@ -22,6 +23,7 @@ public sealed class WalletsController(WalletService wallets) : ControllerBase
         return Ok(wallet);
     }
 
+    [HttpPost("/api/v1/me/wallet", Order = -1)]
     [HttpPost]
     [ProducesResponseType<WalletResponse>(201)]
     [ProducesResponseType<WalletResponse>(200)]
@@ -41,6 +43,7 @@ public sealed class WalletsController(WalletService wallets) : ControllerBase
         return StatusCode(result.Created ? StatusCodes.Status201Created : StatusCodes.Status200OK, result.Wallet);
     }
 
+    [HttpPatch("/api/v1/me/wallet/alias", Order = -1)]
     [HttpPatch("alias")]
     [ProducesResponseType<WalletResponse>(200)]
     [ProducesResponseType<ProblemDetails>(400)]

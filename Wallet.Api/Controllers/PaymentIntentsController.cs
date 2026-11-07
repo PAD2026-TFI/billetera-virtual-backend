@@ -17,6 +17,7 @@ public sealed class PaymentIntentsController(
     /// Genera una nueva intención de cobro omnicanal para el comercio B2B identificado por su X-Api-Key.
     /// Retorna el token, la URL pública de checkout y la URL del código QR dinámico.
     /// </summary>
+    [HttpPost("/api/v1/integrations/payment-links", Order = -1)]
     [HttpPost]
     [ProducesResponseType<PaymentIntentResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -43,7 +44,7 @@ public sealed class PaymentIntentsController(
             var scheme = Request.Scheme;
             var host = Request.Host.Value;
             var checkoutUrl = $"{scheme}://{host}/checkout/index.html?token={created.Token}";
-            var qrCodeUrl = $"{scheme}://{host}/api/v1/checkout/links/{created.Token}/qr";
+            var qrCodeUrl = $"{scheme}://{host}/api/v1/public/payment-links/{created.Token}/qr";
 
             var response = new PaymentIntentResponse(
                 created.Id,
@@ -73,6 +74,7 @@ public sealed class PaymentIntentsController(
     /// <summary>
     /// Consulta los detalles y estado actual de una intención de pago perteneciente al comercio autenticado.
     /// </summary>
+    [HttpGet("/api/v1/integrations/payment-links/{id:guid}", Order = -1)]
     [HttpGet("{id:guid}")]
     [ProducesResponseType<PaymentIntentResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
@@ -94,7 +96,7 @@ public sealed class PaymentIntentsController(
         var scheme = Request.Scheme;
         var host = Request.Host.Value;
         var checkoutUrl = $"{scheme}://{host}/checkout/index.html?token={link.Token}";
-        var qrCodeUrl = $"{scheme}://{host}/api/v1/checkout/links/{link.Token}/qr";
+        var qrCodeUrl = $"{scheme}://{host}/api/v1/public/payment-links/{link.Token}/qr";
 
         var response = new PaymentIntentResponse(
             link.Id,

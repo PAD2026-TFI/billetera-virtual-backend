@@ -160,7 +160,7 @@ public sealed class WalletCreationTests
         await using var host = new IdentityTestHost();
         using var client = host.Client();
         using var document = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
-        var post = document.RootElement.GetProperty("paths").GetProperty("/api/wallets").GetProperty("post");
+        var post = document.RootElement.GetProperty("paths").GetProperty("/api/v1/me/wallet").GetProperty("post");
         Assert.False(post.TryGetProperty("requestBody", out _));
         foreach (var status in new[] { "200", "201", "400", "401", "403", "503" })
             Assert.True(post.GetProperty("responses").TryGetProperty(status, out _));

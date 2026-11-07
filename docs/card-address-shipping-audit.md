@@ -1,4 +1,6 @@
-﻿# Auditoría de tarjetas, domicilios y preparación logística
+# Auditoría de tarjetas, domicilios y preparación logística
+
+> Actualización posterior: el ingreso de domicilio completo, el estado AwaitingAddressValidation y el débito desde billetera ya fueron implementados. Consultar [la guía actual de pagos y endpoints](api-audiences-debit-and-card-orders.md). Este documento conserva el diagnóstico de la revisión inicial.
 
 Fecha: 2026-11-07. Proyecto Wallet / TFI_ICS, .NET 9.
 Alcance: código, configuraciones EF Core y migraciones del repositorio. No se consultaron datos de la base desplegada ni se aplicaron migraciones.

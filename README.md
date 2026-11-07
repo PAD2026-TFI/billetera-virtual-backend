@@ -52,7 +52,7 @@ El proyecto está organizado en capas desacopladas orientadas al dominio:
   - Soporta links de un solo uso (`SingleUse`) o recurrentes (`MultiUse`), con tiempo de expiración configurable (`ttlMinutes`).
 - **Interfaz Web de Checkout (`/checkout/index.html?token=...`)**:
   - Pantalla responsiva alojada en los archivos estáticos de la API para visualización y liquidación del cobro.
-- **Múltiples Métodos de Liquidación (`/api/v1/checkout/pay`)**:
+- **Múltiples Métodos de Liquidación (`/api/v1/public/checkout/payments`)**:
   - **Saldo en Billetera Virtual (B2C)**: Débito directo de fondos con validación de saldo.
   - **Tarjetas Artificiales (Simulador Financiero)**: Motor de simulación con validación de algoritmo de Luhn, fecha de expiración y códigos de prueba predefinidos (aprobado, fondos insuficientes, tarjeta bloqueada, sospecha de fraude). Acreditación y ledger contable atómico en la billetera receptora.
 
@@ -68,40 +68,24 @@ El proyecto está organizado en capas desacopladas orientadas al dominio:
 
 ---
 
-## 4. Resumen de Endpoints Principales
+## 4. API por audiencia
 
-### B2C (Usuarios — Autenticación `Bearer <JWT>`)
-| Controlador | Ruta Base | Funcionalidad Principal |
-|---|---|---|
-| `AuthController` | `/api/v1/auth` | Registro, login y emisión de tokens JWT. |
-| `UsersController` | `/api/v1/users` | Perfil de usuario, direcciones y tarjetas. |
-| `WalletsController` | `/api/v1/wallets` | Creación de billetera personal y consulta de saldo. |
-| `TransfersController` | `/api/v1/transfers` | Transferencias entre billeteras con `Idempotency-Key`. |
-| `MovementsController` | `/api/v1/movements` | Historial paginado de movimientos contables. |
-| `HealthController` | `/health` | Verificación de estado del servicio. |
+Swagger agrupa las rutas por consumidor y muestra los nombres canónicos. Las rutas anteriores conservan compatibilidad.
 
-### B2B (Pasarela de Pagos — Autenticación `X-Api-Key`)
-| Método | Endpoint | Cabeceras | Descripción |
-|---|---|---|---|
-| `POST` | `/api/v1/gateway/clients` | Público | Alta de comercio B2B y emisión de `apiKey` y `walletId`. |
-| `GET` | `/api/v1/gateway/wallet` | `X-Api-Key` | Consulta de saldo y estado de la billetera comercial. |
-| `POST` | `/api/v1/gateway/wallet` | `X-Api-Key` | Creación de billetera si el cliente aún no posee una. |
-| `POST` | `/api/v1/gateway/payments` | `X-Api-Key`, `Idempotency-Key` | Ejecución de pagos/transferencias entre billeteras. |
-| `GET` | `/api/v1/gateway/movements` | `X-Api-Key` | Historial paginado del libro mayor (Ledger). |
-| `GET` | `/api/v1/gateway/checkout-payments/{paymentId}` | `X-Api-Key` | Consulta de pago individual recibido por el comercio. |
-| `GET` | `/api/v1/gateway/checkout-payments` | `X-Api-Key` | Listado de cobros recibidos por el comercio. |
+| Consumidor | Rutas | Autenticación |
+| --- | --- | --- |
+| Registro y acceso | `/api/v1/auth/*` | Públicas |
+| Clientes | `/api/v1/me/*` | JWT de cliente |
+| Comercios y apps externas | `/api/v1/integrations/*` | API Key; alta pública |
+| Checkout | `/api/v1/public/*` | Consulta pública; JWT para saldo o tarjeta asociada |
+| Administración | `/api/v1/admin/*` | JWT Admin; alta con clave de configuración |
+| Salud | `/health/*` | Públicas |
 
-### Checkout Omnicanal & QR (Público / Híbrido)
-| Método | Endpoint | Cabeceras | Descripción |
-|---|---|---|---|
-| `POST` | `/api/v1/checkout/links` | Opcional `Bearer` | Creación de link de pago (usuarios registrados o comercio invitado). |
-| `GET` | `/api/v1/checkout/links/{token}` | Público | Obtención pública de datos del link para el checkout. |
-| `GET` | `/api/v1/checkout/links/{token}/qr` | Público | Renderizado del código QR en formato vectorial SVG. |
-| `POST` | `/api/v1/checkout/pay` | `Idempotency-Key` | Liquidación del cobro vía Tarjeta Artificial o Billetera Virtual. |
-| `GET` | `/checkout/index.html?token={token}` | Público | Interfaz Web de Checkout interactiva lista para clientes. |
+La tarjeta asociada de débito paga desde el saldo de su billetera mediante `POST /api/v1/me/payment-links/{paymentLinkId}/card-payments`. La solicitud de tarjeta física acepta el domicilio completo en `POST /api/v1/me/physical-card-orders`.
+
+Ver [guía de pagos, domicilios y endpoints](docs/api-audiences-debit-and-card-orders.md) para ejemplos, requisitos de idempotencia, estados de validación y migraciones. Ejemplos ejecutables: [Wallet.Api.http](Wallet.Api/Wallet.Api.http).
 
 ---
-
 ## 5. Ejecución Local y Herramientas de Desarrollo
 
 ### Requisitos

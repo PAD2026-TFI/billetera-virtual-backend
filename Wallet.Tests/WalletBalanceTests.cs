@@ -142,7 +142,7 @@ public sealed class WalletBalanceTests
         await using var host = new IdentityTestHost();
         using var client = host.Client();
         using var json = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
-        var get = json.RootElement.GetProperty("paths").GetProperty("/api/wallets/me").GetProperty("get");
+        var get = json.RootElement.GetProperty("paths").GetProperty("/api/v1/me/wallet").GetProperty("get");
         Assert.False(get.TryGetProperty("requestBody", out _));
         Assert.False(get.TryGetProperty("parameters", out var parameters) && parameters.GetArrayLength() > 0);
         Assert.Contains(get.GetProperty("security").EnumerateArray(), item => item.TryGetProperty("Bearer", out _));

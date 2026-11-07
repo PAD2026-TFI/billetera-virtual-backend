@@ -36,6 +36,7 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
         }
     }
 
+    [HttpPost("/api/v1/me/transfers/by-cvu", Order = -1)]
     [HttpPost("cvu")]
     [ProducesResponseType<TransferResponse>(201)]
     [ProducesResponseType<TransferResponse>(200)]
@@ -64,6 +65,7 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
         }
     }
 
+    [HttpPost("/api/v1/me/transfers/by-alias", Order = -1)]
     [HttpPost("alias")]
     [ProducesResponseType<TransferResponse>(201)]
     [ProducesResponseType<TransferResponse>(200)]
@@ -92,6 +94,7 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
         }
     }
 
+    [HttpPost("/api/v1/me/transfers/by-wallet-id", Order = -1)]
     [HttpPost("wallet-id")]
     [ProducesResponseType<TransferResponse>(201)]
     [ProducesResponseType<TransferResponse>(200)]

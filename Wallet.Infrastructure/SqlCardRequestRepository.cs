@@ -18,6 +18,16 @@ public sealed class SqlCardRequestRepository(WalletDbContext db) : ICardRequestR
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task CreateWithAddressAsync(CardRequest request, Address address, CancellationToken ct)
+    {
+        if (address.Id != request.AddressId || address.UserId != request.UserId)
+            throw new ArgumentException("The address must match the request and its owner.");
+        db.Addresses.Add(address);
+        db.CardRequests.Add(request);
+        // EF commits both inserts in the same transaction.
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task UpdateAsync(CardRequest request, CancellationToken ct)
     {
         db.CardRequests.Update(request);

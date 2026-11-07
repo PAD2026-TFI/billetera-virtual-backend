@@ -18,6 +18,7 @@ public sealed class AdminController(
     /// <summary>
     /// Permite crear una cuenta con rol de Administrador para pruebas y administración de la plataforma.
     /// </summary>
+    [HttpPost("/api/v1/admin/register", Order = -1)]
     [HttpPost("register")]
     [AllowAnonymous]
     [ProducesResponseType<UserResponse>(StatusCodes.Status201Created)]
@@ -154,6 +155,7 @@ public sealed class AdminController(
     /// <summary>
     /// Permite al Administrador inyectar fondos en una billetera indicando su CVU de 22 dígitos.
     /// </summary>
+    [HttpPost("/api/v1/admin/wallet-funding/by-cvu", Order = -1)]
     [HttpPost("funds/cvu")]
     [Authorize(Policy = "Admin")]
     [ProducesResponseType<AdminFundWalletResponse>(StatusCodes.Status200OK)]
@@ -211,6 +213,7 @@ public sealed class AdminController(
     /// <summary>
     /// Permite al Administrador inyectar fondos en una billetera indicando su Alias de transferencia.
     /// </summary>
+    [HttpPost("/api/v1/admin/wallet-funding/by-alias", Order = -1)]
     [HttpPost("funds/alias")]
     [Authorize(Policy = "Admin")]
     [ProducesResponseType<AdminFundWalletResponse>(StatusCodes.Status200OK)]
@@ -268,6 +271,7 @@ public sealed class AdminController(
     /// <summary>
     /// Permite al Administrador inyectar fondos en una billetera indicando su identificador GUID (WalletId).
     /// </summary>
+    [HttpPost("/api/v1/admin/wallet-funding/by-wallet-id", Order = -1)]
     [HttpPost("funds/wallet-id")]
     [Authorize(Policy = "Admin")]
     [ProducesResponseType<AdminFundWalletResponse>(StatusCodes.Status200OK)]

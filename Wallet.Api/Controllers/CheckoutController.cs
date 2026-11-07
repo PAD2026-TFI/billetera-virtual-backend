@@ -41,6 +41,7 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
         }
     }
 
+    [HttpGet("/api/v1/public/payment-links/{token}", Order = -1)]
     [HttpGet("links/{token}")]
     [AllowAnonymous]
     [ProducesResponseType<CheckoutPublicDetailsDto>(200)]
@@ -61,6 +62,7 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
         return Ok(details);
     }
 
+    [HttpPost("/api/v1/public/checkout/payments", Order = -1)]
     [HttpPost("pay")]
     [AllowAnonymous]
     [ProducesResponseType<CheckoutReceiptDto>(200)]
@@ -128,6 +130,9 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
         {
             var (status, title) = ex.Code switch
             {
+                "INVALID_SESSION" => (401, "La sesión o el titular no están activos."),
+                "CONCURRENCY_CONFLICT" => (409, "Conflicto de concurrencia. Reintentá con la misma clave."),
+                "DESTINATION_UNAVAILABLE" => (422, "La billetera destino no está disponible."),
                 "SOURCE_WALLET_NOT_FOUND" => (404, "No tenés una billetera creada para realizar el pago."),
                 "INSUFFICIENT_FUNDS" => (409, "Saldo insuficiente en tu billetera."),
                 "DESTINATION_BALANCE_LIMIT" => (409, "La billetera destino excede el límite operativo."),
@@ -150,8 +155,9 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
         }
     }
 
-    [HttpPost("{paymentIntentId:guid}/pay")]
-    [Authorize]
+    [HttpPost("/api/v1/me/payment-links/{paymentLinkId:guid}/card-payments", Order = -1)]
+    [HttpPost("{paymentLinkId:guid}/pay")]
+    [Authorize(Policy = "Client")]
     [ProducesResponseType<CheckoutReceiptDto>(200)]
     [ProducesResponseType<ProblemDetails>(400)]
     [ProducesResponseType<ProblemDetails>(401)]
@@ -159,14 +165,14 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
     [ProducesResponseType<ProblemDetails>(409)]
     [ProducesResponseType<ProblemDetails>(422)]
     public async Task<ActionResult<CheckoutReceiptDto>> PayWithSavedCard(
-        [FromRoute] Guid paymentIntentId,
+        [FromRoute] Guid paymentLinkId,
         [FromBody] PayWithSavedCardRequest request,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         CancellationToken ct)
     {
         try
         {
-            var receipt = await checkoutService.PayWithSavedCardAsync(paymentIntentId, request, currentUser.Id, idempotencyKey, ct);
+            var receipt = await checkoutService.PayWithSavedCardAsync(paymentLinkId, request, currentUser.Id, idempotencyKey, ct);
             Response.Headers["Idempotency-Replayed"] = receipt.IdempotencyReplayed ? "true" : "false";
             return Ok(receipt);
         }
@@ -198,6 +204,26 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
                 title: ex.Message,
                 extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
         }
+        catch (TransferRejectedException ex)
+        {
+            var (status, title) = ex.Code switch
+            {
+                "INVALID_SESSION" => (401, "La sesión o el titular no están activos."),
+                "CONCURRENCY_CONFLICT" => (409, "Conflicto de concurrencia. Reintentá con la misma clave."),
+                "DESTINATION_UNAVAILABLE" => (422, "La billetera destino no está disponible."),
+                "SOURCE_WALLET_NOT_FOUND" => (404, "No tenés una billetera creada para realizar el pago."),
+                "INSUFFICIENT_FUNDS" => (409, "Saldo insuficiente en tu billetera."),
+                "DESTINATION_BALANCE_LIMIT" => (409, "La billetera destino excede el límite operativo."),
+                "IDEMPOTENCY_CONFLICT" => (409, "La clave de idempotencia ya fue utilizada con otros parámetros."),
+                "SAME_WALLET" => (400, "Origen y destino deben ser distintos."),
+                _ => (400, "Error en la transferencia de billetera.")
+            };
+
+            return Problem(
+                statusCode: status,
+                title: title,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
         catch (ArgumentException ex)
         {
             return Problem(
@@ -207,6 +233,7 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
         }
     }
 
+    [HttpGet("/api/v1/public/payment-links/{token}/qr", Order = -1)]
     [HttpGet("links/{token}/qr")]
     [AllowAnonymous]
     [Produces("image/svg+xml")]

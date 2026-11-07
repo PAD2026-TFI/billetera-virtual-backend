@@ -1,50 +1,130 @@
-@baseUrl = https://localhost:7081
-@token = REEMPLAZAR_POR_ACCESS_TOKEN
-### Vida sin Azure
-GET {{baseUrl}}/health/live
-### Dependencias; 503 mientras no esté habilitada identidad
-GET {{baseUrl}}/health/ready
-### Registro (requiere Azure y migración)
-POST {{baseUrl}}/api/users
+﻿@baseUrl = https://localhost:7081
+@token = REEMPLAZAR_POR_JWT_CLIENTE
+@apiKey = REEMPLAZAR_POR_API_KEY_COMERCIO
+@paymentLinkId = REEMPLAZAR_POR_ID_LINK
+@checkoutToken = REEMPLAZAR_POR_TOKEN_LINK
+@cardId = REEMPLAZAR_POR_ID_DE_GET_ME_CARDS
+@cardOrderId = REEMPLAZAR_POR_ID_PEDIDO
+@destinationWalletId = REEMPLAZAR_POR_ID_BILLETERA_DESTINO
+@operationKey = REEMPLAZAR_POR_UUID_Y_REUTILIZAR_AL_REINTENTAR
+
+### Acceso público: registrar cliente
+POST {{baseUrl}}/api/v1/auth/register
 Content-Type: application/json
 
-{"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"Frase de prueba 2026!"}
-### Login
-POST {{baseUrl}}/api/auth/login
+{"dni":"30123456","firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"Frase de prueba 2026!"}
+
+### Acceso público: iniciar sesión
+POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
 
 {"email":"ana@example.com","password":"Frase de prueba 2026!"}
-### Perfil propio
-GET {{baseUrl}}/api/users/me
+
+### Cliente JWT: mi perfil
+GET {{baseUrl}}/api/v1/me/profile
 Authorization: Bearer {{token}}
-### Reemplazar perfil editable
-PUT {{baseUrl}}/api/users/me/profile
+
+### Cliente JWT: actualizar mi perfil
+PUT {{baseUrl}}/api/v1/me/profile
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {"firstName":"Ana María","lastName":"Pérez"}
 
-### Creo mi billetera ARS; sin cuerpo. Repetir devuelve la existente.
-POST {{baseUrl}}/api/wallets
+### Cliente JWT: crear mi billetera, sin cuerpo; repetir devuelve la existente
+POST {{baseUrl}}/api/v1/me/wallet
 Authorization: Bearer {{token}}
-Accept: application/json
 
-### Consulto mi billetera y saldo actual; 404 si todavía no la creé.
-GET {{baseUrl}}/api/wallets/me
+### Cliente JWT: consultar saldo
+GET {{baseUrl}}/api/v1/me/wallet
 Authorization: Bearer {{token}}
-Accept: application/json
 
-### Transfiero ARS; conservo la clave al reintentar la misma intención.
-@destinationWalletId = REEMPLAZAR_POR_UUID_BILLETERA_DESTINO
-@transferKey = REEMPLAZAR_POR_UUID_DE_LA_OPERACION
-POST {{baseUrl}}/api/transfers
+### Cliente JWT: mis tarjetas; usar el id de una tarjeta Debit para pagar desde mi saldo
+GET {{baseUrl}}/api/v1/me/cards
 Authorization: Bearer {{token}}
-Idempotency-Key: {{transferKey}}
+
+### Cliente JWT: pagar con tarjeta asociada. Débito descuenta saldo real de la billetera.
+POST {{baseUrl}}/api/v1/me/payment-links/{{paymentLinkId}}/card-payments
+Authorization: Bearer {{token}}
+Idempotency-Key: {{operationKey}}
+Content-Type: application/json
+
+{"cardId":"{{cardId}}"}
+
+### Cliente JWT: solicitar tarjeta física con domicilio completo
+POST {{baseUrl}}/api/v1/me/physical-card-orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type":"Debit",
+  "deliveryAddress":{
+    "street":"Av. Corrientes",
+    "number":"1234",
+    "city":"CABA",
+    "state":"Buenos Aires",
+    "postalCode":"1043",
+    "country":"Argentina"
+  }
+}
+
+### Cliente JWT: estado y domicilio del pedido
+GET {{baseUrl}}/api/v1/me/physical-card-orders/{{cardOrderId}}
+Authorization: Bearer {{token}}
+
+### Cliente JWT: transferencia por ID; conservar la clave de la operación
+POST {{baseUrl}}/api/v1/me/transfers/by-wallet-id
+Authorization: Bearer {{token}}
+Idempotency-Key: {{operationKey}}
 Content-Type: application/json
 
 {"destinationWalletId":"{{destinationWalletId}}","amount":300.00}
 
-### Consulto mi historial; para continuar uso el nextCursor recibido.
-GET {{baseUrl}}/api/wallets/me/movements?limit=20
+### Cliente JWT: historial paginado
+GET {{baseUrl}}/api/v1/me/wallet/movements?limit=20
 Authorization: Bearer {{token}}
-Accept: application/json
+
+### Integración: alta pública de comercio; guardar la API Key recibida
+POST {{baseUrl}}/api/v1/integrations/register
+Content-Type: application/json
+
+{"companyName":"Comercio de prueba","contactEmail":"comercio@example.com","description":"Tienda online","cuit":"30712345678"}
+
+### Integración API Key: generar link de cobro
+POST {{baseUrl}}/api/v1/integrations/payment-links
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{"amount":300.00,"title":"Compra de prueba","currency":"ARS","ttlMinutes":30}
+
+### Integración API Key: consultar link y cobros recibidos
+GET {{baseUrl}}/api/v1/integrations/payment-links/{{paymentLinkId}}
+X-Api-Key: {{apiKey}}
+
+### Integración API Key: saldo de la integración
+GET {{baseUrl}}/api/v1/integrations/wallet
+X-Api-Key: {{apiKey}}
+
+### Integración API Key: cobros recibidos
+GET {{baseUrl}}/api/v1/integrations/received-payments?limit=20
+X-Api-Key: {{apiKey}}
+
+### Checkout público: consultar un link
+GET {{baseUrl}}/api/v1/public/payment-links/{{checkoutToken}}
+
+### Checkout público: obtener QR
+GET {{baseUrl}}/api/v1/public/payment-links/{{checkoutToken}}/qr
+
+### Checkout con tarjeta asociada: requiere JWT e Idempotency-Key, aunque la ruta admita pagos anónimos externos
+POST {{baseUrl}}/api/v1/public/checkout/payments
+Authorization: Bearer {{token}}
+Idempotency-Key: {{operationKey}}
+Content-Type: application/json
+
+{"token":"{{checkoutToken}}","paymentMethod":"Card","cardId":"{{cardId}}"}
+
+### Salud pública
+GET {{baseUrl}}/health/live
+
+### Dependencias
+GET {{baseUrl}}/health/ready

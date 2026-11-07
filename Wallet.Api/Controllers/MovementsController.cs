@@ -7,6 +7,7 @@ namespace Wallet.Api.Controllers;
 [ApiController, Route("api/wallets/me/movements"), Authorize(Policy = "Client")]
 public sealed class MovementsController(MovementHistoryService history) : ControllerBase
 {
+    [HttpGet("/api/v1/me/wallet/movements", Order = -1)]
     [HttpGet]
     [ProducesResponseType<MovementPage>(200)]
     [ProducesResponseType<ProblemDetails>(400)]

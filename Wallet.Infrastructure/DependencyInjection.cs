@@ -22,6 +22,10 @@ public static class DependencyInjection
         services.AddScoped<ICardRepository, SqlCardRepository>();
         services.AddScoped<ICardRequestRepository, SqlCardRequestRepository>();
         services.AddScoped<IAddressRepository, SqlAddressRepository>();
+        services.AddScoped<IUnitOfWork, SqlUnitOfWork>();
+        services.AddSingleton<ICvuGenerator, CvuGenerator>();
+        services.AddSingleton<IAliasGenerator, AliasGenerator>();
+        services.AddScoped<UserRegistrationService>();
         return services;
     }
 }

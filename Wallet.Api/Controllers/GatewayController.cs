@@ -37,6 +37,69 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpGet("me")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<ExternalClientDetailsResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<ExternalClientDetailsResponse>> GetMe(CancellationToken ct)
+    {
+        var client = await gateway.GetClientByIdAsync(currentUser.Id, ct);
+        if (client is null)
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+
+        return Ok(client);
+    }
+
+    [HttpPut("webhook")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<ExternalClientDetailsResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<ExternalClientDetailsResponse>> ConfigureWebhook(
+        [FromBody] ConfigureWebhookRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var response = await gateway.ConfigureWebhookAsync(currentUser.Id, request, ct);
+            return Ok(response);
+        }
+        catch (ArgumentException e)
+        {
+            return Problem(
+                statusCode: 400,
+                title: "Datos de webhook inválidos.",
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_WEBHOOK", ["detail"] = e.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
+    [HttpDelete("webhook")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<ExternalClientDetailsResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<ExternalClientDetailsResponse>> DeactivateWebhook(CancellationToken ct)
+    {
+        try
+        {
+            var response = await gateway.DeactivateWebhookAsync(currentUser.Id, ct);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
     [HttpGet("wallet")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<WalletResponse>(200)]

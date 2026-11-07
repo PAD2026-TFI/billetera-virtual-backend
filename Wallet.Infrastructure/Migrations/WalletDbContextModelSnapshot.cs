@@ -517,6 +517,11 @@ namespace Wallet.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Alias")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<decimal>("Balance")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -531,6 +536,11 @@ namespace Wallet.Infrastructure.Migrations
                         .HasColumnType("char(3)")
                         .HasDefaultValue("ARS");
 
+                    b.Property<string>("Cvu")
+                        .IsRequired()
+                        .HasMaxLength(22)
+                        .HasColumnType("nvarchar(22)");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("OwnerId");
@@ -542,6 +552,12 @@ namespace Wallet.Infrastructure.Migrations
                         .HasColumnType("rowversion");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Alias")
+                        .IsUnique();
+
+                    b.HasIndex("Cvu")
+                        .IsUnique();
 
                     b.HasIndex("OwnerId")
                         .IsUnique();
@@ -598,6 +614,11 @@ namespace Wallet.Infrastructure.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("nvarchar(254)");
 
+                    b.Property<string>("Cuit")
+                        .IsRequired()
+                        .HasMaxLength(11)
+                        .HasColumnType("nvarchar(11)");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -605,9 +626,21 @@ namespace Wallet.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("LastRotatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("WebhookSecret")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("WebhookUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
                     b.HasIndex("ApiKeyHash")
                         .IsUnique()
                         .HasFilter("[ApiKeyHash] IS NOT NULL");
+
+                    b.HasIndex("Cuit")
+                        .IsUnique()
+                        .HasFilter("[Cuit] IS NOT NULL");
 
                     b.ToTable("ExternalClients", (string)null);
                 });
@@ -615,6 +648,11 @@ namespace Wallet.Infrastructure.Migrations
             modelBuilder.Entity("Wallet.Domain.User", b =>
                 {
                     b.HasBaseType("Wallet.Domain.WalletOwner");
+
+                    b.Property<string>("Dni")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -649,6 +687,9 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.Property<int>("SessionVersion")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("WalletId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasIndex("NormalizedEmail")
                         .IsUnique()

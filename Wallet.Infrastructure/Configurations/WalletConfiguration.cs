@@ -19,6 +19,10 @@ public class WalletConfiguration : IEntityTypeConfiguration<Domain.Wallet>
             .HasConversion(b => b.Amount, a => Money.From(a, Money.DefaultCurrency))
             .HasPrecision(18, 2);
         builder.Ignore(wallet => wallet.UserId);
+        builder.Property(wallet => wallet.Cvu).HasMaxLength(22).IsRequired();
+        builder.HasIndex(wallet => wallet.Cvu).IsUnique();
+        builder.Property(wallet => wallet.Alias).HasMaxLength(40).IsRequired();
+        builder.HasIndex(wallet => wallet.Alias).IsUnique();
         builder.Property(wallet => wallet.Currency)
             .HasColumnType("char(3)")
             .HasMaxLength(3)

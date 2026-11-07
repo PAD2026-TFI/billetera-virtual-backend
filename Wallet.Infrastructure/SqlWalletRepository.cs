@@ -22,7 +22,6 @@ public sealed class SqlWalletRepository(WalletDbContext db) : IWalletRepository
             }
             catch (DbUpdateException e) when (e.InnerException is SqlException { Number: 2601 or 2627 })
             {
-                // Otra solicitud pudo crearla entre el SELECT y el INSERT.
                 db.Entry(candidate).State = EntityState.Detached;
                 existing = await GetByUserIdAsync(candidate.OwnerId, ct);
                 if (existing is null) throw new StorageUnavailableException(e);
@@ -49,5 +48,37 @@ public sealed class SqlWalletRepository(WalletDbContext db) : IWalletRepository
         {
             throw new StorageUnavailableException(e);
         }
+    }
+
+    public Task<bool> ExistsCvuAsync(string cvu, CancellationToken ct)
+    {
+        return db.Wallets.AnyAsync(w => w.Cvu == cvu, ct);
+    }
+
+    public Task<bool> ExistsAliasAsync(string alias, CancellationToken ct)
+    {
+        return db.Wallets.AnyAsync(w => w.Alias == alias, ct);
+    }
+
+    public Task<DomainWallet?> FindByCvuAsync(string cvu, CancellationToken ct)
+    {
+        return db.Wallets.FirstOrDefaultAsync(w => w.Cvu == cvu, ct);
+    }
+
+    public Task<DomainWallet?> FindByAliasAsync(string alias, CancellationToken ct)
+    {
+        return db.Wallets.FirstOrDefaultAsync(w => w.Alias == alias, ct);
+    }
+
+    public Task CreateAsync(DomainWallet wallet, CancellationToken ct)
+    {
+        db.Wallets.Add(wallet);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(DomainWallet wallet, CancellationToken ct)
+    {
+        db.Wallets.Update(wallet);
+        return db.SaveChangesAsync(ct);
     }
 }

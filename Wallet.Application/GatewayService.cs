@@ -9,7 +9,8 @@ namespace Wallet.Application;
 public sealed record RegisterExternalClientRequest(
     [Required, MaxLength(150)] string CompanyName,
     [Required, EmailAddress, MaxLength(254)] string ContactEmail,
-    [MaxLength(500)] string? Description);
+    [MaxLength(500)] string? Description,
+    string? Cuit = null);
 
 public sealed record RegisterExternalClientResponse(
     Guid Id,
@@ -18,7 +19,23 @@ public sealed record RegisterExternalClientResponse(
     string? Description,
     string ApiKey,
     Guid WalletId,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string Cuit = "",
+    string? WebhookUrl = null);
+
+public sealed record ConfigureWebhookRequest(
+    [Required, MaxLength(2048)] string WebhookUrl,
+    [Required, MinLength(32), MaxLength(256)] string WebhookSecret);
+
+public sealed record ExternalClientDetailsResponse(
+    Guid Id,
+    string CompanyName,
+    string Cuit,
+    string ContactEmail,
+    string? Description,
+    string? WebhookUrl,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastRotatedAt);
 
 public sealed class GatewayService(
     IExternalClientRepository clients,
@@ -40,13 +57,15 @@ public sealed class GatewayService(
         ArgumentNullException.ThrowIfNull(request);
 
         var now = clock.GetUtcNow();
+        var effectiveCuit = string.IsNullOrWhiteSpace(request.Cuit) ? "00000000000" : request.Cuit.Trim();
+
         var client = ExternalClient.Create(
             request.CompanyName,
+            effectiveCuit,
             request.ContactEmail,
             now,
             request.Description);
 
-        // Generar clave de 32 bytes aleatorios (64 caracteres hex)
         var randomBytes = new byte[32];
         RandomNumberGenerator.Fill(randomBytes);
         var rawKey = Convert.ToHexString(randomBytes).ToLowerInvariant();
@@ -56,7 +75,6 @@ public sealed class GatewayService(
 
         await clients.CreateAsync(client, ct);
 
-        // Crear billetera para el cliente externo automáticamente
         var wallet = DomainWallet.Create(client.Id, now);
         await wallets.CreateOrGetAsync(wallet, ct);
 
@@ -67,6 +85,71 @@ public sealed class GatewayService(
             client.Description,
             rawKey,
             wallet.Id,
-            client.CreatedAt);
+            client.CreatedAt,
+            client.Cuit,
+            client.WebhookUrl);
+    }
+
+    public async Task<ExternalClientDetailsResponse> ConfigureWebhookAsync(
+        Guid clientId,
+        ConfigureWebhookRequest request,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var client = await clients.FindByIdAsync(clientId, ct)
+            ?? throw new KeyNotFoundException($"External client '{clientId}' was not found.");
+
+        client.ConfigureWebhook(request.WebhookUrl, request.WebhookSecret);
+        await clients.UpdateAsync(client, ct);
+
+        return new ExternalClientDetailsResponse(
+            client.Id,
+            client.CompanyName,
+            client.Cuit,
+            client.ContactEmail,
+            client.Description,
+            client.WebhookUrl,
+            client.CreatedAt,
+            client.LastRotatedAt);
+    }
+
+    public async Task<ExternalClientDetailsResponse> DeactivateWebhookAsync(
+        Guid clientId,
+        CancellationToken ct)
+    {
+        var client = await clients.FindByIdAsync(clientId, ct)
+            ?? throw new KeyNotFoundException($"External client '{clientId}' was not found.");
+
+        client.DeactivateWebhook();
+        await clients.UpdateAsync(client, ct);
+
+        return new ExternalClientDetailsResponse(
+            client.Id,
+            client.CompanyName,
+            client.Cuit,
+            client.ContactEmail,
+            client.Description,
+            client.WebhookUrl,
+            client.CreatedAt,
+            client.LastRotatedAt);
+    }
+
+    public async Task<ExternalClientDetailsResponse?> GetClientByIdAsync(
+        Guid clientId,
+        CancellationToken ct)
+    {
+        var client = await clients.FindByIdAsync(clientId, ct);
+        if (client is null) return null;
+
+        return new ExternalClientDetailsResponse(
+            client.Id,
+            client.CompanyName,
+            client.Cuit,
+            client.ContactEmail,
+            client.Description,
+            client.WebhookUrl,
+            client.CreatedAt,
+            client.LastRotatedAt);
     }
 }

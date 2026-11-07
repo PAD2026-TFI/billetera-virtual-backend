@@ -24,6 +24,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
     internal TestWalletRepository Wallets { get; } = new();
     internal TestTransferStore Transfers { get; } = new();
     internal TestMovementHistory History { get; } = new();
+    internal TestUnitOfWork UnitOfWork { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -47,6 +48,8 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
                 s.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
                 s.RemoveAll<IMovementHistoryReader>();
                 s.AddSingleton<IMovementHistoryReader>(History);
+                s.RemoveAll<IUnitOfWork>();
+                s.AddSingleton<IUnitOfWork>(UnitOfWork);
             });
     }
 
@@ -170,5 +173,20 @@ internal sealed class TestMovementHistory : IMovementHistoryReader
             .Where(m => before is null || m.CreatedAt < before.CreatedAt || m.CreatedAt == before.CreatedAt && m.Id.CompareTo(before.Id) < 0)
             .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).Take(count).ToArray();
         return Task.FromResult<IReadOnlyList<Movement>>(result);
+    }
+}
+
+internal sealed class TestUnitOfWork : IUnitOfWork
+{
+    public Task<ITransactionScope> BeginTransactionAsync(CancellationToken ct) =>
+        Task.FromResult<ITransactionScope>(new TestTransactionScope());
+
+    public Task SaveChangesAsync(CancellationToken ct) => Task.CompletedTask;
+
+    private sealed class TestTransactionScope : ITransactionScope
+    {
+        public Task CommitAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task RollbackAsync(CancellationToken ct) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

@@ -24,9 +24,23 @@ public sealed class CardRequestTests
         Assert.NotEqual(Guid.Empty, request.Id);
         Assert.Equal(userId, request.UserId);
         Assert.Equal(address.Id, request.AddressId);
+        Assert.Equal(CardType.Debit, request.Type);
         Assert.Equal(CardRequestStatus.Pending, request.Status);
         Assert.Equal(now.ToUniversalTime(), request.RequestedAt);
         Assert.Equal(now.ToUniversalTime(), request.UpdatedAt);
+    }
+
+    [Fact]
+    public void Create_with_credit_type_initializes_correctly()
+    {
+        var userId = Guid.NewGuid();
+        var address = CreateValidAddress();
+        var now = DateTimeOffset.UtcNow;
+
+        var request = CardRequest.Create(userId, address, now, CardType.Credit);
+
+        Assert.Equal(CardType.Credit, request.Type);
+        Assert.Equal(CardRequestStatus.Pending, request.Status);
     }
 
     [Fact]
@@ -54,25 +68,28 @@ public sealed class CardRequestTests
         var request = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Pending, request.Status);
 
-        request.Approve(DateTimeOffset.UtcNow);
-        Assert.Equal(CardRequestStatus.Approved, request.Status);
+        request.Process(DateTimeOffset.UtcNow);
+        Assert.Equal(CardRequestStatus.Processing, request.Status);
 
-        request.StartDelivery(DateTimeOffset.UtcNow);
-        Assert.Equal(CardRequestStatus.InDelivery, request.Status);
+        request.Issue(DateTimeOffset.UtcNow);
+        Assert.Equal(CardRequestStatus.Issued, request.Status);
+
+        request.Ship(DateTimeOffset.UtcNow);
+        Assert.Equal(CardRequestStatus.InTransit, request.Status);
 
         request.MarkDelivered(DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Delivered, request.Status);
     }
 
     [Fact]
-    public void CardRequest_can_be_cancelled_from_Pending_or_Approved()
+    public void CardRequest_can_be_cancelled_from_Pending_or_Processing()
     {
         var req1 = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
         req1.Cancel(DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Cancelled, req1.Status);
 
         var req2 = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
-        req2.Approve(DateTimeOffset.UtcNow);
+        req2.Process(DateTimeOffset.UtcNow);
         req2.Cancel(DateTimeOffset.UtcNow);
         Assert.Equal(CardRequestStatus.Cancelled, req2.Status);
     }
@@ -91,7 +108,17 @@ public sealed class CardRequestTests
         var request = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
         request.Reject(DateTimeOffset.UtcNow);
 
-        // Cannot approve after rejection
-        Assert.Throws<InvalidOperationException>(() => request.Approve(DateTimeOffset.UtcNow));
+        Assert.Throws<InvalidOperationException>(() => request.Process(DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void UpdateStatus_transitions_to_any_valid_state()
+    {
+        var request = CardRequest.Create(Guid.NewGuid(), CreateValidAddress(), DateTimeOffset.UtcNow);
+        request.UpdateStatus(CardRequestStatus.Processing, DateTimeOffset.UtcNow);
+        Assert.Equal(CardRequestStatus.Processing, request.Status);
+
+        request.UpdateStatus(CardRequestStatus.Issued, DateTimeOffset.UtcNow);
+        Assert.Equal(CardRequestStatus.Issued, request.Status);
     }
 }

@@ -82,6 +82,8 @@ if (enabled)
     builder.Services.AddScoped<GatewayService>();
     builder.Services.AddScoped<CardSimulatorService>();
     builder.Services.AddScoped<PaymentLinkService>();
+    builder.Services.AddScoped<ICheckoutService>(sp => sp.GetRequiredService<PaymentLinkService>());
+    builder.Services.AddScoped<ICardService, CardService>();
     builder.Services.AddScoped<DevelopmentFundingService>();
     builder.Services.AddDataProtection();
     builder.Services.AddScoped<IMovementCursorCodec, MovementCursorCodec>();

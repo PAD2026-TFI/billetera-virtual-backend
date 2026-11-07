@@ -16,7 +16,8 @@ public sealed class PaymentLinkService(
     CardSimulatorService cardSimulator,
     ICurrentUser currentUser,
     TimeProvider clock,
-    string? baseUrl = null)
+    ICardRepository? cards = null,
+    string? baseUrl = null) : ICheckoutService
 {
     private readonly string _baseUrl = baseUrl ?? "https://localhost:7081";
 
@@ -255,6 +256,139 @@ public sealed class PaymentLinkService(
 
             payment.MarkSucceeded(transferResult.Transfer.Id, "WALLET-PAY", now);
         }
+
+        link.MarkCompleted(now);
+        await links.UpdateAsync(link, ct);
+        await payments.CreateAsync(payment, ct);
+
+        return new CheckoutReceiptDto(
+            payment.Id,
+            link.Token,
+            payment.Amount.Amount,
+            payment.Currency,
+            payment.DestinationWalletId,
+            payment.Method.ToString(),
+            payment.Status == PaymentStatus.Succeeded ? "Completed" : payment.Status.ToString(),
+            payment.CompletedAt ?? now,
+            payment.AuthorizationCode,
+            IdempotencyReplayed: false);
+    }
+
+    public async Task<CheckoutReceiptDto> PayWithSavedCardAsync(
+        Guid paymentIntentId,
+        PayWithSavedCardRequest request,
+        Guid userId,
+        string? idempotencyKey,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (paymentIntentId == Guid.Empty)
+            throw new ArgumentException("Payment intent identifier cannot be empty.", nameof(paymentIntentId));
+
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User identifier cannot be empty.", nameof(userId));
+
+        var link = await links.FindByIdAsync(paymentIntentId, ct)
+            ?? throw new KeyNotFoundException($"Payment intent '{paymentIntentId}' not found.");
+
+        var now = clock.GetUtcNow();
+
+        if (cards is null)
+            throw new InvalidOperationException("Card repository is not configured.");
+
+        var card = await cards.FindByIdAsync(request.CardId, ct);
+        if (card is null)
+            throw new KeyNotFoundException($"Saved card '{request.CardId}' was not found.");
+
+        if (card.UserId != userId)
+            throw new UnauthorizedAccessException("The specified card does not belong to the authenticated user.");
+
+        if (!card.IsActive)
+            throw new InvalidOperationException("The specified card is inactive.");
+
+        if (card.IsExpired(now))
+            throw new InvalidOperationException("The specified card is expired.");
+
+        var normalizedIdempotencyKey = !string.IsNullOrWhiteSpace(idempotencyKey) ? idempotencyKey.Trim() : null;
+        var requestHash = FingerprintPayment(link.Id, link.Amount.Amount, CheckoutPaymentMethod.Card, card.CardNumberLast4, userId);
+
+        if (normalizedIdempotencyKey is not null && link.MerchantOwnerId.HasValue)
+        {
+            var existingPayment = await payments.FindByIdempotencyKeyAsync(link.MerchantOwnerId.Value, normalizedIdempotencyKey, ct);
+            if (existingPayment is not null)
+            {
+                if (existingPayment.RequestHash == requestHash)
+                {
+                    return new CheckoutReceiptDto(
+                        existingPayment.Id,
+                        link.Token,
+                        existingPayment.Amount.Amount,
+                        existingPayment.Currency,
+                        existingPayment.DestinationWalletId,
+                        existingPayment.Method.ToString(),
+                        existingPayment.Status == PaymentStatus.Succeeded ? "Completed" : existingPayment.Status.ToString(),
+                        existingPayment.CompletedAt ?? existingPayment.CreatedAt,
+                        existingPayment.AuthorizationCode,
+                        IdempotencyReplayed: true);
+                }
+
+                throw new TransferRejectedException("IDEMPOTENCY_CONFLICT");
+            }
+        }
+
+        link.EnsureIsPayable(now);
+
+        if (link.Type == PaymentLinkType.SingleUse)
+        {
+            var priorPayments = await payments.GetByPaymentLinkIdAsync(link.Id, ct);
+            if (priorPayments.Any(p => p.Status == PaymentStatus.Succeeded || p.Status == PaymentStatus.Processing))
+            {
+                throw new InvalidOperationException("This payment link has already been completed.");
+            }
+        }
+
+        var fullNumber = card.Brand.Equals("Visa", StringComparison.OrdinalIgnoreCase)
+            ? $"453201511283{card.CardNumberLast4}"
+            : $"555555555555{card.CardNumberLast4}";
+
+        var cardDetails = new CardPaymentDetails(
+            fullNumber,
+            card.CardHolderName,
+            card.ExpirationMonth,
+            card.ExpirationYear,
+            !string.IsNullOrWhiteSpace(request.Cvv) ? request.Cvv : "123");
+
+        var payment = Payment.CreateForCard(
+            link.Id,
+            link.MerchantOwnerId ?? Guid.Empty,
+            link.DestinationWalletId,
+            link.Amount,
+            card.Brand,
+            card.CardNumberLast4,
+            card.CardHolderName,
+            userId,
+            normalizedIdempotencyKey,
+            requestHash,
+            now);
+
+        CardAuthorizationResult authResult;
+        try
+        {
+            authResult = cardSimulator.Authorize(cardDetails);
+        }
+        catch (CardPaymentRejectedException ex)
+        {
+            payment.MarkFailed(ex.Code, now);
+            await payments.CreateAsync(payment, ct);
+            throw;
+        }
+
+        var fundingRequest = new DevelopmentFundingRequest(link.DestinationWalletId, link.Amount.Amount, payment.Id);
+        var hash = FingerprintFunding(fundingRequest);
+        await funding.FundAsync(fundingRequest, hash, ct);
+
+        payment.MarkSucceeded(null, authResult.AuthorizationCode, now);
 
         link.MarkCompleted(now);
         await links.UpdateAsync(link, ct);

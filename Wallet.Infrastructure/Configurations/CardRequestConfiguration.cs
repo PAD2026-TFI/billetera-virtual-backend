@@ -13,6 +13,7 @@ public class CardRequestConfiguration : IEntityTypeConfiguration<CardRequest>
         builder.Property(cr => cr.Id).ValueGeneratedNever();
         builder.Property(cr => cr.UserId).IsRequired();
         builder.Property(cr => cr.AddressId).IsRequired();
+        builder.Property(cr => cr.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(cr => cr.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(cr => cr.RequestedAt).IsRequired();
         builder.Property(cr => cr.UpdatedAt).IsRequired();

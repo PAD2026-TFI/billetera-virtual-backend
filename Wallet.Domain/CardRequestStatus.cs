@@ -1,12 +1,12 @@
-﻿namespace Wallet.Domain
+namespace Wallet.Domain;
+
+public enum CardRequestStatus
 {
-    public enum CardRequestStatus
-    {
-        Pending, 
-        Approved,
-        Rejected, 
-        InDelivery, 
-        Delivered,
-        Cancelled
-    }
+    Pending,
+    Processing,
+    Issued,
+    InTransit,
+    Delivered,
+    Cancelled,
+    Rejected
 }

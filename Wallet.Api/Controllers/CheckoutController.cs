@@ -8,7 +8,7 @@ namespace Wallet.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/checkout")]
-public sealed class CheckoutController(PaymentLinkService paymentLinks) : ControllerBase
+public sealed class CheckoutController(ICheckoutService checkoutService, ICurrentUser currentUser) : ControllerBase
 {
     [HttpPost("links")]
     [AllowAnonymous]
@@ -20,7 +20,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
     {
         try
         {
-            var result = await paymentLinks.CreateLinkAsync(request, ct);
+            var result = await checkoutService.CreateLinkAsync(request, ct);
             return CreatedAtAction(nameof(GetLinkByToken), new { token = result.Token }, result);
         }
         catch (ArgumentException ex)
@@ -40,7 +40,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         [FromRoute] string token,
         CancellationToken ct)
     {
-        var details = await paymentLinks.GetByTokenAsync(token, ct);
+        var details = await checkoutService.GetByTokenAsync(token, ct);
         if (details is null)
         {
             return Problem(
@@ -79,7 +79,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
 
         try
         {
-            var receipt = await paymentLinks.ProcessCheckoutAsync(effectiveToken, request, idempotencyKey, ct);
+            var receipt = await checkoutService.ProcessCheckoutAsync(effectiveToken, request, idempotencyKey, ct);
             Response.Headers["Idempotency-Replayed"] = receipt.IdempotencyReplayed ? "true" : "false";
             return Ok(receipt);
         }
@@ -141,6 +141,63 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         }
     }
 
+    [HttpPost("{paymentIntentId:guid}/pay")]
+    [Authorize]
+    [ProducesResponseType<CheckoutReceiptDto>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
+    public async Task<ActionResult<CheckoutReceiptDto>> PayWithSavedCard(
+        [FromRoute] Guid paymentIntentId,
+        [FromBody] PayWithSavedCardRequest request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
+    {
+        try
+        {
+            var receipt = await checkoutService.PayWithSavedCardAsync(paymentIntentId, request, currentUser.Id, idempotencyKey, ct);
+            Response.Headers["Idempotency-Replayed"] = receipt.IdempotencyReplayed ? "true" : "false";
+            return Ok(receipt);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "UNAUTHORIZED" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "NOT_FOUND" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "LINK_NOT_PAYABLE" });
+        }
+        catch (CardPaymentRejectedException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_INPUT" });
+        }
+    }
+
     [HttpGet("links/{token}/qr")]
     [AllowAnonymous]
     [Produces("image/svg+xml")]
@@ -150,7 +207,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         [FromRoute] string token,
         CancellationToken ct)
     {
-        var details = await paymentLinks.GetByTokenAsync(token, ct);
+        var details = await checkoutService.GetByTokenAsync(token, ct);
         if (details is null)
         {
             return Problem(

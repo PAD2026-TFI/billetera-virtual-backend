@@ -15,8 +15,23 @@ public sealed class GatewayController(
     PaymentLinkService paymentLinks,
     ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Registro y onboarding de clientes externos / comercios B2B.
+    /// Crea la entidad ExternalClient, su billetera atómica con CVU/Alias, y emite la API Key en texto plano una única vez.
+    /// </summary>
+    [HttpPost("/api/v1/integrations/register", Order = -1)]
+    [HttpPost("/api/v1/merchants/register")]
+    [AllowAnonymous]
+    [ProducesResponseType<RegisterExternalClientResponse>(201)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    public async Task<ActionResult<RegisterExternalClientResponse>> RegisterMerchant(
+        RegisterExternalClientRequest request,
+        CancellationToken ct) =>
+        await RegisterClient(request, ct);
+
     [HttpPost("clients")]
     [AllowAnonymous]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<RegisterExternalClientResponse>(201)]
     [ProducesResponseType<ProblemDetails>(400)]
     public async Task<ActionResult<RegisterExternalClientResponse>> RegisterClient(
@@ -37,6 +52,73 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpGet("/api/v1/integrations/profile", Order = -1)]
+    [HttpGet("me")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<ExternalClientDetailsResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<ExternalClientDetailsResponse>> GetMe(CancellationToken ct)
+    {
+        var client = await gateway.GetClientByIdAsync(currentUser.Id, ct);
+        if (client is null)
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+
+        return Ok(client);
+    }
+
+    [HttpPut("/api/v1/integrations/webhook", Order = -1)]
+    [HttpPut("webhook")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<ExternalClientDetailsResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<ExternalClientDetailsResponse>> ConfigureWebhook(
+        [FromBody] ConfigureWebhookRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var response = await gateway.ConfigureWebhookAsync(currentUser.Id, request, ct);
+            return Ok(response);
+        }
+        catch (ArgumentException e)
+        {
+            return Problem(
+                statusCode: 400,
+                title: "Datos de webhook inválidos.",
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_WEBHOOK", ["detail"] = e.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
+    [HttpDelete("/api/v1/integrations/webhook", Order = -1)]
+    [HttpDelete("webhook")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<ExternalClientDetailsResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<ExternalClientDetailsResponse>> DeactivateWebhook(CancellationToken ct)
+    {
+        try
+        {
+            var response = await gateway.DeactivateWebhookAsync(currentUser.Id, ct);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
+    [HttpGet("/api/v1/integrations/wallet", Order = -1)]
     [HttpGet("wallet")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<WalletResponse>(200)]
@@ -56,6 +138,7 @@ public sealed class GatewayController(
 
     [HttpPost("wallet")]
     [Authorize(Policy = "ExternalClient")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<WalletResponse>(201)]
     [ProducesResponseType<WalletResponse>(200)]
     public async Task<ActionResult<WalletResponse>> CreateWallet(
@@ -66,6 +149,7 @@ public sealed class GatewayController(
         return StatusCode(result.Created ? StatusCodes.Status201Created : StatusCodes.Status200OK, result.Wallet);
     }
 
+    [HttpPost("/api/v1/integrations/transfers", Order = -1)]
     [HttpPost("payments")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<TransferResponse>(201)]
@@ -114,6 +198,7 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpGet("/api/v1/integrations/wallet/movements", Order = -1)]
     [HttpGet("movements")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<MovementPage>(200)]
@@ -131,6 +216,7 @@ public sealed class GatewayController(
             extensions: new Dictionary<string, object?> { ["code"] = result.Error.Code });
     }
 
+    [HttpGet("/api/v1/integrations/received-payments/{paymentId:guid}", Order = -1)]
     [HttpGet("checkout-payments/{paymentId:guid}")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<MerchantPaymentDto>(200)]
@@ -153,6 +239,7 @@ public sealed class GatewayController(
         return Ok(payment);
     }
 
+    [HttpGet("/api/v1/integrations/received-payments", Order = -1)]
     [HttpGet("checkout-payments")]
     [Authorize(Policy = "ExternalClient")]
     [ProducesResponseType<IReadOnlyList<MerchantPaymentDto>>(200)]

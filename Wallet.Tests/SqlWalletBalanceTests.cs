@@ -47,7 +47,7 @@ public sealed class SqlWalletBalanceTests
                 client.DefaultRequestHeaders.Authorization = new("Bearer", host.Token(user));
                 using var response = await client.GetAsync("/api/wallets/me");
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                Assert.Equal(new WalletResponse(wallet.Id, 12345.67m, "ARS", createdAt),
+                Assert.Equal(new WalletResponse(wallet.Id, 12345.67m, "ARS", createdAt, wallet.Cvu, wallet.Alias),
                     await response.Content.ReadFromJsonAsync<WalletResponse>());
             }
             await using (var db = NewDb())

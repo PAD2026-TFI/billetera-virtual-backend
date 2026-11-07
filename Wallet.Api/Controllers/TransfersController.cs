@@ -9,6 +9,7 @@ namespace Wallet.Api.Controllers;
 public sealed class TransfersController(TransferService transfers) : ControllerBase
 {
     [HttpPost]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<TransferResponse>(201)]
     [ProducesResponseType<TransferResponse>(200)]
     [ProducesResponseType<ProblemDetails>(400)]
@@ -18,8 +19,10 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
     [ProducesResponseType<ProblemDetails>(409)]
     [ProducesResponseType<ProblemDetails>(422)]
     [ProducesResponseType<ProblemDetails>(503)]
-    public async Task<ActionResult<TransferResponse>> Create(TransferRequest request,
-        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey, CancellationToken ct)
+    public async Task<ActionResult<TransferResponse>> Create(
+        [FromBody] TransferRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string idempotencyKey,
+        CancellationToken ct)
     {
         try
         {
@@ -29,22 +32,114 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
         }
         catch (TransferRejectedException e)
         {
-            var (status, title) = e.Code switch
-            {
-                "SOURCE_WALLET_NOT_FOUND" => (404, "No tenés una billetera creada."),
-                "DESTINATION_UNAVAILABLE" => (422, "La billetera de destino no está disponible."),
-                "INSUFFICIENT_FUNDS" => (409, "Saldo insuficiente."),
-                "DESTINATION_BALANCE_LIMIT" => (409, "El destino no admite este importe."),
-                "IDEMPOTENCY_CONFLICT" => (409, "La clave ya identifica una transferencia con otros datos."),
-                "CONCURRENCY_CONFLICT" => (409, "Conflicto concurrente. Reintentá con la misma clave."),
-                "INVALID_SESSION" => (401, "Sesión inválida."),
-                "SAME_WALLET" => (400, "Origen y destino deben ser distintos."),
-                "INVALID_AMOUNT" => (400, "El importe debe estar entre 0,01 y 780400 ARS, sin fracciones de centavo."),
-                _ => (400, "Datos o clave de idempotencia inválidos.")
-            };
-            if (status == 401) Response.Headers.WWWAuthenticate = "Bearer";
-            return Problem(statusCode: status, title: title,
-                extensions: new Dictionary<string, object?> { ["code"] = e.Code });
+            return HandleException(e);
         }
+    }
+
+    [HttpPost("/api/v1/me/transfers/by-cvu", Order = -1)]
+    [HttpPost("cvu")]
+    [ProducesResponseType<TransferResponse>(201)]
+    [ProducesResponseType<TransferResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(403)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
+    [ProducesResponseType<ProblemDetails>(503)]
+    public async Task<ActionResult<TransferResponse>> CreateByCvu(
+        [FromBody] TransferByCvuRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string? idempotencyKey,
+        CancellationToken ct)
+    {
+        var key = string.IsNullOrWhiteSpace(idempotencyKey) ? Guid.NewGuid().ToString() : idempotencyKey;
+        try
+        {
+            var result = await transfers.ExecuteByCvuAsync(request, key, ct);
+            Response.Headers["Idempotency-Replayed"] = result.Created ? "false" : "true";
+            return StatusCode(result.Created ? 201 : 200, result.Transfer);
+        }
+        catch (TransferRejectedException e)
+        {
+            return HandleException(e);
+        }
+    }
+
+    [HttpPost("/api/v1/me/transfers/by-alias", Order = -1)]
+    [HttpPost("alias")]
+    [ProducesResponseType<TransferResponse>(201)]
+    [ProducesResponseType<TransferResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(403)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
+    [ProducesResponseType<ProblemDetails>(503)]
+    public async Task<ActionResult<TransferResponse>> CreateByAlias(
+        [FromBody] TransferByAliasRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string? idempotencyKey,
+        CancellationToken ct)
+    {
+        var key = string.IsNullOrWhiteSpace(idempotencyKey) ? Guid.NewGuid().ToString() : idempotencyKey;
+        try
+        {
+            var result = await transfers.ExecuteByAliasAsync(request, key, ct);
+            Response.Headers["Idempotency-Replayed"] = result.Created ? "false" : "true";
+            return StatusCode(result.Created ? 201 : 200, result.Transfer);
+        }
+        catch (TransferRejectedException e)
+        {
+            return HandleException(e);
+        }
+    }
+
+    [HttpPost("/api/v1/me/transfers/by-wallet-id", Order = -1)]
+    [HttpPost("wallet-id")]
+    [ProducesResponseType<TransferResponse>(201)]
+    [ProducesResponseType<TransferResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(403)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
+    [ProducesResponseType<ProblemDetails>(503)]
+    public async Task<ActionResult<TransferResponse>> CreateByWalletId(
+        [FromBody] TransferByWalletIdRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required] string? idempotencyKey,
+        CancellationToken ct)
+    {
+        var key = string.IsNullOrWhiteSpace(idempotencyKey) ? Guid.NewGuid().ToString() : idempotencyKey;
+        try
+        {
+            var result = await transfers.ExecuteByWalletIdAsync(request, key, ct);
+            Response.Headers["Idempotency-Replayed"] = result.Created ? "false" : "true";
+            return StatusCode(result.Created ? 201 : 200, result.Transfer);
+        }
+        catch (TransferRejectedException e)
+        {
+            return HandleException(e);
+        }
+    }
+
+    private ActionResult HandleException(TransferRejectedException e)
+    {
+        var (status, title) = e.Code switch
+        {
+            "SOURCE_WALLET_NOT_FOUND" => (404, "No tenés una billetera creada."),
+            "DESTINATION_UNAVAILABLE" => (422, "La billetera de destino no está disponible o no existe."),
+            "INSUFFICIENT_FUNDS" => (409, "Saldo insuficiente."),
+            "DESTINATION_BALANCE_LIMIT" => (409, "El destino no admite este importe."),
+            "IDEMPOTENCY_CONFLICT" => (409, "La clave ya identifica una transferencia con otros datos."),
+            "CONCURRENCY_CONFLICT" => (409, "Conflicto concurrente. Reintentá con la misma clave."),
+            "INVALID_SESSION" => (401, "Sesión inválida."),
+            "SAME_WALLET" => (400, "Origen y destino deben ser distintos."),
+            "INVALID_AMOUNT" => (400, "El importe debe estar entre 0,01 y 780400 ARS, sin fracciones de centavo."),
+            _ => (400, "Datos o clave de idempotencia inválidos.")
+        };
+        if (status == 401) Response.Headers.WWWAuthenticate = "Bearer";
+        return Problem(statusCode: status, title: title,
+            extensions: new Dictionary<string, object?> { ["code"] = e.Code });
     }
 }

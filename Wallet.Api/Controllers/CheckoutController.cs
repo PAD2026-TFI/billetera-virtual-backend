@@ -8,19 +8,28 @@ namespace Wallet.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/checkout")]
-public sealed class CheckoutController(PaymentLinkService paymentLinks) : ControllerBase
+public sealed class CheckoutController(ICheckoutService checkoutService, ICurrentUser currentUser) : ControllerBase
 {
+    /// <summary>
+    /// Genera un nuevo link o intención de cobro omnicanal.
+    /// Requiere autenticación mediante API Key (X-Api-Key) del comercio B2B (ExternalClient).
+    /// Campos obligatorios: Amount y Title. Todos los demás campos son opcionales.
+    /// La billetera destino se vincula automáticamente al comercio autenticado.
+    /// </summary>
     [HttpPost("links")]
-    [AllowAnonymous]
+    [Authorize(Policy = "ExternalClient")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ProducesResponseType<PaymentLinkDto>(201)]
     [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
     public async Task<ActionResult<PaymentLinkDto>> CreateLink(
         [FromBody] CreatePaymentLinkRequest request,
+        [FromHeader(Name = "X-Api-Key")] string? apiKey,
         CancellationToken ct)
     {
         try
         {
-            var result = await paymentLinks.CreateLinkAsync(request, ct);
+            var result = await checkoutService.CreateLinkAsync(request, ct);
             return CreatedAtAction(nameof(GetLinkByToken), new { token = result.Token }, result);
         }
         catch (ArgumentException ex)
@@ -32,6 +41,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         }
     }
 
+    [HttpGet("/api/v1/public/payment-links/{token}", Order = -1)]
     [HttpGet("links/{token}")]
     [AllowAnonymous]
     [ProducesResponseType<CheckoutPublicDetailsDto>(200)]
@@ -40,7 +50,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         [FromRoute] string token,
         CancellationToken ct)
     {
-        var details = await paymentLinks.GetByTokenAsync(token, ct);
+        var details = await checkoutService.GetByTokenAsync(token, ct);
         if (details is null)
         {
             return Problem(
@@ -52,6 +62,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         return Ok(details);
     }
 
+    [HttpPost("/api/v1/public/checkout/payments", Order = -1)]
     [HttpPost("pay")]
     [AllowAnonymous]
     [ProducesResponseType<CheckoutReceiptDto>(200)]
@@ -79,7 +90,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
 
         try
         {
-            var receipt = await paymentLinks.ProcessCheckoutAsync(effectiveToken, request, idempotencyKey, ct);
+            var receipt = await checkoutService.ProcessCheckoutAsync(effectiveToken, request, idempotencyKey, ct);
             Response.Headers["Idempotency-Replayed"] = receipt.IdempotencyReplayed ? "true" : "false";
             return Ok(receipt);
         }
@@ -119,6 +130,9 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         {
             var (status, title) = ex.Code switch
             {
+                "INVALID_SESSION" => (401, "La sesión o el titular no están activos."),
+                "CONCURRENCY_CONFLICT" => (409, "Conflicto de concurrencia. Reintentá con la misma clave."),
+                "DESTINATION_UNAVAILABLE" => (422, "La billetera destino no está disponible."),
                 "SOURCE_WALLET_NOT_FOUND" => (404, "No tenés una billetera creada para realizar el pago."),
                 "INSUFFICIENT_FUNDS" => (409, "Saldo insuficiente en tu billetera."),
                 "DESTINATION_BALANCE_LIMIT" => (409, "La billetera destino excede el límite operativo."),
@@ -141,6 +155,85 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         }
     }
 
+    [HttpPost("/api/v1/me/payment-links/{paymentLinkId:guid}/card-payments", Order = -1)]
+    [HttpPost("{paymentLinkId:guid}/pay")]
+    [Authorize(Policy = "Client")]
+    [ProducesResponseType<CheckoutReceiptDto>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
+    public async Task<ActionResult<CheckoutReceiptDto>> PayWithSavedCard(
+        [FromRoute] Guid paymentLinkId,
+        [FromBody] PayWithSavedCardRequest request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
+    {
+        try
+        {
+            var receipt = await checkoutService.PayWithSavedCardAsync(paymentLinkId, request, currentUser.Id, idempotencyKey, ct);
+            Response.Headers["Idempotency-Replayed"] = receipt.IdempotencyReplayed ? "true" : "false";
+            return Ok(receipt);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "UNAUTHORIZED" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "NOT_FOUND" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "LINK_NOT_PAYABLE" });
+        }
+        catch (CardPaymentRejectedException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+        catch (TransferRejectedException ex)
+        {
+            var (status, title) = ex.Code switch
+            {
+                "INVALID_SESSION" => (401, "La sesión o el titular no están activos."),
+                "CONCURRENCY_CONFLICT" => (409, "Conflicto de concurrencia. Reintentá con la misma clave."),
+                "DESTINATION_UNAVAILABLE" => (422, "La billetera destino no está disponible."),
+                "SOURCE_WALLET_NOT_FOUND" => (404, "No tenés una billetera creada para realizar el pago."),
+                "INSUFFICIENT_FUNDS" => (409, "Saldo insuficiente en tu billetera."),
+                "DESTINATION_BALANCE_LIMIT" => (409, "La billetera destino excede el límite operativo."),
+                "IDEMPOTENCY_CONFLICT" => (409, "La clave de idempotencia ya fue utilizada con otros parámetros."),
+                "SAME_WALLET" => (400, "Origen y destino deben ser distintos."),
+                _ => (400, "Error en la transferencia de billetera.")
+            };
+
+            return Problem(
+                statusCode: status,
+                title: title,
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_INPUT" });
+        }
+    }
+
+    [HttpGet("/api/v1/public/payment-links/{token}/qr", Order = -1)]
     [HttpGet("links/{token}/qr")]
     [AllowAnonymous]
     [Produces("image/svg+xml")]
@@ -150,7 +243,7 @@ public sealed class CheckoutController(PaymentLinkService paymentLinks) : Contro
         [FromRoute] string token,
         CancellationToken ct)
     {
-        var details = await paymentLinks.GetByTokenAsync(token, ct);
+        var details = await checkoutService.GetByTokenAsync(token, ct);
         if (details is null)
         {
             return Problem(

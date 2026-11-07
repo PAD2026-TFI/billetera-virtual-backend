@@ -7,6 +7,7 @@ namespace Wallet.Api.Controllers;
 [ApiController, Route("api/wallets"), Authorize(Policy = "Client")]
 public sealed class WalletsController(WalletService wallets) : ControllerBase
 {
+    [HttpGet("/api/v1/me/wallet", Order = -1)]
     [HttpGet("me")]
     [ProducesResponseType<WalletResponse>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
@@ -22,6 +23,7 @@ public sealed class WalletsController(WalletService wallets) : ControllerBase
         return Ok(wallet);
     }
 
+    [HttpPost("/api/v1/me/wallet", Order = -1)]
     [HttpPost]
     [ProducesResponseType<WalletResponse>(201)]
     [ProducesResponseType<WalletResponse>(200)]
@@ -39,5 +41,37 @@ public sealed class WalletsController(WalletService wallets) : ControllerBase
 
         var result = await wallets.CreateAsync(ct);
         return StatusCode(result.Created ? StatusCodes.Status201Created : StatusCodes.Status200OK, result.Wallet);
+    }
+
+    [HttpPatch("/api/v1/me/wallet/alias", Order = -1)]
+    [HttpPatch("alias")]
+    [ProducesResponseType<WalletResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    [ProducesResponseType<ProblemDetails>(409)]
+    public async Task<ActionResult<WalletResponse>> ModifyAlias(
+        [FromBody] ModifyAliasRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var updated = await wallets.ModifyAliasAsync(request.NewAlias, ct);
+            return Ok(updated);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "No tenés una billetera creada.",
+                extensions: new Dictionary<string, object?> { ["code"] = "WALLET_NOT_FOUND" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: 409, title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "ALIAS_ALREADY_EXISTS" });
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: 400, title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_ALIAS" });
+        }
     }
 }

@@ -134,6 +134,21 @@ public sealed class Payment
             now);
     }
 
+    public static Payment CreateForDebitCard(
+        Guid paymentLinkId, Guid merchantOwnerId, Guid destinationWalletId, Money amount,
+        Card card, Guid payerWalletId, string idempotencyKey, string requestHash, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        if (card.Type != CardType.Debit || !card.IsActive || card.IsExpired(now))
+            throw new InvalidOperationException("An active, unexpired debit card is required.");
+        if (payerWalletId == Guid.Empty || payerWalletId == destinationWalletId)
+            throw new ArgumentException("Source wallet must exist and differ from destination.", nameof(payerWalletId));
+        var payment = CreateForCard(paymentLinkId, merchantOwnerId, destinationWalletId, amount,
+            card.Brand, card.CardNumberLast4, card.CardHolderName, card.UserId, idempotencyKey, requestHash, now);
+        payment.PayerWalletId = payerWalletId;
+        return payment;
+    }
+
     public void MarkSucceeded(Guid? transferId, string? authorizationCode, DateTimeOffset now)
     {
         if (Status != PaymentStatus.Processing && Status != PaymentStatus.Pending)

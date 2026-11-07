@@ -9,6 +9,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> builder) 
     {
         builder.ToTable("Users");
+        builder.Property(user => user.Dni).HasMaxLength(20).IsRequired();
         builder.Property(user => user.FirstName).HasMaxLength(100).IsRequired();
         builder.Property(user => user.LastName).HasMaxLength(100).IsRequired();
         builder.Property(user => user.Email).HasMaxLength(254).IsRequired();
@@ -17,5 +18,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.PasswordHash).HasMaxLength(512).IsRequired();
         builder.Property(user => user.Role).HasMaxLength(20).IsRequired();
         builder.Property(user => user.SessionVersion).IsRequired();
+        builder.Property(user => user.WalletId);
     }
 }

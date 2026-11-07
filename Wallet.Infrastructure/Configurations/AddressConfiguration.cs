@@ -11,6 +11,7 @@ public class AddressConfiguration : IEntityTypeConfiguration<Address>
         builder.ToTable("Addresses");
         builder.HasKey(a => a.Id);
         builder.Property(a => a.Id).ValueGeneratedNever();
+        builder.HasOne<User>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(a => a.Street).IsRequired().HasMaxLength(150);
         builder.Property(a => a.Number).IsRequired().HasMaxLength(20);
         builder.Property(a => a.City).IsRequired().HasMaxLength(100);

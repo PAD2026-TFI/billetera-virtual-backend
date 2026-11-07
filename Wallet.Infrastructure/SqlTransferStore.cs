@@ -16,47 +16,10 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
             {
                 await using var db = new WalletDbContext(options);
                 await using var transaction = await db.Database.BeginTransactionAsync(ct);
-                var sourceId = await db.Wallets.AsNoTracking().Where(w => w.OwnerId == command.SourceUserId)
-                    .Select(w => w.Id).SingleOrDefaultAsync(ct);
-                if (sourceId == Guid.Empty) throw new TransferRejectedException("SOURCE_WALLET_NOT_FOUND");
-
-                // Recuperar una confirmada no requiere otra vez saldo ni un destino aún activo.
-                var previous = await Previous(db, sourceId, command.IdempotencyKey, ct);
-                if (previous is not null) return Replay(previous, command, hash);
-                if (sourceId == command.DestinationWalletId) throw new TransferRejectedException("SAME_WALLET");
-
-                var locked = new Dictionary<Guid, DomainWallet>();
-                foreach (var id in new[] { sourceId, command.DestinationWalletId }.OrderBy(id => id))
-                {
-                    var wallet = await db.Wallets.FromSqlInterpolated(
-                        $"SELECT * FROM [Wallets] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {id}").SingleOrDefaultAsync(ct);
-                    if (wallet is null) throw new TransferRejectedException(id == sourceId ? "SOURCE_WALLET_NOT_FOUND" : "DESTINATION_UNAVAILABLE");
-                    locked.Add(id, wallet);
-                }
-                // Otra solicitud con la misma clave pudo confirmar mientras esperábamos el lock.
-                previous = await Previous(db, sourceId, command.IdempotencyKey, ct);
-                if (previous is not null) return Replay(previous, command, hash);
-
-                var source = locked[sourceId]; var destination = locked[command.DestinationWalletId];
-                foreach (var ownerId in new[] { source.OwnerId, destination.OwnerId }.Distinct().OrderBy(id => id))
-                {
-                    var isActive = await db.Database.SqlQuery<bool>(
-                        $"SELECT [IsActive] AS [Value] FROM [WalletOwners] WITH (HOLDLOCK) WHERE [Id] = {ownerId}").SingleAsync(ct);
-                    if (!isActive) throw new TransferRejectedException(ownerId == source.OwnerId ? "INVALID_SESSION" : "DESTINATION_UNAVAILABLE");
-                }
-                if (source.Currency != "ARS" || destination.Currency != "ARS") throw new TransferRejectedException("DESTINATION_UNAVAILABLE");
-                if (source.Balance < command.Amount) throw new TransferRejectedException("INSUFFICIENT_FUNDS");
-                if (command.Amount.Amount > Money.MaxAllowedAmount - destination.Balance.Amount) throw new TransferRejectedException("DESTINATION_BALANCE_LIMIT");
-
-                var transfer = Transfer.Complete(source.Id, destination.Id, command.Amount, command.IdempotencyKey, hash, clock.GetUtcNow());
-                ct.ThrowIfCancellationRequested();
-                transfer.ApplyTo(source, destination);
-                db.Transfers.Add(transfer);
-                db.Movements.AddRange(Movement.ForCompletedTransfer(transfer, source, destination));
-                await db.SaveChangesAsync(ct);
+                var result = await ExecuteInTransactionAsync(db, command, hash, clock, ct);
                 ct.ThrowIfCancellationRequested();
                 await transaction.CommitAsync(ct);
-                return new(TransferResponse.From(transfer), true);
+                return result;
             }
             catch (DbUpdateConcurrencyException) when (attempt < 2) { }
             catch (DbUpdateException e) when (attempt < 2 && e.InnerException is SqlException { Number: 2601 or 2627 or 1205 }) { }
@@ -70,6 +33,50 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
             // La disposición de la transacción revierte cualquier intento sin commit.
         }
     }
+    internal static async Task<TransferExecution> ExecuteInTransactionAsync(
+        WalletDbContext db, TransferCommand command, string hash, TimeProvider clock, CancellationToken ct)
+    {
+        var sourceId = await db.Wallets.AsNoTracking().Where(w => w.OwnerId == command.SourceUserId)
+            .Select(w => w.Id).SingleOrDefaultAsync(ct);
+        if (sourceId == Guid.Empty) throw new TransferRejectedException("SOURCE_WALLET_NOT_FOUND");
+
+        // Recuperar una confirmada no requiere otra vez saldo ni un destino aún activo.
+        var previous = await Previous(db, sourceId, command.IdempotencyKey, ct);
+        if (previous is not null) return Replay(previous, command, hash);
+        if (sourceId == command.DestinationWalletId) throw new TransferRejectedException("SAME_WALLET");
+
+        var locked = new Dictionary<Guid, DomainWallet>();
+        foreach (var id in new[] { sourceId, command.DestinationWalletId }.OrderBy(id => id))
+        {
+            var wallet = await db.Wallets.FromSqlInterpolated(
+                $"SELECT * FROM [Wallets] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {id}").SingleOrDefaultAsync(ct);
+            if (wallet is null) throw new TransferRejectedException(id == sourceId ? "SOURCE_WALLET_NOT_FOUND" : "DESTINATION_UNAVAILABLE");
+            locked.Add(id, wallet);
+        }
+        // Otra solicitud con la misma clave pudo confirmar mientras esperábamos el lock.
+        previous = await Previous(db, sourceId, command.IdempotencyKey, ct);
+        if (previous is not null) return Replay(previous, command, hash);
+
+        var source = locked[sourceId]; var destination = locked[command.DestinationWalletId];
+        foreach (var ownerId in new[] { source.OwnerId, destination.OwnerId }.Distinct().OrderBy(id => id))
+        {
+            var isActive = await db.Database.SqlQuery<bool>(
+                $"SELECT [IsActive] AS [Value] FROM [WalletOwners] WITH (HOLDLOCK) WHERE [Id] = {ownerId}").SingleAsync(ct);
+            if (!isActive) throw new TransferRejectedException(ownerId == source.OwnerId ? "INVALID_SESSION" : "DESTINATION_UNAVAILABLE");
+        }
+        if (source.Currency != "ARS" || destination.Currency != "ARS") throw new TransferRejectedException("DESTINATION_UNAVAILABLE");
+        if (source.Balance < command.Amount) throw new TransferRejectedException("INSUFFICIENT_FUNDS");
+        if (command.Amount.Amount > Money.MaxAllowedAmount - destination.Balance.Amount) throw new TransferRejectedException("DESTINATION_BALANCE_LIMIT");
+
+        var transfer = Transfer.Complete(source.Id, destination.Id, command.Amount, command.IdempotencyKey, hash, clock.GetUtcNow());
+        ct.ThrowIfCancellationRequested();
+        transfer.ApplyTo(source, destination);
+        db.Transfers.Add(transfer);
+        db.Movements.AddRange(Movement.ForCompletedTransfer(transfer, source, destination));
+        await db.SaveChangesAsync(ct);
+        return new(TransferResponse.From(transfer), true);
+    }
+
     private static Task<Transfer?> Previous(WalletDbContext db, Guid source, Guid key, CancellationToken ct) =>
         db.Transfers.AsNoTracking().SingleOrDefaultAsync(t => t.SourceWalletId == source && t.IdempotencyKey == key, ct);
     private static TransferExecution Replay(Transfer transfer, TransferCommand command, string hash)

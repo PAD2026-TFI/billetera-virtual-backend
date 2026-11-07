@@ -42,7 +42,7 @@ public sealed class WalletCreationTests
         Assert.Equal("ARS", wallet.Currency);
         Assert.Equal(owner.Id, host.Wallets.Items[owner.Id].UserId);
         using var json = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        Assert.Equal(new[] { "balance", "createdAt", "currency", "id" },
+        Assert.Equal(new[] { "alias", "balance", "createdAt", "currency", "cvu", "id" },
             json.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToArray());
         // Fixture de billetera con fondos futuros: repetir la creación no los modifica.
         typeof(DomainWallet).GetProperty(nameof(DomainWallet.Balance))!.SetValue(host.Wallets.Items[owner.Id], Wallet.Domain.Money.From(125.50m));
@@ -160,7 +160,7 @@ public sealed class WalletCreationTests
         await using var host = new IdentityTestHost();
         using var client = host.Client();
         using var document = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
-        var post = document.RootElement.GetProperty("paths").GetProperty("/api/wallets").GetProperty("post");
+        var post = document.RootElement.GetProperty("paths").GetProperty("/api/v1/me/wallet").GetProperty("post");
         Assert.False(post.TryGetProperty("requestBody", out _));
         foreach (var status in new[] { "200", "201", "400", "401", "403", "503" })
             Assert.True(post.GetProperty("responses").TryGetProperty(status, out _));

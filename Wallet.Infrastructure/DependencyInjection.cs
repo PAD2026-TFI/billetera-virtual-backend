@@ -12,6 +12,7 @@ public static class DependencyInjection
             sql => sql.CommandTimeout(15)));
         services.AddScoped<IMovementHistoryReader, SqlMovementHistoryReader>();
         services.AddScoped<ITransferStore, SqlTransferStore>();
+        services.AddScoped<IDebitCardPaymentStore, SqlDebitCardPaymentStore>();
         services.AddScoped<IDevelopmentFundingStore, SqlDevelopmentFundingStore>();
         services.AddScoped<IWalletRepository, SqlWalletRepository>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
@@ -19,6 +20,13 @@ public static class DependencyInjection
         services.AddScoped<IPaymentLinkRepository, SqlPaymentLinkRepository>();
         services.AddScoped<IPaymentRepository, SqlPaymentRepository>();
         services.AddScoped<IPasswordService, IdentityPasswordService>();
+        services.AddScoped<ICardRepository, SqlCardRepository>();
+        services.AddScoped<ICardRequestRepository, SqlCardRequestRepository>();
+        services.AddScoped<IAddressRepository, SqlAddressRepository>();
+        services.AddScoped<IUnitOfWork, SqlUnitOfWork>();
+        services.AddSingleton<ICvuGenerator, CvuGenerator>();
+        services.AddSingleton<IAliasGenerator, AliasGenerator>();
+        services.AddScoped<UserRegistrationService>();
         return services;
     }
 }

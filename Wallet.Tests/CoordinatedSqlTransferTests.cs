@@ -85,7 +85,7 @@ public sealed class CoordinatedSqlTransferTests
         {
             // Antes de ejecutar el SELECT inicial, todavía no hay locks de billeteras.
             if (command.CommandText.Contains("FROM [Wallets]", StringComparison.Ordinal)
-                && command.CommandText.Contains("[UserId]", StringComparison.Ordinal)
+                && command.CommandText.Contains("[OwnerId]", StringComparison.Ordinal)
                 && !command.CommandText.Contains("UPDLOCK", StringComparison.Ordinal))
             {
                 var arrival = Interlocked.Increment(ref _seen);

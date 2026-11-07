@@ -27,7 +27,7 @@ public sealed class CardSimulatorService(TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(details);
 
-        var cleanNumber = new string(details.CardNumber?.Where(char.IsDigit).ToArray() ?? []);
+        var cleanNumber = details.CardNumber ?? string.Empty;
         if (string.IsNullOrWhiteSpace(cleanNumber) || !ValidateLuhn(cleanNumber))
             throw new CardPaymentRejectedException("INVALID_CARD_NUMBER", "El número de tarjeta es inválido (falló validación de Luhn).");
 
@@ -36,9 +36,9 @@ public sealed class CardSimulatorService(TimeProvider clock)
 
         ValidateExpiration(details.ExpirationMonth, details.ExpirationYear);
 
-        var cleanCvv = details.Cvv?.Trim() ?? "";
-        if (cleanCvv.Length is < 3 or > 4 || !cleanCvv.All(char.IsDigit))
-            throw new CardPaymentRejectedException("INVALID_CVV", "El código de seguridad (CVV) debe contener 3 o 4 dígitos.");
+        var cleanCvv = details.Cvv ?? "";
+        if (cleanCvv.Length != 3 || !cleanCvv.All(c => c is >= '0' and <= '9'))
+            throw new CardPaymentRejectedException("INVALID_CVV", "El código de seguridad (CVV) debe contener exactamente 3 dígitos ASCII.");
 
         // Reglas de simulación financiera
         if (cleanNumber.EndsWith("0000", StringComparison.Ordinal) || cleanCvv == "999")
@@ -60,8 +60,9 @@ public sealed class CardSimulatorService(TimeProvider clock)
     public static bool ValidateLuhn(string number)
     {
         if (string.IsNullOrWhiteSpace(number)) return false;
-        var digits = number.Where(char.IsDigit).Select(c => c - '0').ToArray();
-        if (digits.Length is < 13 or > 19) return false;
+        if (number.Length != 16 || !number.All(c => c is >= '0' and <= '9')) return false;
+        var digits = number.Select(c => c - '0').ToArray();
+
 
         var sum = 0;
         var shouldDouble = false;
@@ -84,7 +85,10 @@ public sealed class CardSimulatorService(TimeProvider clock)
         if (month is < 1 or > 12)
             throw new CardPaymentRejectedException("INVALID_EXPIRATION_MONTH", "El mes de vencimiento debe estar entre 1 y 12.");
 
-        var fullYear = year < 100 ? 2000 + year : year;
+        if (year is < 1 or > 9999)
+            throw new CardPaymentRejectedException("INVALID_EXPIRATION_YEAR", "El año de vencimiento debe estar entre 1 y 9999.");
+
+        var fullYear = year;
         var now = clock.GetUtcNow();
 
         if (fullYear < now.Year || (fullYear == now.Year && month < now.Month))

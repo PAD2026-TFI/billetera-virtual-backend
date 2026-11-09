@@ -136,7 +136,9 @@ public sealed class PaymentLinkService(
             link.Type.ToString(),
             link.ExpiresAt,
             isPayable,
-            link.Id);
+            link.Id,
+            link.MerchantOwnerId,
+            link.DestinationWalletId);
     }
 
     public async Task<PaymentLinkDto?> GetByIdAsync(Guid id, Guid merchantOwnerId, CancellationToken ct)
@@ -175,6 +177,18 @@ public sealed class PaymentLinkService(
         link.EnsureIsPayable(now);
 
         var currentUserId = TryGetCurrentUserId();
+        if (currentUserId.HasValue)
+        {
+            if (link.MerchantOwnerId.HasValue && link.MerchantOwnerId.Value == currentUserId.Value)
+            {
+                throw new TransferRejectedException("SAME_WALLET");
+            }
+            var checkWallet = await wallets.GetByUserIdAsync(currentUserId.Value, ct);
+            if (checkWallet is not null && checkWallet.Id == link.DestinationWalletId)
+            {
+                throw new TransferRejectedException("SAME_WALLET");
+            }
+        }
         var normalizedIdempotencyKey = !string.IsNullOrWhiteSpace(idempotencyKey) ? idempotencyKey.Trim() : null;
         var requestHash = FingerprintPayment(link.Id, link.Amount.Amount, request.PaymentMethod, request.Card?.CardNumber, currentUserId);
 
@@ -249,11 +263,34 @@ public sealed class PaymentLinkService(
                 throw;
             }
 
-            var fundingRequest = new DevelopmentFundingRequest(link.DestinationWalletId, link.Amount.Amount, payment.Id);
-            var hash = FingerprintFunding(fundingRequest);
-            await funding.FundAsync(fundingRequest, hash, ct);
+            if (currentUserId.HasValue)
+            {
+                var payerWallet = await wallets.GetByUserIdAsync(currentUserId.Value, ct);
+                if (payerWallet is not null)
+                {
+                    if (payerWallet.Id == link.DestinationWalletId)
+                        throw new TransferRejectedException("SAME_WALLET");
 
-            payment.MarkSucceeded(null, authResult.AuthorizationCode, now);
+                    var transferCommand = new TransferCommand(currentUserId.Value, link.DestinationWalletId, link.Amount, payment.Id);
+                    var transferHash = TransferService.Fingerprint(link.DestinationWalletId, link.Amount.Amount);
+                    var transferResult = await transfers.ExecuteAsync(transferCommand, transferHash, ct);
+                    payment.MarkSucceeded(transferResult.Transfer.Id, authResult.AuthorizationCode, now);
+                }
+                else
+                {
+                    var fundingRequest = new DevelopmentFundingRequest(link.DestinationWalletId, link.Amount.Amount, payment.Id);
+                    var hash = FingerprintFunding(fundingRequest);
+                    await funding.FundAsync(fundingRequest, hash, ct);
+                    payment.MarkSucceeded(null, authResult.AuthorizationCode, now);
+                }
+            }
+            else
+            {
+                var fundingRequest = new DevelopmentFundingRequest(link.DestinationWalletId, link.Amount.Amount, payment.Id);
+                var hash = FingerprintFunding(fundingRequest);
+                await funding.FundAsync(fundingRequest, hash, ct);
+                payment.MarkSucceeded(null, authResult.AuthorizationCode, now);
+            }
         }
         else // CheckoutPaymentMethod.Wallet
         {
@@ -486,7 +523,7 @@ public sealed class PaymentLinkService(
 
     private PaymentLinkDto Map(PaymentLink link)
     {
-        var checkoutUrl = $"{_baseUrl.TrimEnd('/')}/checkout/index.html?token={link.Token}";
+        var checkoutUrl = $"{_baseUrl.TrimEnd('/')}/checkout?token={link.Token}";
         var qrCodeUrl = $"{_baseUrl.TrimEnd('/')}/api/v1/public/payment-links/{link.Token}/qr";
         return new PaymentLinkDto(
             link.Id,

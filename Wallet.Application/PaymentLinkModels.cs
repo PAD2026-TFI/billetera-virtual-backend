@@ -167,7 +167,9 @@ public sealed record CheckoutPublicDetailsDto(
     string Type,
     DateTimeOffset? ExpiresAt,
     bool IsPayable,
-    Guid Id);
+    Guid Id,
+    Guid? MerchantOwnerId = null,
+    Guid? DestinationWalletId = null);
 
 public sealed class ProcessCheckoutRequest
 {

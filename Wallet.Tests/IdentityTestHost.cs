@@ -51,6 +51,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
                 s.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
                 s.RemoveAll<IMovementHistoryReader>();
                 s.AddSingleton<IMovementHistoryReader>(History);
+                s.RemoveAll<ITransferCounterpartyResolver>();
                 s.RemoveAll<IUnitOfWork>();
                 s.AddSingleton<IUnitOfWork>(UnitOfWork);
                 s.RemoveAll<IExternalClientRepository>();

@@ -1,0 +1,52 @@
+---
+title: "Creá tu cuenta de vendedor en Padi"
+description: "Registrate como vendedor desde la aplicación de Padi, recorré las pantallas de alta y accedé a Cobros y Ventas para generar tu primer enlace de pago."
+sidebarTitle: "Cuenta de vendedor"
+keywords: [vendedor, registro, cuenta, Netlify]
+---
+
+Para cobrar desde la aplicación Padi, creá una cuenta de tipo **Vendedor** en [padi-billetera.netlify.app](https://padi-billetera.netlify.app/). Al finalizar el alta, la app te ofrece entrar directamente a la pantalla de cobros.
+
+<Note>
+La app se presenta como un entorno de pruebas, sin dinero real y con fines académicos y demostrativos. El recorrido que sigue se verificó en la aplicación publicada el 9 de noviembre de 2026.
+</Note>
+
+## Completar el registro
+
+<Steps>
+  <Step title="Elegí Vendedor">
+    En la pantalla de inicio de sesión, pulsá **Crear una cuenta**. En **Tipo de cuenta**, elegí **Vendedor · Cobros y QR**.
+
+    Completá **Nombre**, **Apellido** y **DNI** y pulsá **Continuar**. El formulario admite un DNI de 7 u 8 números.
+
+    ![Registro de Padi con la opción Vendedor seleccionada y datos ficticios de prueba](/images/registro-vendedor.png)
+  </Step>
+  <Step title="Ingresá tu correo">
+    Completá **Correo electrónico** y pulsá **Enviar código**. La siguiente pantalla muestra seis casilleros para un código numérico y la opción de reenviarlo después de la cuenta regresiva.
+  </Step>
+  <Step title="Continuá a la contraseña">
+    Completá los seis casilleros y pulsá **Continuar a contraseña** cuando aparezca habilitado.
+
+    En **Creá tu contraseña**, ingresá y repetí una clave de al menos ocho caracteres, con una mayúscula, una minúscula y un número. Pulsá **Continuar a validación de DNI**.
+  </Step>
+  <Step title="Recorré la pantalla de DNI">
+    La pantalla **Validá tu DNI** ofrece **Capturar frente del DNI** y **Capturar dorso del DNI**. Después de completar ambas acciones, pulsá **Continuar a validación facial**.
+  </Step>
+  <Step title="Finalizá el alta">
+    En **Validación facial**, pulsá **Iniciar escaneo facial** y, cuando se habilite, **Finalizar registro**.
+
+    Cuando aparezca la confirmación de la cuenta, pulsá **Ir a cobrar** para entrar a **Cobros y Ventas**.
+  </Step>
+</Steps>
+
+<Warning>
+En la versión de prueba verificada, el paso del código acepta seis dígitos sin comprobarlos contra un servicio de correo. Las pantallas de DNI y validación facial también completan una simulación. Este recorrido no acredita una verificación real de correo, documento o identidad. Usá datos ficticios para las pruebas.
+</Warning>
+
+## Qué cuenta acabás de crear
+
+Esta cuenta te permite generar cobros dentro de la app. Durante el recorrido no se solicita razón social ni CUIT y no se entrega una API Key.
+
+Si desarrollás una aplicación externa que necesita generar enlaces mediante la API, seguí [Autenticación de integraciones](/autenticacion). El alta de vendedor en la app no reemplaza ese registro.
+
+Continuá con [Generar un link desde la app](/cobrar-desde-app).

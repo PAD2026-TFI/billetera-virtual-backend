@@ -4,9 +4,16 @@ description: "Conectá tu aplicación con Padi: registrá tu comercio, obtené u
 keywords: [Padi, pasarela de pagos, integración, API]
 ---
 
-Padi permite que tu aplicación genere un enlace de pago y envíe al comprador al checkout. Tu servidor crea el cobro con la API Key del comercio y consulta el resultado para actualizar el pedido.
+Padi permite generar enlaces de pago desde la aplicación de la billetera y desde una integración externa. En ambos recorridos, el comprador abre un checkout para ver el cobro.
 
-Esta documentación está dirigida a desarrolladores de aplicaciones externas que integran la pasarela.
+Esta documentación está dirigida a quienes integran la pasarela y necesitan entender también cómo opera un vendedor en la aplicación publicada.
+
+## Empezar desde la aplicación
+
+1. [Creá una cuenta de vendedor](/crear-cuenta-vendedor) en Netlify.
+2. [Generá y compartí un link de cobro](/cobrar-desde-app) desde **Cobros y Ventas**.
+
+El registro de vendedor no entrega una API Key. Para automatizar cobros desde tu propio servidor, seguí el recorrido de integración que se describe más abajo.
 
 ## Direcciones del servicio
 
@@ -31,5 +38,5 @@ export WALLET_API_URL="https://padi.runasp.net"
 Conservá las credenciales y las llamadas autenticadas en tu servidor. El navegador del comprador recibe el enlace de checkout.
 
 <Note>
-Los ejemplos usan datos ficticios. La URL indicada es el backend alojado del proyecto; esta guía no presupone que exista un entorno sandbox separado.
+La app publicada se identifica como un entorno de pruebas académico, sin dinero real. Los ejemplos usan datos ficticios y apuntan al backend alojado del proyecto.
 </Note>

@@ -1,42 +1,26 @@
 ---
-title: "Integrá la pasarela de pagos Padi"
-description: "Conectá tu aplicación con Padi: registrá tu comercio, obtené una API Key, generá enlaces de pago y verificá los cobros desde tu servidor."
-keywords: [Padi, pasarela de pagos, integración, API]
+title: "Cobrá con Padi desde tu cuenta de vendedor"
+description: "Aprendé a crear tu cuenta de vendedor en Padi, generar un link de cobro con código QR y compartirlo con tus clientes desde la aplicación."
+sidebarTitle: "Introducción"
+keywords: [Padi, comercios, vendedor, cobros, QR]
 ---
 
-Padi permite generar enlaces de pago desde la aplicación de la billetera y desde una integración externa. En ambos recorridos, el comprador abre un checkout para ver el cobro.
+Con Padi podés generar un link de cobro y compartirlo con tus clientes desde la aplicación. Esta guía te acompaña desde la creación de tu cuenta de vendedor hasta la pantalla de checkout que abre el comprador.
 
-Esta documentación está dirigida a quienes integran la pasarela y necesitan entender también cómo opera un vendedor en la aplicación publicada.
+## Empezá a cobrar
 
-## Empezar desde la aplicación
+1. Abrí [la aplicación Padi](https://padi-billetera.netlify.app/).
+2. [Creá tu cuenta de vendedor](/crear-cuenta-vendedor). Si ya la tenés, iniciá sesión.
+3. Entrá a **Cobros** y [generá un link con su código QR](/cobrar-desde-app).
+4. Compartí el enlace o mostrale el QR al comprador.
 
-1. [Creá una cuenta de vendedor](/crear-cuenta-vendedor) en Netlify.
-2. [Generá y compartí un link de cobro](/cobrar-desde-app) desde **Cobros y Ventas**.
+## Qué vas a encontrar
 
-El registro de vendedor no entrega una API Key. Para automatizar cobros desde tu propio servidor, seguí el recorrido de integración que se describe más abajo.
-
-## Direcciones del servicio
-
-| Servicio | URL | Uso |
-| --- | --- | --- |
-| API | `https://padi.runasp.net` | Alta del comercio, creación de enlaces y consulta de cobros. |
-| Aplicación Padi | [padi-billetera.netlify.app](https://padi-billetera.netlify.app/) | Interfaz de la billetera para sus usuarios. |
-| Documentación | [padi-api.mintlify.site](https://padi-api.mintlify.site/) | Guías y referencia de integración. |
-
-En los ejemplos, definí la URL base de la API sin agregar `/api/v1`:
-
-```bash
-export WALLET_API_URL="https://padi.runasp.net"
-```
-
-## Primera integración
-
-1. [Registrá el comercio y obtené su API Key](/autenticacion).
-2. [Creá un enlace de pago y abrí el checkout](/cobros).
-3. [Consultá el cobro y conciliá el pedido](/confirmacion-de-pagos).
-
-Conservá las credenciales y las llamadas autenticadas en tu servidor. El navegador del comprador recibe el enlace de checkout.
+| Guía | Qué podés hacer |
+| --- | --- |
+| [Cuenta de vendedor](/crear-cuenta-vendedor) | Elegir el tipo de cuenta y completar las pantallas del registro. |
+| [Crear link de cobro](/cobrar-desde-app) | Ingresar importe y concepto, generar el link y compartirlo con el comprador. |
 
 <Note>
-La app publicada se identifica como un entorno de pruebas académico, sin dinero real. Los ejemplos usan datos ficticios y apuntan al backend alojado del proyecto.
+Padi se presenta como un entorno de pruebas con fines académicos y demostrativos, sin dinero real. El recorrido de estas guías se verificó en la aplicación publicada el 9 de noviembre de 2026, con datos ficticios y sin realizar un pago.
 </Note>

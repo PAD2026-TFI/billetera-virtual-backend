@@ -1,56 +1,41 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Pasarela de pagos Padi",
+  "name": "Padi para comercios",
   "colors": {
     "primary": "#4F46E5",
     "light": "#A5B4FC",
     "dark": "#4338CA"
   },
   "navigation": {
-    "tabs": [
+    "groups": [
       {
-        "tab": "Guías",
-        "groups": [
-          {
-            "group": "Primeros pasos",
-            "pages": [
-              "index",
-              "autenticacion"
-            ]
-          },
-          {
-            "group": "Vendedores en la app",
-            "pages": [
-              "crear-cuenta-vendedor",
-              "cobrar-desde-app"
-            ]
-          },
-          {
-            "group": "Integrar la pasarela",
-            "pages": [
-              "cobros",
-              "confirmacion-de-pagos"
-            ]
-          }
+        "group": "Primeros pasos",
+        "pages": [
+          "index",
+          "crear-cuenta-vendedor"
         ]
       },
       {
-        "tab": "Referencia de la API",
-        "openapi": "openapi.json"
+        "group": "Cobrar con Padi",
+        "pages": [
+          "cobrar-desde-app"
+        ]
       }
     ]
   },
-  "api": {
-    "playground": {
-      "display": "simple"
+  "redirects": [
+    {
+      "source": "/autenticacion",
+      "destination": "/crear-cuenta-vendedor"
     },
-    "examples": {
-      "languages": [
-        "curl",
-        "javascript"
-      ],
-      "defaults": "required"
+    {
+      "source": "/cobros",
+      "destination": "/cobrar-desde-app"
+    },
+    {
+      "source": "/confirmacion-de-pagos",
+      "destination": "/cobrar-desde-app"
     }
-  }
+  ]
 }

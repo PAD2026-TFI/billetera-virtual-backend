@@ -5,7 +5,7 @@ sidebarTitle: "Crear link de cobro"
 keywords: [cobros, vendedor, link de pago, QR, checkout]
 ---
 
-Con tu [cuenta de vendedor](/crear-cuenta-vendedor), entrá a **Cobros** desde el menú de Padi. La pantalla **Cobros y Ventas** permite crear un enlace y su código QR sin escribir solicitudes a la API ni ingresar una API Key.
+Con tu [cuenta de vendedor](/crear-cuenta-vendedor), entrá a **Cobros** desde el menú de Padi. En la pantalla **Cobros y Ventas** podés ingresar el importe y el concepto y generar el enlace con su código QR.
 
 ## Crear el cobro
 
@@ -40,7 +40,7 @@ Con tu [cuenta de vendedor](/crear-cuenta-vendedor), entrá a **Cobros** desde e
 | Concepto o producto | Obligatorio, hasta 100 caracteres en el formulario. |
 | Detalle adicional | Opcional, hasta 160 caracteres en el formulario. |
 | Generar link y QR | Crea el cobro y muestra el enlace y el QR. |
-| Copiar link | Copia una URL de la app con la forma `/checkout?token=…`. |
+| Copiar link | Copia el enlace de pago para que puedas enviárselo al comprador. |
 | Abrir checkout | Abre la pantalla de pago del cobro. |
 | Ver código QR | Permite volver a mostrar el QR desde un cobro reciente. |
 
@@ -51,7 +51,3 @@ La pantalla no ofrece seleccionar moneda, configurar vencimiento ni elegir entre
 El checkout muestra el concepto, el detalle y el total. Si lo abrís con la misma cuenta que creó el cobro, aparece **Cobro propio** y el mensaje que indica que no podés pagarlo con tu propia cuenta. Compartí el link con el comprador.
 
 El estado **Esperando pago del cliente** confirma que se generó el enlace, no que ya se recibió el pago. Este recorrido se verificó creando un enlace de prueba por **$1.500**, sin completar un pago ni comprobar una acreditación.
-
-## Si estás integrando una aplicación externa
-
-En este recorrido operás desde la app como vendedor. Si necesitás crear enlaces automáticamente desde tu propio servidor, usá [Autenticación de integraciones](/autenticacion) y [Creación de enlaces mediante API](/cobros).

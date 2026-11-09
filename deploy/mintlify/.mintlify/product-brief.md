@@ -1,19 +1,15 @@
 # Producto
 
-Padi permite a aplicaciones externas generar enlaces de cobro y consultar pagos.
+Padi permite al comercio crear una cuenta de vendedor y generar enlaces de cobro con QR desde la aplicación publicada en Netlify.
 
 ## Audiencia
 
-Desarrolladores que integran la pasarela desde el backend de su aplicación.
+Comercios que operan desde la interfaz de la app. La documentación pública se limita a las pantallas y acciones que ven sus usuarios, según la indicación del usuario.
 
 ## Tareas
 
-Registrar el comercio, proteger su API Key, crear enlaces y confirmar pagos.
+Crear una cuenta de vendedor, iniciar sesión, completar el formulario Nuevo cobro, generar el enlace y compartirlo con el comprador.
 
-## Alcance
+## Evidencia y límites
 
-Solo integración externa, según lo solicitado. Se asume checkout alojado para la primera integración. Motivación comercial no especificada.
-
-## Recorrido verificado en la app
-
-El 9 de noviembre de 2026 se creó una cuenta ficticia Vendedor en Netlify y un enlace de prueba por $1500, sin pagar. El vendedor usa sesión de usuario y las rutas /api/v1/me/merchant/payment-links. El alta B2B con X-Api-Key es independiente. Las pantallas de correo, DNI y rostro son simulaciones. La elección de vendedor se conserva localmente en el navegador según el frontend revisado; no se verificó su continuidad en otro dispositivo.
+El 9 de noviembre de 2026 se creó una cuenta ficticia en la app y un enlace por $1500. Se comprobó el acceso al checkout y el aviso Cobro propio. No se realizó un pago ni se verificó una acreditación. La app indica que es un entorno académico sin dinero real. Las pantallas de correo, DNI y rostro completan simulaciones.

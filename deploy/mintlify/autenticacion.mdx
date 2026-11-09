@@ -1,22 +1,51 @@
 ---
-title: "Alta y autenticación del comercio"
-description: "Registrá el comercio y usá su API Key desde tu servidor."
+title: "Autenticá tu integración con una API Key"
+description: "Registrá tu aplicación o comercio en Padi, guardá la API Key que recibís en el alta y usala desde tu servidor para generar y consultar cobros."
+sidebarTitle: "Autenticación"
+keywords: [API Key, X-Api-Key, comercio, registro]
 ---
+
+Padi identifica a tu aplicación externa mediante una API Key. Primero registrá el comercio; después enviá esa credencial en el encabezado `X-Api-Key` al crear enlaces de pago y consultar los cobros recibidos.
 
 ## Registrar el comercio
 
-Hacé un `POST /api/v1/integrations/register` con el nombre, correo de contacto y CUIT de 11 dígitos del comercio. Esta operación de alta es pública. Reemplazá los datos de ejemplo por los de tu comercio.
+El alta no requiere una credencial previa:
 
 ```bash
-curl "$WALLET_API_URL/api/v1/integrations/register" \
-  -H "Content-Type: application/json" \
-  --data '{"companyName":"Comercio de ejemplo","contactEmail":"comercio@example.com","cuit":"30712345678"}'
+export WALLET_API_URL="https://padi.runasp.net"
+
+curl --fail-with-body --request POST   "$WALLET_API_URL/api/v1/integrations/register"   --header "Content-Type: application/json"   --data '{
+    "companyName": "Tienda de ejemplo",
+    "contactEmail": "integraciones@example.com",
+    "description": "Cobros de pedidos de la tienda"
+  }'
 ```
 
-La respuesta `201` contiene `apiKey` y los identificadores del comercio y su billetera. Guardá la clave al recibirla. Padi entrega su valor una sola vez durante el alta.
+| Campo | Requerido | Descripción |
+| --- | --- | --- |
+| `companyName` | Sí | Nombre del comercio, hasta 150 caracteres. |
+| `contactEmail` | Sí | Correo de contacto válido, hasta 254 caracteres. |
+| `description` | No | Descripción de la integración, hasta 500 caracteres. |
+| `cuit` | No | CUIT del comercio. |
 
-## Usar la API Key
+La respuesta `201 Created` incluye `id`, `companyName`, `contactEmail`, `description`, `apiKey`, `walletId`, `createdAt`, `cuit` y `webhookUrl`. El alta crea también la billetera del comercio.
 
-Conservá la clave como secreto en tu servidor, por ejemplo en `WALLET_MERCHANT_API_KEY`. Enviá `X-Api-Key: <apiKey>` para crear links y consultar tus cobros. Si la API devuelve `401`, verificá la clave y el encabezado.
+<Warning>
+La API Key se entrega en texto plano una única vez durante el alta. Guardala en el almacenamiento seguro de tu servidor. No la incluyas en el frontend, repositorios, URLs ni registros de solicitudes.
+</Warning>
 
-Las URLs del checkout y del QR se pueden compartir con el comprador. Los endpoints públicos de consulta y QR funcionan sin API Key.
+## Usar la credencial
+
+Definí `WALLET_MERCHANT_API_KEY` en el entorno de tu servidor con el valor recibido en `apiKey`. Podés verificar el acceso consultando el perfil:
+
+```bash
+curl --fail-with-body   "$WALLET_API_URL/api/v1/integrations/profile"   --header "X-Api-Key: $WALLET_MERCHANT_API_KEY"
+```
+
+La respuesta `200 OK` contiene los datos del comercio. Una credencial ausente o inválida impide el acceso a las operaciones protegidas y devuelve `401 Unauthorized`.
+
+## Credenciales del comprador
+
+Para generar el enlace no necesitás iniciar sesión como comprador. La API Key identifica al comercio. Cuando el comprador paga con saldo de su billetera o con una tarjeta asociada, el checkout gestiona su autenticación de usuario.
+
+Continuá con [Cobros y checkout](/cobros).

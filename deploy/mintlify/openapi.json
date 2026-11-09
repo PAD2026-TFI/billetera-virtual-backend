@@ -906,5 +906,11 @@
     {
       "name": "04 - Checkout público - consulta y pago"
     }
+  ],
+  "servers": [
+    {
+      "url": "https://padi.runasp.net",
+      "description": "Backend alojado de Padi"
+    }
   ]
 }

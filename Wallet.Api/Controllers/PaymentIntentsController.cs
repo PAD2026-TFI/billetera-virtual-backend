@@ -43,7 +43,7 @@ public sealed class PaymentIntentsController(
 
             var scheme = Request.Scheme;
             var host = Request.Host.Value;
-            var checkoutUrl = $"{scheme}://{host}/checkout/index.html?token={created.Token}";
+            var checkoutUrl = $"{scheme}://{host}/checkout?token={created.Token}";
             var qrCodeUrl = $"{scheme}://{host}/api/v1/public/payment-links/{created.Token}/qr";
 
             var response = new PaymentIntentResponse(
@@ -95,7 +95,7 @@ public sealed class PaymentIntentsController(
 
         var scheme = Request.Scheme;
         var host = Request.Host.Value;
-        var checkoutUrl = $"{scheme}://{host}/checkout/index.html?token={link.Token}";
+        var checkoutUrl = $"{scheme}://{host}/checkout?token={link.Token}";
         var qrCodeUrl = $"{scheme}://{host}/api/v1/public/payment-links/{link.Token}/qr";
 
         var response = new PaymentIntentResponse(

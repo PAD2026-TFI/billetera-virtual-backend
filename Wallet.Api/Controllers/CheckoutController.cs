@@ -10,12 +10,6 @@ namespace Wallet.Api.Controllers;
 [Route("api/v1/checkout")]
 public sealed class CheckoutController(ICheckoutService checkoutService, ICurrentUser currentUser) : ControllerBase
 {
-    /// <summary>
-    /// Genera un nuevo link o intención de cobro omnicanal.
-    /// Requiere autenticación mediante API Key (X-Api-Key) del comercio B2B (ExternalClient).
-    /// Campos obligatorios: Amount y Title. Todos los demás campos son opcionales.
-    /// La billetera destino se vincula automáticamente al comercio autenticado.
-    /// </summary>
     [HttpPost("links")]
     [Authorize(Policy = "ExternalClient")]
     [ApiExplorerSettings(IgnoreApi = true)]
@@ -272,6 +266,7 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
     [ProducesResponseType<ProblemDetails>(404)]
     public async Task<IActionResult> GetQrCode(
         [FromRoute] string token,
+        [FromServices] IConfiguration configuration,
         CancellationToken ct)
     {
         var details = await checkoutService.GetByTokenAsync(token, ct);
@@ -283,9 +278,10 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
                 extensions: new Dictionary<string, object?> { ["code"] = "PAYMENT_LINK_NOT_FOUND" });
         }
 
-        var scheme = Request.Scheme;
-        var host = Request.Host.Value;
-        var checkoutUrl = $"{scheme}://{host}/checkout/index.html?token={token}";
+        var configuredBase = configuration["FrontendUrl"] ?? configuration["BaseUrl"];
+        var checkoutUrl = !string.IsNullOrWhiteSpace(configuredBase)
+            ? $"{configuredBase.TrimEnd('/')}/checkout?token={token}"
+            : $"{Request.Scheme}://{Request.Host.Value}/checkout?token={token}";
 
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(checkoutUrl, QRCodeGenerator.ECCLevel.Q);

@@ -88,7 +88,7 @@ public sealed class PaymentIntentsControllerTests
         Assert.Equal(2500m, intent.Amount);
         Assert.Equal("ARS", intent.Currency);
         Assert.Equal("Buzo Hoodie Negra", intent.Title);
-        Assert.Contains($"/checkout/index.html?token={intent.Token}", intent.CheckoutUrl);
+        Assert.Contains($"/checkout?token={intent.Token}", intent.CheckoutUrl);
         Assert.Contains($"/api/v1/public/payment-links/{intent.Token}/qr", intent.QrCodeUrl);
 
         // 3. Query intent status by ID

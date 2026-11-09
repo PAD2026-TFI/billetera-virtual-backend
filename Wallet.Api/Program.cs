@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
@@ -8,7 +9,6 @@ using Wallet.Api.Errors;
 using Wallet.Api.Security;
 using Wallet.Application;
 using Wallet.Infrastructure;
-
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 16 * 1024);
@@ -45,16 +45,37 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-var allowedOrigins = configuredOrigins is { Length: > 0 }
-    ? configuredOrigins
-    : ["http://localhost:5173", "https://localhost:5173", "http://127.0.0.1:5173", "https://127.0.0.1:5173"];
+var defaultOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://127.0.0.1:5173",
+    "https://padi-billetera.netlify.app"
+};
+
+if (configuredOrigins != null)
+{
+    foreach (var origin in configuredOrigins)
+    {
+        if (!string.IsNullOrWhiteSpace(origin))
+        {
+            defaultOrigins.Add(origin.TrimEnd('/'));
+        }
+    }
+}
+
+var frontendUrl = builder.Configuration["FrontendUrl"] ?? builder.Configuration["BaseUrl"];
+if (!string.IsNullOrWhiteSpace(frontendUrl))
+{
+    defaultOrigins.Add(frontendUrl.TrimEnd('/'));
+}
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(policy =>
-    policy.WithOrigins(allowedOrigins)
+    policy.WithOrigins(defaultOrigins.ToArray())
         .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         .WithHeaders("Authorization", "Content-Type", "Idempotency-Key", "X-Api-Key")
         .WithExposedHeaders("Idempotency-Replayed")));
-
 
 builder.Services.AddRateLimiter(o =>
 {
@@ -88,11 +109,18 @@ if (enabled)
 
     var key = jwt.GetKey();
 
+    var checkoutBaseUrl = builder.Configuration["FrontendUrl"]
+        ?? builder.Configuration["BaseUrl"]
+        ?? builder.Configuration["Checkout:BaseUrl"]
+        ?? "https://localhost:7081";
+
     builder.Services.AddScoped<IdentityService>();
     builder.Services.AddScoped<WalletService>();
     builder.Services.AddScoped<GatewayService>();
     builder.Services.AddScoped<CardSimulatorService>();
-    builder.Services.AddScoped<PaymentLinkService>();
+    builder.Services.AddScoped<PaymentLinkService>(sp => ActivatorUtilities.CreateInstance<PaymentLinkService>(
+        sp,
+        checkoutBaseUrl));
     builder.Services.AddScoped<ICheckoutService>(sp => sp.GetRequiredService<PaymentLinkService>());
     builder.Services.AddScoped<ICardService, CardService>();
     builder.Services.AddScoped<DevelopmentFundingService>();
@@ -209,21 +237,24 @@ if (enabled)
     });
 }
 
-
 var app = builder.Build();
 
 app.UseExceptionHandler();
 
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint(
+        "/openapi/v1.json",
+        "Wallet API v1");
 
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint(
-            "/openapi/v1.json",
-            "Wallet API v1");
+    options.RoutePrefix = "swagger";
+    options.InjectJavascript("/swagger/wallet-tools.js");
+});
 
-        options.RoutePrefix = "swagger";
-        options.InjectJavascript("/swagger/wallet-tools.js");
-    });
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

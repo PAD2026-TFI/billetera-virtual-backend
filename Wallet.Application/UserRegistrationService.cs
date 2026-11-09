@@ -51,6 +51,7 @@ public sealed class UserRegistrationService(
             return Result<UserRegistrationResult>.Failure("INVALID_INPUT", "Datos de usuario inválidos.");
         }
 
+        user.SetAccountType(request.AccountType);
         user.SetPasswordHash(passwords.Hash(user, request.Password));
 
         string cvu;
@@ -137,7 +138,8 @@ public sealed class UserRegistrationService(
             user.Dni,
             wallet.Id,
             wallet.Cvu,
-            wallet.Alias);
+            wallet.Alias,
+            user.AccountType);
 
         return Result<UserRegistrationResult>.Success(result);
     }

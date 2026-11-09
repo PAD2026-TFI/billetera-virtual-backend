@@ -218,7 +218,7 @@ public sealed class GatewayController(
 
     [HttpGet("/api/v1/integrations/received-payments/{paymentId:guid}", Order = -1)]
     [HttpGet("checkout-payments/{paymentId:guid}")]
-    [Authorize(Policy = "ExternalClient")]
+    [Authorize(Policy = "PaymentIntegration")]
     [ProducesResponseType<MerchantPaymentDto>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
     [ProducesResponseType<ProblemDetails>(404)]
@@ -241,7 +241,7 @@ public sealed class GatewayController(
 
     [HttpGet("/api/v1/integrations/received-payments", Order = -1)]
     [HttpGet("checkout-payments")]
-    [Authorize(Policy = "ExternalClient")]
+    [Authorize(Policy = "PaymentIntegration")]
     [ProducesResponseType<IReadOnlyList<MerchantPaymentDto>>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
     public async Task<ActionResult<IReadOnlyList<MerchantPaymentDto>>> GetReceivedCheckoutPayments(

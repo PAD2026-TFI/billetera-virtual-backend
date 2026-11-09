@@ -53,6 +53,50 @@ public sealed class User : WalletOwner
     /// </summary>
     public Guid? WalletId { get; private set; }
 
+    // A seller remains a Client: account type never grants an administrative role.
+    public string AccountType { get; private set; } = "personal";
+    public int IntegrationVersion { get; private set; }
+    public string? IntegrationName { get; private set; }
+    public string? IntegrationKeyHash { get; private set; }
+    public string? IntegrationKeyPrefix { get; private set; }
+    public DateTimeOffset? IntegrationCreatedAt { get; private set; }
+    public DateTimeOffset? IntegrationRotatedAt { get; private set; }
+    public DateTimeOffset? IntegrationRevokedAt { get; private set; }
+
+    public void SetAccountType(string accountType)
+    {
+        if (accountType is not ("personal" or "merchant"))
+            throw new ArgumentException("Tipo de cuenta inválido.", nameof(accountType));
+        if (AccountType != accountType) IntegrationVersion = checked(IntegrationVersion + 1);
+        AccountType = accountType;
+        // Revocation is completed by the application with its clock when switching to personal.
+    }
+
+    public void SetIntegrationKey(string name, string hash, string prefix, DateTimeOffset now)
+    {
+        if (!IsActive || Role != "Client" || AccountType != "merchant")
+            throw new InvalidOperationException("La cuenta debe ser un vendedor activo.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (name.Trim().Length > 100 || hash.Length != 64 || !hash.All(Uri.IsHexDigit)
+            || prefix.Length is < 1 or > 20)
+            throw new ArgumentException("Datos de integración inválidos.");
+        IntegrationVersion = checked(IntegrationVersion + 1);
+        IntegrationName = name.Trim();
+        IntegrationKeyHash = hash.ToLowerInvariant();
+        IntegrationKeyPrefix = prefix;
+        IntegrationCreatedAt ??= now.ToUniversalTime();
+        IntegrationRotatedAt = now.ToUniversalTime();
+        IntegrationRevokedAt = null;
+    }
+
+    public void RevokeIntegrationKey(DateTimeOffset now)
+    {
+        if (IntegrationKeyHash is null) return;
+        IntegrationVersion = checked(IntegrationVersion + 1);
+        IntegrationKeyHash = null;
+        IntegrationRevokedAt = now.ToUniversalTime();
+    }
+
     private User() { } // Materialización EF Core.
 
     private User(Guid id, string dni, string firstName, string lastName, string email, DateTimeOffset createdAt)

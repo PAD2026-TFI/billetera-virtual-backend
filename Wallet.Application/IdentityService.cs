@@ -14,7 +14,7 @@ public sealed class IdentityService(
     private static bool IsValid(object request) => Validator.TryValidateObject(
         request, new ValidationContext(request), new List<ValidationResult>(), true);
 
-    private static UserResponse Map(User user) => new(user.Id, user.FirstName, user.LastName, user.Email);
+    private static UserResponse Map(User user) => new(user.Id, user.FirstName, user.LastName, user.Email, user.AccountType);
 
     public async Task<Result<UserResponse>> RegisterAsync(RegisterUserRequest request, CancellationToken ct)
     {
@@ -27,7 +27,7 @@ public sealed class IdentityService(
                     return Result<UserResponse>.Failure(regResult.Error!.Code, regResult.Error.Message);
 
                 var v = regResult.Value!;
-                return Result<UserResponse>.Success(new UserResponse(v.UserId, v.FirstName, v.LastName, v.Email));
+                return Result<UserResponse>.Success(new UserResponse(v.UserId, v.FirstName, v.LastName, v.Email, v.AccountType));
             }
             catch (Exception ex) when (IsStorageOrConnectionException(ex))
             {
@@ -42,6 +42,7 @@ public sealed class IdentityService(
         try { user = User.Create(request.FirstName, request.LastName, request.Email, clock.GetUtcNow(), request.Dni); }
         catch (ArgumentException) { return Result<UserResponse>.Failure("INVALID_INPUT", "Datos de usuario inválidos."); }
 
+        user.SetAccountType(request.AccountType);
         user.SetPasswordHash(passwords.Hash(user, request.Password));
 
         try { await users.AddAsync(user, ct); }

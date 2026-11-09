@@ -9,6 +9,7 @@ public sealed class RegisterUserRequest
     [Required, EmailAddress, StringLength(254)] public string Email { get; init; } = "";
     [Required, StringLength(128, MinimumLength = 8)] public string Password { get; init; } = "";
     public string? Dni { get; init; }
+    [Required, RegularExpression("^(personal|merchant)$")] public string AccountType { get; init; } = "personal";
 }
 
 public sealed class LoginRequest
@@ -23,7 +24,7 @@ public sealed class UpdateProfileRequest
     [Required, StringLength(100)] public string LastName { get; init; } = "";
 }
 
-public sealed record UserResponse(Guid Id, string FirstName, string LastName, string Email);
+public sealed record UserResponse(Guid Id, string FirstName, string LastName, string Email, string AccountType = "personal");
 
 public sealed record UserRegistrationResult(
     Guid UserId,
@@ -33,7 +34,8 @@ public sealed record UserRegistrationResult(
     string Dni,
     Guid WalletId,
     string Cvu,
-    string Alias);
+    string Alias,
+    string AccountType = "personal");
 
 public sealed record TokenResponse(string AccessToken, string TokenType, int ExpiresIn);
 

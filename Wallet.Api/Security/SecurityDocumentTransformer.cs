@@ -33,7 +33,7 @@ public sealed class SecurityDocumentTransformer : IOpenApiDocumentTransformer
             operation.Security = [];
             if (!metadata.OfType<IAllowAnonymous>().Any())
             {
-                var external = metadata.OfType<IAuthorizeData>().Any(a => a.Policy == "ExternalClient");
+                var external = metadata.OfType<IAuthorizeData>().Any(a => a.Policy is "ExternalClient" or "PaymentIntegration");
                 var scheme = new OpenApiSecurityScheme
                 {
                     Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = external ? "ApiKey" : "Bearer" }

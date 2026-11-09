@@ -123,6 +123,8 @@ internal sealed class TestUserRepository : IUserRepository
         CheckAvailability();
         return Task.FromResult(_users.Values.SingleOrDefault(u => u.Id == id));
     }
+    public Task<User?> FindByIntegrationKeyHashAsync(string hash, CancellationToken ct) =>
+        Task.FromResult(_users.Values.SingleOrDefault(u => u.IntegrationKeyHash == hash));
     public Task AddAsync(User user, CancellationToken ct)
     {
         CheckAvailability();
@@ -248,6 +250,9 @@ internal sealed class TestPaymentLinkRepository : IPaymentLinkRepository
 {
     private readonly ConcurrentDictionary<string, PaymentLink> _byToken = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<Guid, PaymentLink> _byId = new();
+
+    public Task<IReadOnlyList<PaymentLink>> ListByMerchantAsync(Guid ownerId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<PaymentLink>>(_byId.Values.Where(l => l.MerchantOwnerId == ownerId).ToArray());
 
     public Task<PaymentLink?> FindByTokenAsync(string token, CancellationToken ct) =>
         Task.FromResult(_byToken.TryGetValue(token, out var val) ? val : null);

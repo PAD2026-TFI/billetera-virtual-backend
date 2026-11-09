@@ -14,11 +14,17 @@
         "groups": [
           {
             "group": "Primeros pasos",
-            "pages": ["index", "autenticacion"]
+            "pages": [
+              "index",
+              "autenticacion"
+            ]
           },
           {
             "group": "Integrar la pasarela",
-            "pages": ["cobros"]
+            "pages": [
+              "cobros",
+              "confirmacion-de-pagos"
+            ]
           }
         ]
       },
@@ -33,7 +39,10 @@
       "display": "simple"
     },
     "examples": {
-      "languages": ["curl", "javascript"],
+      "languages": [
+        "curl",
+        "javascript"
+      ],
       "defaults": "required"
     }
   }

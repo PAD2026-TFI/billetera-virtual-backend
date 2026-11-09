@@ -1,22 +1,35 @@
 ---
-title: "Integrá la pasarela de Padi"
-description: "Creá un link de pago, enviá al comprador al checkout y verificá el cobro."
+title: "Integrá la pasarela de pagos Padi"
+description: "Conectá tu aplicación con Padi: registrá tu comercio, obtené una API Key, generá enlaces de pago y verificá los cobros desde tu servidor."
+keywords: [Padi, pasarela de pagos, integración, API]
 ---
 
-Padi aloja el checkout. Tu servidor crea el link de pago y consulta el resultado. El comprador abre el link o escanea el QR para pagar en Padi.
+Padi permite que tu aplicación genere un enlace de pago y envíe al comprador al checkout. Tu servidor crea el cobro con la API Key del comercio y consulta el resultado para actualizar el pedido.
 
-1. Registrá tu comercio y guardá la API Key. [Alta y autenticación](/autenticacion)
-2. Creá un link con el importe de tu pedido y redirigí al comprador a `checkoutUrl` o mostrá el QR. [Guía de cobros](/cobros)
-3. Consultá el pago desde tu servidor antes de marcar tu pedido como pagado.
+Esta documentación está dirigida a desarrolladores de aplicaciones externas que integran la pasarela.
 
-| Operación | Cuándo usarla |
-| --- | --- |
-| `POST /api/v1/integrations/register` | Dar de alta el comercio y obtener la API Key. |
-| `POST /api/v1/integrations/payment-links` | Crear un cobro para un pedido. |
-| `GET /api/v1/integrations/payment-links/{id}` | Consultar el estado de un link propio. |
-| `GET /api/v1/integrations/received-payments` | Listar cobros recientes del comercio. |
-| `GET /api/v1/integrations/received-payments/{paymentId}` | Verificar un cobro concreto. |
-| `GET /api/v1/public/payment-links/{token}` | Mostrar los datos públicos de un link. |
-| `GET /api/v1/public/payment-links/{token}/qr` | Obtener el QR para abrir el checkout. |
+## Direcciones del servicio
 
-En los ejemplos, `WALLET_API_URL` es la URL HTTPS base de la API del entorno que estés usando, sin agregar `/api/v1`.
+| Servicio | URL | Uso |
+| --- | --- | --- |
+| API | `https://padi.runasp.net` | Alta del comercio, creación de enlaces y consulta de cobros. |
+| Aplicación Padi | [padi-billetera.netlify.app](https://padi-billetera.netlify.app/) | Interfaz de la billetera para sus usuarios. |
+| Documentación | [padi-api.mintlify.site](https://padi-api.mintlify.site/) | Guías y referencia de integración. |
+
+En los ejemplos, definí la URL base de la API sin agregar `/api/v1`:
+
+```bash
+export WALLET_API_URL="https://padi.runasp.net"
+```
+
+## Primera integración
+
+1. [Registrá el comercio y obtené su API Key](/autenticacion).
+2. [Creá un enlace de pago y abrí el checkout](/cobros).
+3. [Consultá el cobro y conciliá el pedido](/confirmacion-de-pagos).
+
+Conservá las credenciales y las llamadas autenticadas en tu servidor. El navegador del comprador recibe el enlace de checkout.
+
+<Note>
+Los ejemplos usan datos ficticios. La URL indicada es el backend alojado del proyecto; esta guía no presupone que exista un entorno sandbox separado.
+</Note>

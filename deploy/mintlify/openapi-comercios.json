@@ -1,0 +1,608 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Padi: cobros para sistemas externos",
+    "version": "v1",
+    "description": "Creá enlaces y consultá los cobros de tu cuenta de vendedor con la API Key obtenida desde la app."
+  },
+  "servers": [
+    {
+      "url": "https://padi.runasp.net",
+      "description": "Backend alojado de Padi, entorno académico"
+    }
+  ],
+  "paths": {
+    "/api/v1/integrations/payment-links": {
+      "post": {
+        "tags": [
+          "Cobros del comercio"
+        ],
+        "summary": "Crear link de cobro para el comercio autenticado",
+        "operationId": "PaymentIntents_Create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentIntentRequest"
+              },
+              "example": {
+                "amount": 1500,
+                "title": "Pedido 1042",
+                "currency": "ARS",
+                "description": "Remera talle L",
+                "type": "SingleUse",
+                "ttlMinutes": 30
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntentResponse"
+                },
+                "example": {
+                  "id": "11111111-1111-4111-8111-111111111111",
+                  "token": "0123456789abcdef0123456789abcdef",
+                  "amount": 1500,
+                  "currency": "ARS",
+                  "title": "Pedido 1042",
+                  "description": "Remera talle L",
+                  "status": "Active",
+                  "type": "SingleUse",
+                  "createdAt": "2026-11-09T18:00:00+00:00",
+                  "expiresAt": "2026-11-09T18:30:00+00:00",
+                  "checkoutUrl": "https://padi.runasp.net/checkout?token=0123456789abcdef0123456789abcdef",
+                  "qrCodeUrl": "https://padi.runasp.net/api/v1/public/payment-links/0123456789abcdef0123456789abcdef/qr"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "description": "Los ejemplos de identificadores, fechas y respuestas son ficticios y muestran el contrato. Reemplazalos por los valores recibidos en tu integración. Cada solicitud puede generar otro enlace: no tiene deduplicación por Idempotency-Key.",
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --fail-with-body \"https://padi.runasp.net/api/v1/integrations/payment-links\" \\\n  -H \"X-Api-Key: $PADI_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  --data '{\"amount\":1500,\"title\":\"Pedido 1042\",\"currency\":\"ARS\",\"type\":\"SingleUse\",\"ttlMinutes\":30}'"
+          },
+          {
+            "lang": "powershell",
+            "label": "PowerShell",
+            "source": "$headers = @{ \"X-Api-Key\" = $env:PADI_API_KEY }\n$body = @{ amount = 1500; title = \"Pedido 1042\"; currency = \"ARS\"; type = \"SingleUse\"; ttlMinutes = 30 } | ConvertTo-Json\nInvoke-RestMethod -Method Post -Uri \"https://padi.runasp.net/api/v1/integrations/payment-links\" -Headers $headers -ContentType \"application/json\" -Body $body"
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/payment-links/{id}": {
+      "get": {
+        "tags": [
+          "Cobros del comercio"
+        ],
+        "summary": "Consultar mi link de cobro",
+        "operationId": "PaymentIntents_GetById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntentResponse"
+                },
+                "example": {
+                  "id": "11111111-1111-4111-8111-111111111111",
+                  "token": "0123456789abcdef0123456789abcdef",
+                  "amount": 1500,
+                  "currency": "ARS",
+                  "title": "Pedido 1042",
+                  "description": "Remera talle L",
+                  "status": "Active",
+                  "type": "SingleUse",
+                  "createdAt": "2026-11-09T18:00:00+00:00",
+                  "expiresAt": "2026-11-09T18:30:00+00:00",
+                  "checkoutUrl": "https://padi.runasp.net/checkout?token=0123456789abcdef0123456789abcdef",
+                  "qrCodeUrl": "https://padi.runasp.net/api/v1/public/payment-links/0123456789abcdef0123456789abcdef/qr"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "description": "Los ejemplos de identificadores, fechas y respuestas son ficticios y muestran el contrato. Reemplazalos por los valores recibidos en tu integración.",
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --fail-with-body \"https://padi.runasp.net/api/v1/integrations/payment-links/$LINK_ID\" \\\n  -H \"X-Api-Key: $PADI_API_KEY\""
+          },
+          {
+            "lang": "powershell",
+            "label": "PowerShell",
+            "source": "$headers = @{ \"X-Api-Key\" = $env:PADI_API_KEY }\nInvoke-RestMethod -Method Get -Uri \"https://padi.runasp.net/api/v1/integrations/payment-links/$linkId\" -Headers $headers"
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/received-payments": {
+      "get": {
+        "tags": [
+          "Cobros del comercio"
+        ],
+        "summary": "Listar cobros recibidos",
+        "operationId": "Gateway_GetReceivedCheckoutPayments",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            },
+            "description": "Cantidad de resultados. Por defecto 20; el servicio limita el valor al rango 1 a 100."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MerchantPaymentDto"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "22222222-2222-4222-8222-222222222222",
+                    "paymentLinkId": "11111111-1111-4111-8111-111111111111",
+                    "destinationWalletId": "33333333-3333-4333-8333-333333333333",
+                    "amount": 1500,
+                    "currency": "ARS",
+                    "paymentMethod": "Wallet",
+                    "status": "Succeeded",
+                    "transferId": "44444444-4444-4444-8444-444444444444",
+                    "cardBrand": null,
+                    "cardLast4": null,
+                    "cardHolderName": null,
+                    "authorizationCode": "WALLET-PAY",
+                    "failureReason": null,
+                    "createdAt": "2026-11-09T18:05:00+00:00",
+                    "completedAt": "2026-11-09T18:05:00+00:00"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "description": "Los ejemplos de identificadores, fechas y respuestas son ficticios y muestran el contrato. Reemplazalos por los valores recibidos en tu integración. Devuelve los cobros del comercio, del más reciente al más antiguo. limit vale 20 por defecto y se ajusta internamente al rango 1 a 100. No hay cursor ni paginación.",
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --fail-with-body \"https://padi.runasp.net/api/v1/integrations/received-payments?limit=20\" \\\n  -H \"X-Api-Key: $PADI_API_KEY\""
+          },
+          {
+            "lang": "powershell",
+            "label": "PowerShell",
+            "source": "$headers = @{ \"X-Api-Key\" = $env:PADI_API_KEY }\nInvoke-RestMethod -Method Get -Uri \"https://padi.runasp.net/api/v1/integrations/received-payments?limit=20\" -Headers $headers"
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/received-payments/{paymentId}": {
+      "get": {
+        "tags": [
+          "Cobros del comercio"
+        ],
+        "summary": "Consultar un cobro recibido",
+        "operationId": "Gateway_GetCheckoutPaymentById",
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantPaymentDto"
+                },
+                "example": {
+                  "id": "22222222-2222-4222-8222-222222222222",
+                  "paymentLinkId": "11111111-1111-4111-8111-111111111111",
+                  "destinationWalletId": "33333333-3333-4333-8333-333333333333",
+                  "amount": 1500,
+                  "currency": "ARS",
+                  "paymentMethod": "Wallet",
+                  "status": "Succeeded",
+                  "transferId": "44444444-4444-4444-8444-444444444444",
+                  "cardBrand": null,
+                  "cardLast4": null,
+                  "cardHolderName": null,
+                  "authorizationCode": "WALLET-PAY",
+                  "failureReason": null,
+                  "createdAt": "2026-11-09T18:05:00+00:00",
+                  "completedAt": "2026-11-09T18:05:00+00:00"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "description": "Los ejemplos de identificadores, fechas y respuestas son ficticios y muestran el contrato. Reemplazalos por los valores recibidos en tu integración.",
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --fail-with-body \"https://padi.runasp.net/api/v1/integrations/received-payments/$PAYMENT_ID\" \\\n  -H \"X-Api-Key: $PADI_API_KEY\""
+          },
+          {
+            "lang": "powershell",
+            "label": "PowerShell",
+            "source": "$headers = @{ \"X-Api-Key\" = $env:PADI_API_KEY }\nInvoke-RestMethod -Method Get -Uri \"https://padi.runasp.net/api/v1/integrations/received-payments/$pagoId\" -Headers $headers"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key",
+        "description": "API Key generada en Integraciones de la app. Guardala y usala desde el servidor de tu comercio."
+      }
+    },
+    "schemas": {
+      "PaymentIntentResponse": {
+        "required": [
+          "id",
+          "token",
+          "amount",
+          "currency",
+          "title",
+          "description",
+          "status",
+          "type",
+          "createdAt",
+          "expiresAt",
+          "checkoutUrl",
+          "qrCodeUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del enlace. Guardalo junto al pedido; no es el id del pago."
+          },
+          "token": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado del enlace: Active, Completed, Expired o Cancelled. Un enlace MultiUse puede seguir Active después de recibir pagos. La consulta por id no garantiza refrescar un vencimiento por tiempo: revisá expiresAt."
+          },
+          "type": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "checkoutUrl": {
+            "type": "string",
+            "description": "URL del checkout devuelta por Padi. Usala tal como se recibe."
+          },
+          "qrCodeUrl": {
+            "type": "string",
+            "description": "URL de la imagen SVG del QR del checkout."
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "Código de error, cuando el endpoint lo incluye. Ejemplos: INVALID_INPUT, PAYMENT_INTENT_NOT_FOUND, PAYMENT_NOT_FOUND."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Identificador de seguimiento, cuando está disponible."
+          }
+        }
+      },
+      "CreatePaymentIntentRequest": {
+        "required": [
+          "amount",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "description": "Importe en pesos argentinos, mayor que cero y con hasta dos decimales. 1500 representa $1.500.",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "multipleOf": 0.01
+          },
+          "title": {
+            "type": "string",
+            "description": "Concepto del pedido, obligatorio y no vacío. No superar 128 caracteres para respetar el almacenamiento del enlace."
+          },
+          "currency": {
+            "type": "string",
+            "default": "ARS",
+            "nullable": true,
+            "description": "Usá ARS. Los cobros actuales se generan en pesos argentinos; enviar otro código no habilita otra moneda."
+          },
+          "description": {
+            "type": "string",
+            "default": null,
+            "nullable": true,
+            "description": "Detalle opcional del pedido. No superar 512 caracteres."
+          },
+          "type": {
+            "$ref": "#/components/schemas/PaymentLinkType2",
+            "description": "SingleUse para un solo pago exitoso; MultiUse para recibir varios pagos del mismo importe."
+          },
+          "ttlMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "default": null,
+            "nullable": true,
+            "description": "Minutos de vigencia. Un valor positivo establece expiresAt. Si se omite, es nulo o no es positivo, no se establece vencimiento por TTL."
+          }
+        }
+      },
+      "MerchantPaymentDto": {
+        "required": [
+          "id",
+          "paymentLinkId",
+          "destinationWalletId",
+          "amount",
+          "currency",
+          "paymentMethod",
+          "status",
+          "transferId",
+          "cardBrand",
+          "cardLast4",
+          "cardHolderName",
+          "authorizationCode",
+          "failureReason",
+          "createdAt",
+          "completedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del pago recibido, distinto del identificador del enlace."
+          },
+          "paymentLinkId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del enlace que originó este pago."
+          },
+          "destinationWalletId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "Pending, Processing, Succeeded, Failed o Cancelled. Solo Succeeded confirma un pago exitoso."
+          },
+          "transferId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "cardBrand": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardLast4": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardHolderName": {
+            "type": "string",
+            "nullable": true
+          },
+          "authorizationCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "PaymentLinkType2": {
+        "enum": [
+          "SingleUse",
+          "MultiUse"
+        ],
+        "default": "SingleUse"
+      }
+    }
+  }
+}

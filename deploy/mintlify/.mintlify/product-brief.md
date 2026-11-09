@@ -21,3 +21,7 @@ Se adopta la alternativa 2 aprobada por el usuario: landing dentro de Mintlify c
 ## Integraciones desde la app
 
 Se agrega como alternativa al cobro manual la guía de la sección Integraciones publicada en Netlify: emisión única de API Key, guardado en el servidor externo, reemplazo y revocación. Se verificaron registro, generación, consulta autenticada y persistencia al volver a iniciar sesión en la app alojada. No se publica una referencia exhaustiva del backend ni credenciales.
+
+## Sección técnica de cobros
+
+Por pedido del usuario se agrega Integración por API para el desarrollador del comercio: primer cobro, errores y cuatro endpoints de creación/consulta de enlaces y pagos recibidos. Se filtra el OpenAPI publicado; no se incluyen administración, transferencias, claves B2B legacy ni funcionalidades no implementadas. Las guías de uso de la app permanecen como recorrido principal para el vendedor.

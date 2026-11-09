@@ -1,0 +1,27 @@
+---
+title: "Creá un enlace de pago"
+description: "Creá un enlace de cobro para tu comercio con importe, concepto y vigencia. La respuesta incluye el identificador, el checkout y el QR."
+sidebarTitle: "Crear cobro"
+keywords: [Padi, API, cobros, comercio]
+openapi: "openapi-comercios.json POST /api/v1/integrations/payment-links"
+---
+
+Padi crea el enlace para la cuenta asociada a tu API Key y su misma billetera. Guardá el `id` con tu pedido antes de abrir el checkout.
+
+## Parámetros y respuesta
+
+`amount` y `title` son obligatorios. Usá `currency: "ARS"`. `type` admite **SingleUse** y **MultiUse**; por defecto es **SingleUse**. Un `ttlMinutes` positivo establece la expiración; omitido o no positivo, no establece vencimiento por TTL.
+
+La respuesta **201** tiene el contrato **PaymentIntentResponse**. `checkoutUrl` es el destino del comprador; `qrCodeUrl` apunta al SVG del QR. El servicio elige la billetera de tu cuenta: no recibe un destino distinto en esta operación.
+
+## Reintentos y modalidades
+
+Cada solicitud puede crear un enlace nuevo. **Idempotency-Key no deduplica la creación**: ante un timeout, no la repitas automáticamente.
+
+**SingleUse** admite un solo pago exitoso. **MultiUse** admite distintos pagos del mismo importe, por lo que el enlace puede permanecer **Active**. Identificá cada pago por su propio `id`.
+
+No uses otro código de moneda para intentar cobrar en una moneda distinta: los cobros actuales se generan en ARS. Los títulos y descripciones no deberían superar 128 y 512 caracteres respectivamente.
+
+Seguí [Primer cobro](/api/primer-cobro) para ver ejemplos completos en PowerShell y JavaScript de servidor.
+
+Los valores de las respuestas de ejemplo son ficticios. Consultá [Errores y reintentos](/api/errores-y-reintentos) para manejar los fallos.

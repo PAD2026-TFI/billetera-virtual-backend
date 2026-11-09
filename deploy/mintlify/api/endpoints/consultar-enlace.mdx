@@ -1,0 +1,23 @@
+---
+title: "Consultá un enlace de tu comercio"
+description: "Recuperá un enlace con su identificador y la API Key del comercio. Consultá el importe, las URLs y los datos del enlace guardado con el pedido."
+sidebarTitle: "Consultar enlace"
+keywords: [Padi, API, cobros, comercio]
+openapi: "openapi-comercios.json GET /api/v1/integrations/payment-links/{id}"
+---
+
+Padi devuelve el enlace si existe y pertenece al comercio autenticado. Enviá el `id` que obtuviste al crearlo, no el token público ni el identificador del pago.
+
+## Qué devuelve
+
+La respuesta **200** utiliza el mismo contrato **PaymentIntentResponse** que la creación. Incluye el importe, la moneda, el tipo, el estado, las fechas y las URLs del checkout y el QR.
+
+Los estados del enlace son **Active**, **Completed**, **Expired** y **Cancelled**. El vencimiento por tiempo no necesariamente se refleja como **Expired** en esta consulta: revisá también `expiresAt`. Un enlace **MultiUse** puede seguir **Active** después de recibir pagos.
+
+## Confirmar el cobro
+
+Esta consulta no devuelve un pago recibido. Para confirmar el pedido, [buscá sus pagos](/api/endpoints/listar-pagos) y [verificá el pago por su id](/api/endpoints/consultar-pago).
+
+Un enlace inexistente o perteneciente a otro comercio devuelve **404** con `PAYMENT_INTENT_NOT_FOUND`. Un identificador con formato inválido puede no coincidir con la ruta y devolver **404**.
+
+Los valores de las respuestas de ejemplo son ficticios. Consultá [Errores y reintentos](/api/errores-y-reintentos) para manejar los fallos.

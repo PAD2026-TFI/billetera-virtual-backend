@@ -20,6 +20,13 @@
             ]
           },
           {
+            "group": "Vendedores en la app",
+            "pages": [
+              "crear-cuenta-vendedor",
+              "cobrar-desde-app"
+            ]
+          },
+          {
             "group": "Integrar la pasarela",
             "pages": [
               "cobros",

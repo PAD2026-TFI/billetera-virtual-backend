@@ -1,0 +1,156 @@
+---
+title: "Integrá tu primer cobro por API"
+description: "Conectá el servidor de tu comercio con Padi: obtené una API Key, creá un enlace, enviá al comprador al checkout y verificá el pago recibido."
+sidebarTitle: "Primer cobro"
+keywords: [API, integración, comercio, pasarela, PowerShell, JavaScript]
+---
+
+La API de Padi permite que el servidor de tu tienda genere enlaces de pago y consulte los cobros de tu cuenta. Esta guía está dirigida a la persona que desarrolla el sistema del comercio; para cobrar manualmente, seguí [Crear link desde la app](/cobrar-desde-app).
+
+## Prepará el acceso
+
+1. Creá tu [cuenta de vendedor](/crear-cuenta-vendedor), o activá Vendedor desde **Mi perfil** si tu cuenta es anterior.
+2. Entrá a **Integraciones** y generá una API Key. Seguí la [guía de administración de claves](/integraciones) para guardarla, reemplazarla o revocarla.
+3. Configurá el secreto como **PADI_API_KEY** en el entorno privado del servidor que ejecutará los ejemplos. No lo guardes en archivos públicos ni en variables expuestas al navegador.
+
+La URL base es **https://padi.runasp.net**, sin agregar `/api/v1`. Las cuatro operaciones de esta sección requieren **X-Api-Key**. No necesitás registrar otro comercio ni usar la contraseña del vendedor en cada solicitud.
+
+<Warning>
+La clave se usa desde el servidor del comercio. No la incluyas en JavaScript del navegador, URLs, repositorios ni registros de solicitudes. Si se pierde o se expone, reemplazala desde la app.
+</Warning>
+
+## 1. Creá el enlace de pago
+
+Llamá a [Crear un cobro](/api/endpoints/crear-cobro) con el importe y el concepto del pedido. El siguiente ejemplo genera un enlace de uso único por **$1.500**, con 30 minutos de vigencia.
+
+<CodeGroup>
+
+```powershell PowerShell
+$apiBase = 'https://padi.runasp.net'
+if ([string]::IsNullOrWhiteSpace($env:PADI_API_KEY)) {
+    throw 'Configurá PADI_API_KEY en el entorno privado del servidor.'
+}
+$headers = @{ 'X-Api-Key' = $env:PADI_API_KEY }
+$body = @{
+    amount = 1500
+    title = 'Pedido 1042'
+    currency = 'ARS'
+    description = 'Remera talle L'
+    type = 'SingleUse'
+    ttlMinutes = 30
+} | ConvertTo-Json
+
+$link = Invoke-RestMethod -Method Post `
+    -Uri "$apiBase/api/v1/integrations/payment-links" `
+    -Headers $headers -ContentType 'application/json' -Body $body
+
+$link | Select-Object id, amount, currency, checkoutUrl, qrCodeUrl
+```
+
+```javascript JavaScript para servidor
+const apiBase = 'https://padi.runasp.net';
+const apiKey = process.env.PADI_API_KEY;
+if (!apiKey) throw new Error('Falta PADI_API_KEY en el servidor');
+
+const response = await fetch(`${apiBase}/api/v1/integrations/payment-links`, {
+  method: 'POST',
+  headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    amount: 1500,
+    title: 'Pedido 1042',
+    currency: 'ARS',
+    description: 'Remera talle L',
+    type: 'SingleUse',
+    ttlMinutes: 30,
+  }),
+});
+if (response.status !== 201) {
+  throw new Error(`No se confirmó la creación: HTTP ${response.status}`);
+}
+const link = await response.json();
+// Persistí link.id junto al pedido antes de responder a tu frontend.
+```
+
+</CodeGroup>
+
+La respuesta es **201 Created** e incluye `id`, `token`, `amount`, `currency`, `title`, `description`, `status`, `type`, `createdAt`, `expiresAt`, `checkoutUrl` y `qrCodeUrl`.
+
+Guardá el **id del enlace** junto al pedido y su importe esperado. Esta operación no recibe un campo de identificador externo de pedido: la relación se conserva en tu sistema.
+
+<Warning>
+Crear enlaces no deduplica solicitudes con **Idempotency-Key**. Un reintento puede crear otro cobro. Si la solicitud termina en timeout, tratá el resultado como incierto; no repitas automáticamente la creación. Revisá también [Errores y reintentos](/api/errores-y-reintentos).
+</Warning>
+
+## 2. Enviá al comprador al checkout
+
+Tu servidor devuelve a tu frontend el **checkoutUrl** recibido. Redirigí al comprador a esa dirección o mostrá el QR de **qrCodeUrl**. No reconstruyas las URLs a partir del dominio de Netlify.
+
+El comprador realiza el pago en el checkout de Padi. La API Key identifica al comercio y no reemplaza la autenticación del comprador. Si el vendedor abre su propio cobro con la misma cuenta, verá **Cobro propio**.
+
+## 3. Recuperá el enlace cuando lo necesites
+
+Con el `id` guardado podés [Consultar el enlace](/api/endpoints/consultar-enlace):
+
+```powershell PowerShell
+$linkId = $link.id
+$detalle = Invoke-RestMethod -Method Get `
+    -Uri "$apiBase/api/v1/integrations/payment-links/$linkId" `
+    -Headers $headers
+```
+
+El identificador es el del enlace y la clave debe pertenecer al mismo comercio. El estado del enlace no sustituye la comprobación de un pago: un enlace **MultiUse** puede seguir **Active** después de recibir pagos.
+
+## 4. Encontrá y confirmá el pago recibido
+
+Consultá [Listar pagos recibidos](/api/endpoints/listar-pagos) y buscá los pagos cuyo **paymentLinkId** coincida con el enlace guardado.
+
+```powershell PowerShell
+$pagos = @(Invoke-RestMethod -Method Get `
+    -Uri "$apiBase/api/v1/integrations/received-payments?limit=20" `
+    -Headers $headers)
+
+$coincidentes = @($pagos | Where-Object {
+    $_.paymentLinkId -eq $linkId
+})
+
+# Ejemplo para el enlace SingleUse de este recorrido.
+foreach ($pago in $coincidentes) {
+    $pagoId = $pago.id
+    $confirmacion = Invoke-RestMethod -Method Get `
+        -Uri "$apiBase/api/v1/integrations/received-payments/$pagoId" `
+        -Headers $headers
+
+    if ($confirmacion.status -eq 'Succeeded' -and
+        $confirmacion.paymentLinkId -eq $linkId -and
+        $confirmacion.amount -eq 1500 -and
+        $confirmacion.currency -eq 'ARS') {
+        # Actualizá tu pedido una sola vez y guardá confirmacion.id.
+        $confirmacion | Select-Object id, paymentLinkId, amount, status
+    }
+}
+```
+
+La [consulta por id del pago](/api/endpoints/consultar-pago) permite verificar un cobro identificado. Antes de entregar el pedido, comprobá **Succeeded**, el enlace, el importe y la moneda. Guardá el **id del pago** y actualizá el pedido de forma que volver a procesar el mismo pago no duplique la entrega.
+
+Si no encontrás un pago válido, el pedido permanece pendiente de confirmación. El regreso del comprador a tu sitio o una captura de su comprobante no confirman el cobro por sí solos.
+
+<Note>
+El listado devuelve los pagos más recientes, con `limit=20` por defecto y un máximo efectivo de 100. No tiene cursor ni paginación: no lo uses como un historial completo ni consideres que la ausencia de un pago demuestra que no ocurrió. No hay notificaciones webhook implementadas en este recorrido.
+</Note>
+
+## 5. Verificá la recepción desde la app
+
+Los enlaces generados por la API aparecen en **Cobros** de la misma cuenta de vendedor. Para comprobar el ingreso visualmente, seguí [Confirmar el cobro](/confirmar-cobro), donde se muestran **Cobrado**, el mensaje de éxito y la acreditación en saldo y movimientos.
+
+## Endpoints disponibles para esta clave
+
+| Operación | Endpoint | Referencia |
+| --- | --- | --- |
+| Crear enlace | `POST /api/v1/integrations/payment-links` | [Crear cobro](/api/endpoints/crear-cobro) |
+| Recuperar enlace | `GET /api/v1/integrations/payment-links/{id}` | [Consultar enlace](/api/endpoints/consultar-enlace) |
+| Buscar pagos | `GET /api/v1/integrations/received-payments` | [Listar pagos](/api/endpoints/listar-pagos) |
+| Verificar un pago | `GET /api/v1/integrations/received-payments/{paymentId}` | [Consultar pago](/api/endpoints/consultar-pago) |
+
+La clave de vendedor no permite transferir saldo ni administrar tu perfil, tus claves o webhooks. Esas operaciones no forman parte de esta integración de cobros.
+
+Padi es un entorno académico sin dinero real. Los identificadores y fechas de las respuestas de ejemplo de la referencia son ficticios. El contrato se contrastó con la API publicada el 9 de noviembre de 2026.

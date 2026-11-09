@@ -28,6 +28,22 @@
         "pages": [
           "integraciones"
         ]
+      },
+      {
+        "group": "Integración por API",
+        "pages": [
+          "api/primer-cobro",
+          "api/errores-y-reintentos",
+          {
+            "group": "Endpoints de cobro",
+            "pages": [
+              "api/endpoints/crear-cobro",
+              "api/endpoints/consultar-enlace",
+              "api/endpoints/listar-pagos",
+              "api/endpoints/consultar-pago"
+            ]
+          }
+        ]
       }
     ]
   },
@@ -67,6 +83,18 @@
       "type": "button",
       "label": "Abrir Padi",
       "href": "https://padi-billetera.netlify.app/"
+    }
+  },
+  "api": {
+    "playground": {
+      "display": "none"
+    },
+    "examples": {
+      "languages": [
+        "curl",
+        "javascript"
+      ],
+      "defaults": "required"
     }
   }
 }

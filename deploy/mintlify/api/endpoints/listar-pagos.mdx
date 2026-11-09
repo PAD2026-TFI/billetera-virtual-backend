@@ -1,0 +1,27 @@
+---
+title: "Listá los pagos recibidos de tu comercio"
+description: "Consultá los pagos recientes de tu comercio y encontrá los asociados a un enlace mediante paymentLinkId, con importe, estado y medio de pago."
+sidebarTitle: "Listar pagos"
+keywords: [Padi, API, cobros, comercio]
+openapi: "openapi-comercios.json GET /api/v1/integrations/received-payments"
+---
+
+Padi devuelve un arreglo de pagos del comercio autenticado, ordenados del más reciente al más antiguo. Usá `paymentLinkId` para relacionar cada pago con el enlace de tu pedido.
+
+## Cantidad de resultados
+
+`limit` vale **20** por defecto. El servicio ajusta los valores al rango de **1 a 100**: un valor mayor a 100 no permite obtener más resultados. Si no hay pagos, devuelve un arreglo vacío.
+
+<Warning>
+No hay cursor, paginación ni filtros de fecha o de pedido en esta operación. La lista no es un historial completo. No interpretes la ausencia de un pago como prueba de que no se realizó.
+</Warning>
+
+## Identificadores y estados
+
+El campo `id` identifica al **pago**. `paymentLinkId` identifica al **enlace**. Son identificadores diferentes.
+
+Los estados del pago son **Pending**, **Processing**, **Succeeded**, **Failed** y **Cancelled**. Para dar por cobrado un pedido, verificá **Succeeded**, el enlace, el importe y la moneda. Con el `id` del pago, seguí [Consultar pago](/api/endpoints/consultar-pago).
+
+Un arreglo puede contener varios pagos para el mismo enlace **MultiUse**. Procesá cada pago una sola vez por su identificador.
+
+Los valores de las respuestas de ejemplo son ficticios. Consultá [Errores y reintentos](/api/errores-y-reintentos) para manejar los fallos.

@@ -1,0 +1,62 @@
+---
+title: "Manejá errores y reintentos de tu integración"
+description: "Interpretá los errores de autenticación y consulta de Padi, distinguí un timeout de un pago confirmado y evitá duplicar enlaces o entregas."
+sidebarTitle: "Errores y reintentos"
+keywords: [errores, timeout, reintentos, API Key, conciliación]
+---
+
+La integración de Padi necesita distinguir una solicitud fallida de una operación cuyo resultado todavía no se conoce. Conservá el pedido, el identificador del enlace y los identificadores de los pagos que ya procesaste.
+
+## Respuestas de error
+
+Los errores pueden incluir `status`, `title`, `detail`, `code` y `traceId`. El contenido depende de la causa: no supongas que todos los campos estarán presentes. La validación de entrada también puede incluir `errors` con los campos inválidos.
+
+| HTTP | Código o situación | Acción |
+| --- | --- | --- |
+| 400 | INVALID_INPUT o validación de entrada | Revisá el JSON, los campos aceptados, el importe y el concepto. No repitas el mismo cuerpo sin corregirlo. |
+| 401 | Credencial ausente, inválida, revocada o reemplazada | Revisá X-Api-Key y el estado de Integraciones en la app. Comprobá también que siga activa la modalidad Vendedor. |
+| 404 | PAYMENT_INTENT_NOT_FOUND | Revisá el id del enlace y que la clave pertenezca al comercio que lo creó. |
+| 404 | PAYMENT_NOT_FOUND | Revisá el id del pago y su pertenencia al comercio. No uses el id del enlace como paymentId. |
+| 404 | Identificador con formato inválido | Verificá que el identificador de la ruta tenga el formato UUID recibido de Padi. |
+| 503 | Servicio no disponible | El servicio no pudo acceder al almacenamiento. Conservá la operación pendiente y revisá el resultado antes de repetir una creación. |
+| 500 o error de red | Resultado no confirmado | No marques el pedido como pagado ni supongas que un enlace no se creó. |
+
+Ejemplo ilustrativo de un error de consulta:
+
+```json
+{
+  "title": "Pago no encontrado o no pertenece a este comercio.",
+  "status": 404,
+  "code": "PAYMENT_NOT_FOUND"
+}
+```
+
+## No dupliques la creación del enlace
+
+**POST /api/v1/integrations/payment-links no implementa deduplicación con Idempotency-Key**. Repetirlo puede crear un nuevo enlace, aunque el pedido sea el mismo.
+
+Si la respuesta se pierde después de crear el enlace, podés quedar sin conocer su id. Esta API de cobros no expone una búsqueda de enlaces por identificador externo de pedido ni una lista de enlaces autenticada con esta clave. No existe una recuperación automática garantizada para ese caso: revisá **Cobros** desde la app antes de decidir cómo continuar y evitá reintentos automáticos de creación.
+
+En tu sistema, guardá la relación entre pedido y enlace al recibir la respuesta y controlá las solicitudes concurrentes para el mismo pedido.
+
+## Consultá sin duplicar la entrega
+
+Podés repetir las consultas GET para volver a conocer el estado. Eso no implica volver a procesar el pago como si fuera nuevo.
+
+Antes de entregar o activar un servicio, comprobá `status: "Succeeded"`, `paymentLinkId`, `amount` y `currency`. Conservá el `id` del pago como referencia única y actualizá el pedido de forma segura frente a consultas o procesos concurrentes.
+
+Para enlaces **MultiUse**, varios pagos pueden compartir `paymentLinkId`. No dedupliques solamente por el enlace: cada pago tiene su propio id.
+
+## Tené en cuenta los límites del listado
+
+El listado de pagos devuelve los más recientes, con `limit=20` por defecto y un máximo efectivo de 100. No tiene cursor ni filtros de fechas. Un pago que ya no está entre los últimos resultados puede quedar fuera del listado.
+
+Si ya guardaste su id, consultalo directamente. Si no lo tenés, no des por resuelta la conciliación por la ausencia en una lista reciente: comprobá la recepción en [tu cuenta de vendedor](/confirmar-cobro).
+
+## Claves y notificaciones
+
+Si reemplazás o revocás una clave, deja de funcionar para nuevas solicitudes. Cambiar la cuenta a Personal también revoca la clave activa. Administrá estas acciones desde [Integraciones](/integraciones).
+
+Este recorrido confirma pagos mediante consultas. No presupongas que configurar una URL vaya a producir notificaciones: el envío de webhooks no está implementado en esta integración.
+
+No registres la API Key ni la contraseña del vendedor en logs. Para investigar errores, conservá el código HTTP y `traceId` cuando esté disponible.

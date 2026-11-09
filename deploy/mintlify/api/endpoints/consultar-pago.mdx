@@ -1,0 +1,30 @@
+---
+title: "Consultá y verificá un pago recibido"
+description: "Verificá un pago de tu comercio mediante su identificador. Contrastá Succeeded, paymentLinkId, amount y currency con los datos del pedido."
+sidebarTitle: "Consultar pago"
+keywords: [Padi, API, cobros, comercio]
+openapi: "openapi-comercios.json GET /api/v1/integrations/received-payments/{paymentId}"
+---
+
+Padi devuelve el pago si pertenece al comercio autenticado. Usá el `id` encontrado en [Listar pagos](/api/endpoints/listar-pagos), distinto del `id` del enlace.
+
+## Comprobaciones antes de entregar
+
+1. `paymentLinkId` coincide con el enlace guardado junto al pedido.
+2. `amount` y `currency` coinciden con el importe esperado.
+3. `status` es **Succeeded**.
+4. Tu sistema todavía no procesó ese `id` de pago.
+
+Actualizá el pedido y registrá el identificador del pago de forma que repetir la consulta o volver a procesar la respuesta no duplique la entrega.
+
+<Note>
+La API de pagos recibidos utiliza **Succeeded** para el éxito. El comprobante del checkout utiliza **Completed**. No intercambies esos valores al confirmar desde tu sistema.
+</Note>
+
+## Datos adicionales
+
+La respuesta incluye `destinationWalletId`, `paymentMethod`, `transferId`, los datos parciales de tarjeta cuando correspondan, `authorizationCode`, `failureReason`, `createdAt` y `completedAt`. Varios de estos campos pueden ser nulos según el medio y estado del pago. No dependas de un código de autorización concreto para decidir si un pago fue exitoso.
+
+Un pago inexistente o perteneciente a otro comercio devuelve **404** con `PAYMENT_NOT_FOUND`. Un `paymentId` con formato inválido puede devolver **404** sin ese código.
+
+Los valores de las respuestas de ejemplo son ficticios. Consultá [Errores y reintentos](/api/errores-y-reintentos) para manejar los fallos.

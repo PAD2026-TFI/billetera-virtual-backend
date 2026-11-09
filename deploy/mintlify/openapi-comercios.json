@@ -57,7 +57,7 @@
                   "type": "SingleUse",
                   "createdAt": "2026-11-09T18:00:00+00:00",
                   "expiresAt": "2026-11-09T18:30:00+00:00",
-                  "checkoutUrl": "https://padi.runasp.net/checkout?token=0123456789abcdef0123456789abcdef",
+                  "checkoutUrl": "https://padi-billetera.netlify.app/checkout?token=0123456789abcdef0123456789abcdef",
                   "qrCodeUrl": "https://padi.runasp.net/api/v1/public/payment-links/0123456789abcdef0123456789abcdef/qr"
                 }
               }
@@ -141,7 +141,7 @@
                   "type": "SingleUse",
                   "createdAt": "2026-11-09T18:00:00+00:00",
                   "expiresAt": "2026-11-09T18:30:00+00:00",
-                  "checkoutUrl": "https://padi.runasp.net/checkout?token=0123456789abcdef0123456789abcdef",
+                  "checkoutUrl": "https://padi-billetera.netlify.app/checkout?token=0123456789abcdef0123456789abcdef",
                   "qrCodeUrl": "https://padi.runasp.net/api/v1/public/payment-links/0123456789abcdef0123456789abcdef/qr"
                 }
               }

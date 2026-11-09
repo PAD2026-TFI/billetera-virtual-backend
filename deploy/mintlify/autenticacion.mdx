@@ -1,0 +1,25 @@
+---
+title: "Autenticación"
+description: "Cómo identificarse como cliente o como integración externa."
+---
+
+| Quién llama | Credencial | Rutas |
+| --- | --- | --- |
+| Cliente de la billetera | `Authorization: Bearer <accessToken>` | `/api/v1/me/*` |
+| Aplicación externa o comercio | `X-Api-Key: <apiKey>` | `/api/v1/integrations/*` después del alta |
+| Visitante del checkout | Acceso público a los detalles del link | `GET /api/v1/public/payment-links/{token}` |
+
+## Clientes
+
+Creá una cuenta con `POST /api/v1/auth/register`. Después, enviá `email` y `password` a `POST /api/v1/auth/login`. La respuesta contiene `accessToken` y `expiresIn`, expresado en segundos. Podés verificar el JWT consultando el perfil.
+
+```bash
+curl "$WALLET_API_URL/api/v1/me/profile" \
+  -H "Authorization: Bearer $WALLET_JWT"
+```
+
+## Integraciones externas
+
+Registrá el comercio con `POST /api/v1/integrations/register`. La respuesta entrega la API Key una sola vez. Guardala del lado del servidor y enviala en `X-Api-Key` en cada solicitud a las rutas del comercio. Los cobros iniciados por un cliente de la billetera usan su JWT y las rutas `/api/v1/me/merchant/*`.
+
+El pago público por saldo o con tarjeta asociada requiere el JWT del comprador. La API Key identifica al comercio que genera el cobro.

@@ -1,0 +1,12 @@
+---
+title: "Wallet API"
+description: "Guías y referencia v1 de la API de la billetera."
+---
+
+La API permite consultar una billetera, transferir saldo, crear links de cobro y pedir una tarjeta física. Las guías muestran el orden de las solicitudes y la pestaña **Referencia de la API** detalla los campos, credenciales y respuestas de cada operación.
+
+1. Identificá la URL HTTPS de la API del entorno que vas a usar. En los ejemplos, definí esa URL como `WALLET_API_URL`, sin agregar `/api/v1`.
+2. Revisá [Autenticación](/autenticacion) para obtener el JWT de un cliente o la API Key de un comercio.
+3. Seguí la guía de [transferencias](/transferencias), [cobros y checkout](/cobros) o [tarjetas](/tarjetas).
+
+Podés consultar `GET /health/live` para comprobar que la API está en ejecución y `GET /health/ready` para verificar que puede atender solicitudes. Usá cuentas, credenciales y domicilios ficticios al ejecutar los ejemplos en un entorno de pruebas.

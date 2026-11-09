@@ -1,0 +1,15 @@
+---
+title: "Consultar y pedir tarjetas"
+description: "Listar las tarjetas asociadas y registrar un pedido de tarjeta física."
+---
+
+Con el JWT del titular, usá `GET /api/v1/me/cards` para ver las tarjetas asociadas, sus últimos cuatro dígitos y el vencimiento. Para pedir una tarjeta física, enviá un domicilio de entrega.
+
+```bash
+curl "$WALLET_API_URL/api/v1/me/physical-card-orders" \
+  -H "Authorization: Bearer $WALLET_JWT" \
+  -H "Content-Type: application/json" \
+  --data '{"type":"Debit","deliveryAddress":{"street":"Calle Ejemplo","number":"123","city":"San Miguel de Tucumán","state":"Tucumán","postalCode":"4000","country":"Argentina"}}'
+```
+
+También podés indicar un `addressId` propio en lugar de `deliveryAddress`. La API devuelve `201` con el ID y el estado del pedido. Si el domicilio queda en `AwaitingAddressValidation`, todavía está pendiente de validar para su fabricación. Consultá `GET /api/v1/me/physical-card-orders` para ver tus pedidos o agregá `/{id}` para consultar uno en particular.

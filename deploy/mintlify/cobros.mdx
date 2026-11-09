@@ -1,0 +1,25 @@
+---
+title: "Cobros y checkout"
+description: "Generar un link de pago, compartir el checkout y consultar el resultado."
+---
+
+## Crear y compartir el link
+
+Con la [API Key del comercio](/autenticacion), creá un link de uso único. El importe está expresado en ARS.
+
+```bash
+curl "$WALLET_API_URL/api/v1/integrations/payment-links" \
+  -H "X-Api-Key: $WALLET_MERCHANT_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data '{"title":"Pedido de prueba","amount":1500,"type":"SingleUse"}'
+```
+
+Guardá `id` y `token` de la respuesta. Compartí con el comprador `checkoutUrl` o el QR de `qrCodeUrl`. El comprador puede consultar el importe y si el link admite pagos con `GET /api/v1/public/payment-links/{token}`. Si el vendedor opera como cliente con JWT, puede crear el link en `POST /api/v1/me/merchant/payment-links`.
+
+## Pagar con una tarjeta de débito asociada
+
+El comprador obtiene su `cardId` en `GET /api/v1/me/cards`. Envía ese ID a `POST /api/v1/me/payment-links/{paymentLinkId}/card-payments` con su JWT y un `Idempotency-Key` estable para el intento. La API debita su billetera y devuelve un `paymentId` al confirmar. Ante una respuesta perdida, reenviá la solicitud con la misma clave y el mismo `cardId`. Para esta modalidad alcanza el identificador de la tarjeta asociada.
+
+## Conciliar el cobro
+
+El comercio consulta `GET /api/v1/integrations/payment-links/{id}` con su API Key para conocer el estado del link. Puede usar `GET /api/v1/integrations/received-payments` para listar cobros recibidos y `GET /api/v1/integrations/received-payments/{paymentId}` para consultar un pago concreto.

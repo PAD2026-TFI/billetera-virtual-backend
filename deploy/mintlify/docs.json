@@ -1,0 +1,40 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Wallet API",
+  "colors": {
+    "primary": "#4F46E5",
+    "light": "#A5B4FC",
+    "dark": "#4338CA"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guías",
+        "groups": [
+          {
+            "group": "Primeros pasos",
+            "pages": ["index", "autenticacion"]
+          },
+          {
+            "group": "Flujos",
+            "pages": ["transferencias", "cobros", "tarjetas"]
+          }
+        ]
+      },
+      {
+        "tab": "Referencia de la API",
+        "openapi": "openapi.json"
+      }
+    ]
+  },
+  "api": {
+    "playground": {
+      "display": "simple"
+    },
+    "examples": {
+      "languages": ["curl", "javascript"],
+      "defaults": "required"
+    }
+  }
+}

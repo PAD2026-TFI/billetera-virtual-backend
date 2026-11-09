@@ -17,3 +17,7 @@ El 9 de noviembre de 2026 se creó una cuenta ficticia en la app y un enlace por
 ## Portada de documentación
 
 Se adopta la alternativa 2 aprobada por el usuario: landing dentro de Mintlify con menú lateral, búsqueda, acceso a la app y tres etapas enlazadas. Se reutilizan las capturas reales en pestañas; los detalles y advertencias permanecen en las guías originales. No se añaden promesas comerciales ni capacidades nuevas.
+
+## Integraciones desde la app
+
+Se agrega como alternativa al cobro manual la guía de la sección Integraciones publicada en Netlify: emisión única de API Key, guardado en el servidor externo, reemplazo y revocación. Se verificaron registro, generación, consulta autenticada y persistencia al volver a iniciar sesión en la app alojada. No se publica una referencia exhaustiva del backend ni credenciales.

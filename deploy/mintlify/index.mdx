@@ -6,7 +6,7 @@ keywords: [Padi, comercios, vendedor, cobros, QR, guías]
 mode: "wide"
 ---
 
-Todo el recorrido de tu comercio en un solo lugar: creá tu cuenta de vendedor, compartí un link o un QR y confirmá que recibiste el pago desde la aplicación.
+Todo el recorrido de tu comercio en un solo lugar: creá tu cuenta de vendedor, compartí un link o un QR y confirmá que recibiste el pago desde la aplicación. Si tenés una tienda o sistema externo, también podés conectarlo desde **Integraciones**.
 
 <div className="not-prose mb-8 mt-5 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-amber-50 p-6 dark:border-violet-800 dark:from-violet-950 dark:via-zinc-950 dark:to-violet-950 sm:p-8">
   <div className="flex flex-wrap items-center gap-3">
@@ -39,6 +39,17 @@ Todo el recorrido de tu comercio en un solo lugar: creá tu cuenta de vendedor, 
   Las guías siguen el mismo orden que la app: creá tu cuenta, generá el link y verificá el pago recibido.
 </Card>
 
+## Dos alternativas, la misma billetera
+
+<Columns cols={2}>
+  <Card title="Cobrá desde la app" icon="qrcode" href="/cobrar-desde-app" cta="Generar un cobro" arrow>
+    Completá el importe y el concepto en Padi y compartí el link o el QR con tu cliente.
+  </Card>
+  <Card title="Conectá tu sistema" icon="plug" href="/integraciones" cta="Configurar mi integración" arrow>
+    Generá una API Key desde tu cuenta para que tu tienda o sistema cree los links automáticamente. Los cobros llegan a tu misma billetera.
+  </Card>
+</Columns>
+
 ## Así lo vas a ver en la app
 
 Estas capturas corresponden al recorrido que verificamos en la aplicación publicada. Abrí cada pestaña para reconocer la pantalla y continuá con su guía detallada.
@@ -65,6 +76,13 @@ Estas capturas corresponden al recorrido que verificamos en la aplicación publi
       <img src="/images/cobro-recibido.png" alt="Confirmación de un cobro recibido por 1500 pesos y estado Cobrado en la cuenta del vendedor" />
     </Frame>
   </Tab>
+  <Tab title="Integraciones" icon="plug">
+    Desde tu cuenta de vendedor podés habilitar el acceso de tu sistema externo. La [guía de Integraciones](/integraciones) explica cómo generar, guardar, reemplazar y revocar la clave.
+
+    <Frame caption="Integración activa con la clave enmascarada, verificada en la app publicada.">
+      <img src="/images/integracion-activa.png" alt="Sección Integraciones de Padi con estado Activa y opciones de administración de la clave" />
+    </Frame>
+  </Tab>
 </Tabs>
 
 ## Antes de dar un pedido por cobrado
@@ -81,6 +99,9 @@ Estas capturas corresponden al recorrido que verificamos en la aplicación publi
 ## Respuestas para tu primer cobro
 
 <AccordionGroup>
+  <Accordion title="¿Necesito una API Key para cobrar?" icon="key">
+    Para generar un link manualmente desde **Cobros y Ventas**, no. Usá [Integraciones](/integraciones) cuando quieras que tu tienda o sistema externo genere los cobros automáticamente. Administrás la clave desde la app y tu sistema la usa desde su servidor.
+  </Accordion>
   <Accordion title="¿Cuál es el recorrido completo?" icon="route">
     1. Abrí [la aplicación Padi](https://padi-billetera.netlify.app/).
     2. [Creá tu cuenta de vendedor](/crear-cuenta-vendedor). Si ya la tenés, iniciá sesión.

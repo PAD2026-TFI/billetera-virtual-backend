@@ -105,9 +105,9 @@ El identificador es el del enlace y la clave debe pertenecer al mismo comercio. 
 Consultá [Listar pagos recibidos](/api/endpoints/listar-pagos) y buscá los pagos cuyo **paymentLinkId** coincida con el enlace guardado.
 
 ```powershell PowerShell
-$pagos = @(Invoke-RestMethod -Method Get `
+$pagos = Invoke-RestMethod -Method Get `
     -Uri "$apiBase/api/v1/integrations/received-payments?limit=20" `
-    -Headers $headers)
+    -Headers $headers
 
 $coincidentes = @($pagos | Where-Object {
     $_.paymentLinkId -eq $linkId

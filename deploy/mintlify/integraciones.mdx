@@ -1,0 +1,113 @@
+---
+title: "Conectá tu sistema de cobros con Padi"
+description: "Activá una integración desde tu cuenta de vendedor, generá una API Key y administrá el acceso de tu tienda o sistema para cobrar con Padi."
+sidebarTitle: "Integraciones"
+keywords: [integraciones, API Key, vendedor, tienda, pasarela de pagos]
+---
+
+La sección **Integraciones** de Padi permite conectar tu tienda o sistema externo para generar links de pago automáticamente. Administrás la clave desde tu cuenta de vendedor y recibís los cobros en la misma billetera que usás en la app.
+
+## Elegí cómo querés cobrar
+
+| Desde Cobros y Ventas | Desde tu sistema externo |
+| --- | --- |
+| Ingresás el importe y el concepto manualmente en Padi. | Tu sistema solicita la creación de cada enlace de pago. |
+| Compartís el enlace o el QR con tu cliente. | Tu sistema muestra o comparte el enlace de checkout recibido. |
+| No necesitás una API Key. | Tu sistema usa una API Key del comercio desde su servidor. |
+| Seguí [Crear link de cobro](/cobrar-desde-app). | Habilitá la integración con los pasos de esta guía. |
+
+Podés usar ambas alternativas con tu cuenta y billetera actuales. Los enlaces creados por la integración también aparecen en **Cobros**.
+
+<Info>
+Generar la clave habilita el acceso, pero no conecta tu tienda automáticamente. La persona que desarrolla o administra tu sistema debe configurar la integración desde su servidor. No necesitás abrir otra cuenta de comercio ni crear otra billetera.
+</Info>
+
+## Antes de empezar
+
+Necesitás una [cuenta de vendedor](/crear-cuenta-vendedor), su billetera y acceso al servidor del sistema que querés conectar.
+
+Si no ves **Integraciones** en el menú, entrá a **Mi perfil** y pulsá **Activar Vendedor**. La modalidad queda guardada en tu cuenta. Desde Mi perfil también podés abrir **Integraciones**, incluso en móvil.
+
+## Generar tu primera API Key
+
+<Steps>
+  <Step title="Entrá a Integraciones">
+    Iniciá sesión en [la aplicación Padi](https://padi-billetera.netlify.app/) y elegí **Integraciones** en el menú. Si todavía no generaste una clave, verás el estado **Sin activar**.
+  </Step>
+  <Step title="Identificá tu sistema">
+    Completá **Nombre de la integración** con un nombre que reconozcas, por ejemplo **Mi tienda online**. El nombre es obligatorio y admite hasta 100 caracteres.
+  </Step>
+  <Step title="Generá la clave">
+    Pulsá **Generar API Key**. La pantalla pasa a **Activa** y abre el panel **Guardá tu API Key ahora**, con la clave completa.
+  </Step>
+  <Step title="Guardala antes de cerrar">
+    Pulsá **Copiar clave** y guardala de forma segura en el servidor de tu sistema. Cuando la hayas guardado, pulsá **Ya la guardé**.
+
+    La clave completa se muestra una sola vez en esa respuesta. Al cerrar el panel, salir de la página o recargar, no podrás recuperarla: verás únicamente su prefijo enmascarado.
+  </Step>
+</Steps>
+
+<Warning>
+No publiques la API Key en el código del navegador, URLs, capturas, mensajes públicos ni repositorios. Tu sistema externo debe utilizarla desde su servidor. Si la perdiste o se expuso, reemplazala.
+</Warning>
+
+<Frame caption="Integración activa en la aplicación publicada, con la clave enmascarada. La captura usa una cuenta ficticia de prueba.">
+  <img src="/images/integracion-activa.png" alt="Pantalla Integraciones de Padi con estado Activa, nombre del sistema, clave enmascarada y botones para reemplazar o revocar" />
+</Frame>
+
+## Conectar la pasarela con tu sistema
+
+En la misma pantalla, **Cómo conectar tu sistema** resume el recorrido para la persona encargada de la integración:
+
+1. Guardar la clave en el servidor de la tienda.
+2. Enviarla en el encabezado **X-Api-Key** para crear enlaces y consultar cobros propios.
+3. Guardar el identificador del enlace junto al pedido y enviar al comprador al **checkoutUrl** recibido.
+4. Confirmar el pago consultando su estado y comprobando que el enlace, el importe y la moneda coincidan con el pedido. La consulta de cobros recibidos utiliza **Succeeded** para indicar un pago exitoso.
+
+Desplegá **Ejemplo para el servidor de tu tienda** para ver el ejemplo de creación de un enlace que ofrece la app. Para comprobar el ingreso visualmente desde tu cuenta, seguí [Confirmar el cobro](/confirmar-cobro).
+
+La clave permite **crear enlaces y consultar los cobros de tu comercio**. No permite transferir saldo ni administrar tu perfil o tus claves. La administración de la integración se hace iniciando sesión en Padi.
+
+## Reemplazar una clave
+
+Si no guardaste la clave o necesitás cambiarla:
+
+1. Entrá a **Integraciones** y pulsá **Reemplazar clave**.
+2. Revisá el aviso y pulsá **Confirmar reemplazo**. Podés pulsar **Cancelar** para mantener la actual.
+3. Copiá y guardá la nueva clave antes de cerrar el panel.
+4. Actualizá la clave en el servidor de tu sistema externo.
+
+<Warning>
+Al confirmar el reemplazo, la clave anterior deja de funcionar inmediatamente. Tu sistema debe utilizar la nueva para continuar operando. Los enlaces y pagos ya registrados se conservan.
+</Warning>
+
+Solo hay una integración y una clave activa por vendedor. Si tu cuenta ya muestra **Activa**, usá **Reemplazar clave** para obtener otra; la clave completa anterior no se vuelve a mostrar.
+
+## Revocar el acceso
+
+Para desconectar el sistema, pulsá **Revocar clave** y después **Confirmar revocación**. El estado cambia a **Revocada** y esa clave deja de autenticar solicitudes. Revocarla no borra tus enlaces ni los pagos recibidos.
+
+Si después querés volver a conectar un sistema, generá una nueva clave y configurala en su servidor.
+
+<Note>
+Si pasás de Vendedor a Personal desde **Mi perfil**, se revoca tu clave activa. Volver a activar Vendedor no recupera esa clave: necesitás generar una nueva.
+</Note>
+
+## Interpretar el estado y resolver dudas
+
+| Lo que ves | Qué hacer |
+| --- | --- |
+| Sin activar | Completá el nombre y pulsá Generar API Key. |
+| Activa | El sistema puede operar con la clave vigente. La pantalla muestra su prefijo enmascarado y fechas. |
+| Revocada | La clave dejó de funcionar. Generá otra si querés volver a conectar tu sistema. |
+| No encuentro la clave completa | Si ya cerraste el panel, reemplazala y guardá la nueva. |
+| La generación terminó con un error o timeout | Pulsá Actualizar estado antes de volver a intentar. Si hay una clave activa que no pudiste guardar, reemplazala. |
+| Mi sistema dejó de autenticar | Revisá si reemplazaste o revocaste la clave, o si cambiaste a modalidad Personal. |
+
+**Actualizar estado** consulta la situación de la integración. No revela ni recupera una clave completa.
+
+## Recorrido verificado
+
+El 9 de noviembre de 2026 se creó una cuenta ficticia de vendedor en la app publicada, se generó una API Key y se comprobó que autenticaba una consulta de cobros correctamente. Al iniciar sesión de nuevo, se conservaron la modalidad vendedor y la integración activa; la clave se mostró enmascarada.
+
+Padi sigue siendo un entorno académico y demostrativo, sin dinero real. Esta comprobación no realizó pagos ni incluye credenciales reales en la documentación.

@@ -22,6 +22,12 @@
           "cobrar-desde-app",
           "confirmar-cobro"
         ]
+      },
+      {
+        "group": "Conectar tu sistema",
+        "pages": [
+          "integraciones"
+        ]
       }
     ]
   },

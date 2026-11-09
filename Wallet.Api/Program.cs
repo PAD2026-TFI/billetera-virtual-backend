@@ -262,15 +262,32 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-app.UseSwaggerUI(options =>
+// Documentation is opt-in for local development. Hosting with Development by mistake
+// must not publish Swagger or the full OpenAPI catalog by default.
+var documentationEnabled = app.Environment.IsDevelopment()
+    && builder.Configuration.GetValue<bool>("Documentation:Enabled");
+if (documentationEnabled)
 {
-    options.SwaggerEndpoint(
-        "/openapi/v1.json",
-        "Wallet API v1");
-
-    options.RoutePrefix = "swagger";
-    options.InjectJavascript("/swagger/wallet-tools.js");
-});
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Wallet API v1");
+        options.RoutePrefix = "swagger";
+        options.InjectJavascript("/swagger/wallet-tools.js");
+    });
+}
+else
+{
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/swagger") ||
+            context.Request.Path.StartsWithSegments("/openapi"))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+        await next(context);
+    });
+}
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
@@ -323,7 +340,7 @@ if (enabled)
     app.UseAuthorization();
 }
 
-if (app.Environment.IsDevelopment())
+if (documentationEnabled)
 {
     app.MapOpenApi().AllowAnonymous();
     app.MapGet("/swagger/wallet-tools.js", () => Results.Stream(
@@ -331,7 +348,7 @@ if (app.Environment.IsDevelopment())
         "application/javascript")).AllowAnonymous().ExcludeFromDescription();
 }
 
-app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous().ExcludeFromDescription();
+app.MapGet("/", () => Results.Redirect(documentationEnabled ? "/swagger" : "/health/live")).AllowAnonymous().ExcludeFromDescription();
 app.MapControllers();
 
 app.Run();

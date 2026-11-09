@@ -90,7 +90,7 @@ public static class ApiEndpointCatalog
         ("Gateway", "GetReceivedCheckoutPayments") => "Listar cobros recibidos",
         ("Gateway", "ConfigureWebhook") => "Configurar webhook de la integración",
         ("Gateway", "DeactivateWebhook") => "Eliminar webhook de la integración",
-        ("Admin", "RegisterAdmin") => "Registrar administrador con clave de configuración",
+        ("Admin", "RegisterAdmin") => "Registrar administrador con JWT de un administrador existente",
         ("Admin", "FundByCvu") => "Cargar saldo de prueba por CVU",
         ("Admin", "FundByAlias") => "Cargar saldo de prueba por alias",
         ("Admin", "FundByWalletId") => "Cargar saldo de prueba por ID de billetera",

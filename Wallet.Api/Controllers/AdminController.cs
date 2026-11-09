@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Wallet.Application;
 using DomainUser = Wallet.Domain.User;
 using DomainWallet = Wallet.Domain.Wallet;
@@ -8,6 +9,7 @@ namespace Wallet.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
+[Authorize(Policy = "Admin")]
 public sealed class AdminController(
     IUserRepository users,
     IWalletRepository wallets,
@@ -20,10 +22,12 @@ public sealed class AdminController(
     /// </summary>
     [HttpPost("/api/v1/admin/register", Order = -1)]
     [HttpPost("register")]
-    [AllowAnonymous]
+    [EnableRateLimiting("credentials")]
     [ProducesResponseType<UserResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<UserResponse>> RegisterAdmin(
         [FromBody] RegisterAdminRequest request,
         CancellationToken ct)

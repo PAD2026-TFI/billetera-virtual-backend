@@ -32,6 +32,8 @@ public sealed class AdminControllerTests
     {
         await using var host = new IdentityTestHost();
         using var client = host.Client();
+        var operatorAdmin = host.Seed("operator-" + Guid.NewGuid().ToString("N") + "@example.com", role: "Admin");
+        client.DefaultRequestHeaders.Authorization = new("Bearer", host.Token(operatorAdmin));
 
         var request = new RegisterAdminRequest
         {
@@ -61,6 +63,8 @@ public sealed class AdminControllerTests
         await using var host = new IdentityTestHost();
         var existing = host.Seed("admin.duplicate@test.com");
         using var client = host.Client();
+        var operatorAdmin = host.Seed("operator-" + Guid.NewGuid().ToString("N") + "@example.com", role: "Admin");
+        client.DefaultRequestHeaders.Authorization = new("Bearer", host.Token(operatorAdmin));
 
         var request = new RegisterAdminRequest
         {

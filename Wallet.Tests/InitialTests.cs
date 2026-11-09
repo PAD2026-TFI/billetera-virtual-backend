@@ -49,7 +49,7 @@ public sealed class InitialTests
     public async Task Baseline_is_alive_but_not_ready_and_does_not_fake_registration()
     {
         await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
-            b.UseSetting("Identity:Enabled", "false").UseEnvironment("Development"));
+            b.UseSetting("Identity:Enabled", "false").UseSetting("Documentation:Enabled", "true").UseEnvironment("Development"));
         using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost") });
         var openApi = await client.GetAsync("/openapi/v1.json");
         Assert.Equal(HttpStatusCode.OK, openApi.StatusCode);

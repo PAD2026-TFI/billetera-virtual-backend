@@ -1,12 +1,22 @@
 ---
-title: "Wallet API"
-description: "Guías y referencia v1 de la API de la billetera."
+title: "Integrá la pasarela de Padi"
+description: "Creá un link de pago, enviá al comprador al checkout y verificá el cobro."
 ---
 
-La API permite consultar una billetera, transferir saldo, crear links de cobro y pedir una tarjeta física. Las guías muestran el orden de las solicitudes y la pestaña **Referencia de la API** detalla los campos, credenciales y respuestas de cada operación.
+Padi aloja el checkout. Tu servidor crea el link de pago y consulta el resultado. El comprador abre el link o escanea el QR para pagar en Padi.
 
-1. Identificá la URL HTTPS de la API del entorno que vas a usar. En los ejemplos, definí esa URL como `WALLET_API_URL`, sin agregar `/api/v1`.
-2. Revisá [Autenticación](/autenticacion) para obtener el JWT de un cliente o la API Key de un comercio.
-3. Seguí la guía de [transferencias](/transferencias), [cobros y checkout](/cobros) o [tarjetas](/tarjetas).
+1. Registrá tu comercio y guardá la API Key. [Alta y autenticación](/autenticacion)
+2. Creá un link con el importe de tu pedido y redirigí al comprador a `checkoutUrl` o mostrá el QR. [Guía de cobros](/cobros)
+3. Consultá el pago desde tu servidor antes de marcar tu pedido como pagado.
 
-Podés consultar `GET /health/live` para comprobar que la API está en ejecución y `GET /health/ready` para verificar que puede atender solicitudes. Usá cuentas, credenciales y domicilios ficticios al ejecutar los ejemplos en un entorno de pruebas.
+| Operación | Cuándo usarla |
+| --- | --- |
+| `POST /api/v1/integrations/register` | Dar de alta el comercio y obtener la API Key. |
+| `POST /api/v1/integrations/payment-links` | Crear un cobro para un pedido. |
+| `GET /api/v1/integrations/payment-links/{id}` | Consultar el estado de un link propio. |
+| `GET /api/v1/integrations/received-payments` | Listar cobros recientes del comercio. |
+| `GET /api/v1/integrations/received-payments/{paymentId}` | Verificar un cobro concreto. |
+| `GET /api/v1/public/payment-links/{token}` | Mostrar los datos públicos de un link. |
+| `GET /api/v1/public/payment-links/{token}/qr` | Obtener el QR para abrir el checkout. |
+
+En los ejemplos, `WALLET_API_URL` es la URL HTTPS base de la API del entorno que estés usando, sin agregar `/api/v1`.

@@ -14,7 +14,23 @@ const isPublicPath = path =>
   path === '/health/live' ||
   path === '/health/ready'
 
-const paths = Object.fromEntries(Object.entries(document.paths).filter(([path]) => isPublicPath(path)))
+const merchantCheckoutOperations = {
+  '/api/v1/integrations/register': 'post',
+  '/api/v1/integrations/payment-links': 'post',
+  '/api/v1/integrations/payment-links/{id}': 'get',
+  '/api/v1/integrations/received-payments': 'get',
+  '/api/v1/integrations/received-payments/{paymentId}': 'get',
+  '/api/v1/public/payment-links/{token}': 'get',
+  '/api/v1/public/payment-links/{token}/qr': 'get',
+}
+
+const paths = exportToMintlify
+  ? Object.fromEntries(Object.entries(merchantCheckoutOperations).map(([path, method]) => {
+    const { [method]: operation, parameters } = document.paths[path] ?? {}
+    if (!operation) throw new Error(`Falta la operación de la pasarela: ${method.toUpperCase()} ${path}`)
+    return [path, { ...(parameters ? { parameters } : {}), [method]: operation }]
+  }))
+  : Object.fromEntries(Object.entries(document.paths).filter(([path]) => isPublicPath(path)))
 if (!Object.keys(paths).length) {
   throw new Error('El OpenAPI no contiene rutas del catálogo público de Wallet.')
 }
@@ -45,19 +61,24 @@ collectReferences(paths)
 const publicDocument = {
   openapi: document.openapi,
   info: {
-    title: document.info.title,
+    title: exportToMintlify ? 'Pasarela de pagos Padi' : document.info.title,
     version: document.info.version,
-    description: 'Referencia de la billetera para clientes, comercios y checkout. '
-      + 'Las operaciones de clientes usan JWT y las integraciones usan X-Api-Key. '
-      + 'Consultá el esquema de seguridad de cada operación.',
+    description: exportToMintlify
+      ? 'Referencia para comercios que integran el checkout alojado de Padi. '
+        + 'Creá links de pago, dirigí al comprador al checkout y consultá los cobros desde tu servidor.'
+      : 'Referencia de la billetera para clientes, comercios y checkout. '
+        + 'Las operaciones de clientes usan JWT y las integraciones usan X-Api-Key. '
+        + 'Consultá el esquema de seguridad de cada operación.',
   },
   paths,
   components: {
     schemas,
-    securitySchemes: {
-      ...document.components.securitySchemes,
-      Bearer: { ...document.components.securitySchemes.Bearer, description: 'JWT del cliente.' },
-    },
+    securitySchemes: exportToMintlify
+      ? { ApiKey: document.components.securitySchemes.ApiKey }
+      : {
+        ...document.components.securitySchemes,
+        Bearer: { ...document.components.securitySchemes.Bearer, description: 'JWT del cliente.' },
+      },
   },
   tags: (document.tags ?? []).filter(tag => usedTags.has(tag.name)),
 }

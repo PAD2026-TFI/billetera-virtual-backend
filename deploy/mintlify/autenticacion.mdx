@@ -1,25 +1,22 @@
 ---
-title: "Autenticación"
-description: "Cómo identificarse como cliente o como integración externa."
+title: "Alta y autenticación del comercio"
+description: "Registrá el comercio y usá su API Key desde tu servidor."
 ---
 
-| Quién llama | Credencial | Rutas |
-| --- | --- | --- |
-| Cliente de la billetera | `Authorization: Bearer <accessToken>` | `/api/v1/me/*` |
-| Aplicación externa o comercio | `X-Api-Key: <apiKey>` | `/api/v1/integrations/*` después del alta |
-| Visitante del checkout | Acceso público a los detalles del link | `GET /api/v1/public/payment-links/{token}` |
+## Registrar el comercio
 
-## Clientes
-
-Creá una cuenta con `POST /api/v1/auth/register`. Después, enviá `email` y `password` a `POST /api/v1/auth/login`. La respuesta contiene `accessToken` y `expiresIn`, expresado en segundos. Podés verificar el JWT consultando el perfil.
+Hacé un `POST /api/v1/integrations/register` con el nombre, correo de contacto y CUIT de 11 dígitos del comercio. Esta operación de alta es pública. Reemplazá los datos de ejemplo por los de tu comercio.
 
 ```bash
-curl "$WALLET_API_URL/api/v1/me/profile" \
-  -H "Authorization: Bearer $WALLET_JWT"
+curl "$WALLET_API_URL/api/v1/integrations/register" \
+  -H "Content-Type: application/json" \
+  --data '{"companyName":"Comercio de ejemplo","contactEmail":"comercio@example.com","cuit":"30712345678"}'
 ```
 
-## Integraciones externas
+La respuesta `201` contiene `apiKey` y los identificadores del comercio y su billetera. Guardá la clave al recibirla. Padi entrega su valor una sola vez durante el alta.
 
-Registrá el comercio con `POST /api/v1/integrations/register`. La respuesta entrega la API Key una sola vez. Guardala del lado del servidor y enviala en `X-Api-Key` en cada solicitud a las rutas del comercio. Los cobros iniciados por un cliente de la billetera usan su JWT y las rutas `/api/v1/me/merchant/*`.
+## Usar la API Key
 
-El pago público por saldo o con tarjeta asociada requiere el JWT del comprador. La API Key identifica al comercio que genera el cobro.
+Conservá la clave como secreto en tu servidor, por ejemplo en `WALLET_MERCHANT_API_KEY`. Enviá `X-Api-Key: <apiKey>` para crear links y consultar tus cobros. Si la API devuelve `401`, verificá la clave y el encabezado.
+
+Las URLs del checkout y del QR se pueden compartir con el comprador. Los endpoints públicos de consulta y QR funcionan sin API Key.

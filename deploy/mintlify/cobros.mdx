@@ -5,7 +5,7 @@ description: "Generar un link de pago, compartir el checkout y consultar el resu
 
 ## Crear y compartir el link
 
-Con la [API Key del comercio](/autenticacion), creá un link de uso único. El importe está expresado en ARS.
+Desde tu servidor, usá la [API Key del comercio](/autenticacion) para crear un link de uso único. El importe está expresado en ARS.
 
 ```bash
 curl "$WALLET_API_URL/api/v1/integrations/payment-links" \
@@ -14,12 +14,17 @@ curl "$WALLET_API_URL/api/v1/integrations/payment-links" \
   --data '{"title":"Pedido de prueba","amount":1500,"type":"SingleUse"}'
 ```
 
-Guardá `id` y `token` de la respuesta. Compartí con el comprador `checkoutUrl` o el QR de `qrCodeUrl`. El comprador puede consultar el importe y si el link admite pagos con `GET /api/v1/public/payment-links/{token}`. Si el vendedor opera como cliente con JWT, puede crear el link en `POST /api/v1/me/merchant/payment-links`.
+La respuesta `201` incluye `id`, `token`, `checkoutUrl` y `qrCodeUrl`. Guardá el `id` del link junto al identificador del pedido en tu sistema. Redirigí al comprador a `checkoutUrl` o mostrá el QR de `qrCodeUrl` para que abra el checkout de Padi.
 
-## Pagar con una tarjeta de débito asociada
-
-El comprador obtiene su `cardId` en `GET /api/v1/me/cards`. Envía ese ID a `POST /api/v1/me/payment-links/{paymentLinkId}/card-payments` con su JWT y un `Idempotency-Key` estable para el intento. La API debita su billetera y devuelve un `paymentId` al confirmar. Ante una respuesta perdida, reenviá la solicitud con la misma clave y el mismo `cardId`. Para esta modalidad alcanza el identificador de la tarjeta asociada.
+Si tu sitio necesita mostrar el importe o comprobar si el link sigue habilitado, usá `GET /api/v1/public/payment-links/{token}`. Para obtener el QR, usá `GET /api/v1/public/payment-links/{token}/qr`, que devuelve una imagen SVG.
 
 ## Conciliar el cobro
 
-El comercio consulta `GET /api/v1/integrations/payment-links/{id}` con su API Key para conocer el estado del link. Puede usar `GET /api/v1/integrations/received-payments` para listar cobros recibidos y `GET /api/v1/integrations/received-payments/{paymentId}` para consultar un pago concreto.
+Consultá `GET /api/v1/integrations/payment-links/{id}` con tu API Key para conocer el estado del link. Si todavía no tenés el identificador del pago, consultá los cobros recientes y buscá el que tenga el `paymentLinkId` guardado con tu pedido.
+
+```bash
+curl "$WALLET_API_URL/api/v1/integrations/received-payments?limit=20" \
+  -H "X-Api-Key: $WALLET_MERCHANT_API_KEY"
+```
+
+Con el `id` del pago, podés consultar `GET /api/v1/integrations/received-payments/{paymentId}`. Marcá tu pedido como pagado cuando la API confirme `status: "Succeeded"` y coincidan el link, el importe y la moneda. El regreso del comprador a tu sitio por sí solo no confirma el pago.

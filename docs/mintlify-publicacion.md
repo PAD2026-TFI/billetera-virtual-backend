@@ -1,6 +1,6 @@
 # Publicar Wallet API en Mintlify Starter
 
-El portal vive en `deploy/mintlify`. Contiene las guías en MDX y la referencia generada desde el OpenAPI público del backend `develop` en `b22502f`. Mintlify publica la documentación desde GitHub y la API sigue en MonsterASP.NET.
+El portal vive en `deploy/mintlify`. Contiene las guías para comercios externos y la referencia de las operaciones que necesitan para integrar el checkout alojado de Padi. El contrato se exportó desde el backend `develop` en `b22502f`. Mintlify publica la documentación desde GitHub y la API sigue en MonsterASP.NET.
 
 ## Vista previa local
 
@@ -21,7 +21,7 @@ Abrí `http://localhost:3000`. Revisá la pestaña **Guías** y al menos una ope
 2. Creá el proyecto en [Mintlify](https://app.mintlify.com/). Durante el alta pueden ofrecer una prueba de Pro. El sitio puede continuar en **Starter** al terminar la prueba.
 3. En **Git Settings**, conectá `PAD2026-TFI/billetera-virtual-backend`. Si se solicita instalar la app de GitHub, limitá el acceso a ese repositorio. La autorización requiere permisos de administración o la aprobación de un administrador de la organización.
 4. Seleccioná la rama de publicación. Activá **docs.json is in a subdirectory** e ingresá `/deploy/mintlify`, sin barra final.
-5. Revisá el estado del despliegue en el panel y abrí la URL asignada. Comprobá la navegación y que el catálogo muestre las rutas públicas de clientes y comercios.
+5. Revisá el estado del despliegue en el panel y abrí la URL asignada. Comprobá que el catálogo muestre las siete operaciones de alta, links de pago, consulta de cobros, detalles públicos y QR.
 
 [Plan Starter](https://www.mintlify.com/pricing) · [Conexión de repositorio y subdirectorio](https://www.mintlify.com/library/publish-open-source-local-docs-on-mintlify)
 
@@ -36,4 +36,4 @@ if ($LASTEXITCODE -ne 0) { throw 'No se pudo exportar el contrato de la API.' }
 node scripts/export-public-openapi.mjs --mintlify $walletOpenApi
 ```
 
-El archivo resultante es `deploy/mintlify/openapi.json`. El exportador conserva las rutas para clientes e integraciones y excluye las herramientas de administración y fondeo de prueba. Para incluir la URL de la API en los ejemplos generados, agregá el origen HTTPS real de MonsterASP.NET como último argumento. La configuración inicial deja el explorador en modo consulta. Si lo habilitan para enviar solicitudes, usen la API de un entorno de pruebas.
+El archivo resultante es `deploy/mintlify/openapi.json`. El exportador usa una lista explícita de operaciones del checkout para que los endpoints nuevos del backend no aparezcan por defecto. Para incluir la URL de la API en los ejemplos generados, agregá el origen HTTPS real de MonsterASP.NET como último argumento. El explorador está en modo consulta.

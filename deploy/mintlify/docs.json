@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "padi.",
   "colors": {
-    "primary": "#4F46E5",
-    "light": "#A5B4FC",
-    "dark": "#4338CA"
+    "primary": "#5B2EE0",
+    "light": "#B9A6FF",
+    "dark": "#2A0E7A"
   },
   "navigation": {
     "groups": [
@@ -43,5 +43,24 @@
     "light": "/logo/padi-light.svg",
     "dark": "/logo/padi-dark.svg",
     "href": "/"
+  },
+  "fonts": {
+    "family": "Geist"
+  },
+  "search": {
+    "prompt": "Buscar en las guías de Padi"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Guías para comercios",
+        "href": "/"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Abrir Padi",
+      "href": "https://padi-billetera.netlify.app/"
+    }
   }
 }

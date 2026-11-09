@@ -1,28 +1,104 @@
 ---
-title: "Cobrá con Padi desde tu cuenta de vendedor"
-description: "Aprendé a crear tu cuenta de vendedor en Padi, generar un link de cobro con código QR y compartirlo con tus clientes desde la aplicación."
-sidebarTitle: "Introducción"
-keywords: [Padi, comercios, vendedor, cobros, QR]
+title: "Empezá a cobrar con Padi"
+description: "Las guías para tu comercio: creá una cuenta de vendedor, generá un link con QR y comprobá que el pago se acreditó en tu cuenta de Padi."
+sidebarTitle: "Inicio"
+keywords: [Padi, comercios, vendedor, cobros, QR, guías]
+mode: "wide"
 ---
 
-Con Padi podés generar un link de cobro y compartirlo con tus clientes desde la aplicación. Esta guía te acompaña desde la creación de tu cuenta de vendedor hasta la confirmación del pago y la acreditación en tu cuenta.
+Todo el recorrido de tu comercio en un solo lugar: creá tu cuenta de vendedor, compartí un link o un QR y confirmá que recibiste el pago desde la aplicación.
 
-## Empezá a cobrar
+<div className="not-prose mb-8 mt-5 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-amber-50 p-6 dark:border-violet-800 dark:from-violet-950 dark:via-zinc-950 dark:to-violet-950 sm:p-8">
+  <div className="flex flex-wrap items-center gap-3">
+    <Badge color="purple" shape="pill" icon="store">Guías para comercios</Badge>
+    <span className="text-sm text-violet-800 dark:text-violet-200">Tu cuenta · Tus cobros · Tus movimientos</span>
+  </div>
+  <p className="mb-2 mt-5 text-2xl font-bold tracking-tight text-violet-950 dark:text-white sm:text-3xl">De tu primer link al cobro confirmado.</p>
+  <p className="m-0 max-w-2xl text-base leading-relaxed text-zinc-700 dark:text-zinc-300">Elegí la etapa en la que estás. Cada guía incluye los pasos de la app, capturas reales y las comprobaciones que necesitás hacer.</p>
+  <div className="mt-5 flex flex-wrap gap-3">
+    <a href="/crear-cuenta-vendedor" className="inline-flex items-center justify-center rounded-xl bg-violet-700 px-5 py-3 text-sm font-semibold text-white no-underline hover:bg-violet-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-violet-600 dark:bg-violet-600 dark:hover:bg-violet-500">Empezar con mi cuenta</a>
+    <a href="https://padi-billetera.netlify.app/" className="inline-flex items-center justify-center rounded-xl border border-violet-300 bg-white px-5 py-3 text-sm font-semibold text-violet-900 no-underline hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-violet-600 dark:border-violet-600 dark:bg-violet-950 dark:text-violet-100 dark:hover:bg-violet-900">Abrir Padi</a>
+  </div>
+</div>
 
-1. Abrí [la aplicación Padi](https://padi-billetera.netlify.app/).
-2. [Creá tu cuenta de vendedor](/crear-cuenta-vendedor). Si ya la tenés, iniciá sesión.
-3. Entrá a **Cobros** y [generá un link con su código QR](/cobrar-desde-app).
-4. Compartí el enlace o mostrale el QR al comprador.
-5. [Confirmá que recibiste el pago](/confirmar-cobro) desde tu cuenta.
+## ¿Por dónde querés empezar?
 
-## Qué vas a encontrar
+<Columns cols={3}>
+  <Card title="1. Creá tu cuenta" icon="user-plus" color="#7C3AED" href="/crear-cuenta-vendedor" cta="Ver el registro" arrow>
+    Elegí **Vendedor · Cobros y QR** y recorré las pantallas de alta hasta **Ir a cobrar**.
+  </Card>
+  <Card title="2. Generá tu cobro" icon="qrcode" color="#7C3AED" href="/cobrar-desde-app" cta="Crear link y QR" arrow>
+    Ingresá el importe y el concepto en **Cobros y Ventas**. Compartí el enlace o mostrale el QR al comprador.
+  </Card>
+  <Card title="3. Confirmá el pago" icon="circle-check" color="#7C3AED" href="/confirmar-cobro" cta="Verificar el ingreso" arrow>
+    Buscá el estado **Cobrado**, abrí la confirmación y revisá la acreditación en tu saldo y movimientos.
+  </Card>
+</Columns>
 
-| Guía | Qué podés hacer |
-| --- | --- |
-| [Cuenta de vendedor](/crear-cuenta-vendedor) | Elegir el tipo de cuenta y completar las pantallas del registro. |
-| [Crear link de cobro](/cobrar-desde-app) | Ingresar importe y concepto, generar el link y compartirlo con el comprador. |
-| [Confirmar el cobro](/confirmar-cobro) | Revisar el estado Cobrado y verificar la acreditación en saldo y movimientos. |
+<Card title="Tu primer cobro, paso a paso" icon="book-open" href="/crear-cuenta-vendedor" cta="Empezar el recorrido" horizontal arrow>
+  Las guías siguen el mismo orden que la app: creá tu cuenta, generá el link y verificá el pago recibido.
+</Card>
+
+## Así lo vas a ver en la app
+
+Estas capturas corresponden al recorrido que verificamos en la aplicación publicada. Abrí cada pestaña para reconocer la pantalla y continuá con su guía detallada.
+
+<Tabs>
+  <Tab title="Cuenta de vendedor" icon="user-plus">
+    En **Crear cuenta**, seleccioná **Vendedor · Cobros y QR**. La [guía de registro](/crear-cuenta-vendedor) detalla los campos, la contraseña y las pantallas de validación de prueba.
+
+    <Frame caption="Registro con datos ficticios y la opción Vendedor seleccionada.">
+      <img src="/images/registro-vendedor.png" alt="Pantalla de registro de Padi con la cuenta Vendedor seleccionada y datos ficticios" />
+    </Frame>
+  </Tab>
+  <Tab title="Link y QR" icon="qrcode">
+    En **Nuevo cobro**, completá el importe, el concepto y, si lo necesitás, el detalle adicional. Seguí la [guía para generar y compartir el link](/cobrar-desde-app).
+
+    <Frame caption="El formulario Nuevo cobro dentro de Cobros y Ventas.">
+      <img src="/images/nuevo-cobro-vendedor.png" alt="Formulario de Padi para ingresar importe, concepto y detalle y generar un link de cobro con QR" />
+    </Frame>
+  </Tab>
+  <Tab title="Cobro confirmado" icon="circle-check">
+    Después del pago, el comercio puede ver **¡Cobro recibido con éxito!** y el estado **Cobrado**. La [guía de confirmación](/confirmar-cobro) explica cómo revisar también el saldo y el movimiento.
+
+    <Frame caption="Cobro de prueba por $1.500, posteriormente pagado. El concepto conserva su nombre original: Prueba de documentación - sin pago.">
+      <img src="/images/cobro-recibido.png" alt="Confirmación de un cobro recibido por 1500 pesos y estado Cobrado en la cuenta del vendedor" />
+    </Frame>
+  </Tab>
+</Tabs>
+
+## Antes de dar un pedido por cobrado
+
+<Columns cols={2}>
+  <Card title="Link generado" icon="link" color="#7C3AED">
+    **Activo** o **Esperando pago del cliente** indican que generaste el enlace. Todavía no confirman que recibiste el dinero.
+  </Card>
+  <Card title="Pago recibido" icon="circle-check" color="#059669" href="/confirmar-cobro" cta="Revisar la confirmación" arrow>
+    Comprobá **Cobrado**, el mensaje de éxito y el ingreso acreditado en tu propia cuenta. Revisá el importe y el concepto del pedido.
+  </Card>
+</Columns>
+
+## Respuestas para tu primer cobro
+
+<AccordionGroup>
+  <Accordion title="¿Cuál es el recorrido completo?" icon="route">
+    1. Abrí [la aplicación Padi](https://padi-billetera.netlify.app/).
+    2. [Creá tu cuenta de vendedor](/crear-cuenta-vendedor). Si ya la tenés, iniciá sesión.
+    3. Entrá a **Cobros** y [generá un link con su código QR](/cobrar-desde-app).
+    4. Compartí el enlace o mostrale el QR al comprador.
+    5. [Confirmá que recibiste el pago](/confirmar-cobro) desde tu cuenta.
+  </Accordion>
+  <Accordion title="¿Puedo pagar mi propio QR?" icon="user-shield">
+    No podés pagarlo con la misma cuenta que lo generó: el checkout muestra **Cobro propio**. El comprador debe usar otra cuenta. Consultá [cómo se confirma un pago](/confirmar-cobro).
+  </Accordion>
+  <Accordion title="¿Qué datos necesito para generar un cobro?" icon="pen-to-square">
+    Un **Importe a cobrar** mayor que cero y un **Concepto o producto**. El **Detalle adicional** es opcional. La [guía de creación](/cobrar-desde-app) conserva los límites del formulario y explica cada acción.
+  </Accordion>
+  <Accordion title="¿Las pantallas de registro verifican mi identidad?" icon="circle-info">
+    En la versión académica que verificamos, las pantallas de código, DNI y validación facial completan simulaciones. No acreditan una verificación real de correo o identidad. Revisá las aclaraciones de la [guía de cuenta de vendedor](/crear-cuenta-vendedor) y usá datos ficticios para las pruebas.
+  </Accordion>
+</AccordionGroup>
 
 <Note>
-Padi se presenta como un entorno de pruebas con fines académicos y demostrativos, sin dinero real. El recorrido de estas guías se verificó en la aplicación publicada el 9 de noviembre de 2026, con dos cuentas ficticias y un pago de prueba por $1.500, cuya acreditación se verificó en la cuenta del vendedor.
+Padi se presenta como un entorno de pruebas con fines académicos y demostrativos, sin dinero real. El recorrido se verificó en la aplicación publicada el 9 de noviembre de 2026, con dos cuentas ficticias y un pago de prueba por **$1.500**, cuya acreditación se comprobó en la cuenta del vendedor. Las [guías detalladas](/crear-cuenta-vendedor) conservan las capturas, los pasos y los límites de esa prueba.
 </Note>

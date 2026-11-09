@@ -32,6 +32,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.UseSetting("Documentation:Enabled", "true");
         builder.UseSetting("Identity:Enabled", "true");
         builder.UseSetting("ConnectionStrings:DefaultConnection", sqlConnection ??
             "Server=unused;Database=unused;Integrated Security=true");

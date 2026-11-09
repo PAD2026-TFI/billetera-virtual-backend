@@ -45,37 +45,52 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-var defaultOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-{
-    "http://localhost:5173",
-    "https://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://127.0.0.1:5173",
-    "https://padi-billetera.netlify.app"
-};
-
-if (configuredOrigins != null)
-{
-    foreach (var origin in configuredOrigins)
-    {
-        if (!string.IsNullOrWhiteSpace(origin))
-        {
-            defaultOrigins.Add(origin.TrimEnd('/'));
-        }
-    }
-}
-
-var frontendUrl = builder.Configuration["FrontendUrl"] ?? builder.Configuration["BaseUrl"];
-if (!string.IsNullOrWhiteSpace(frontendUrl))
-{
-    defaultOrigins.Add(frontendUrl.TrimEnd('/'));
-}
+var allowAllOrigins = builder.Environment.IsDevelopment()
+    || configuredOrigins == null
+    || configuredOrigins.Length == 0
+    || configuredOrigins.Contains("*");
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(policy =>
-    policy.WithOrigins(defaultOrigins.ToArray())
-        .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        .WithHeaders("Authorization", "Content-Type", "Idempotency-Key", "X-Api-Key")
-        .WithExposedHeaders("Idempotency-Replayed")));
+{
+    if (allowAllOrigins)
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .WithExposedHeaders("Idempotency-Replayed", "Location");
+    }
+    else
+    {
+        var origins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "http://localhost:5173",
+            "https://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://127.0.0.1:5173",
+            "https://padi-billetera.netlify.app"
+        };
+        if (configuredOrigins != null)
+        {
+            foreach (var origin in configuredOrigins)
+            {
+                if (!string.IsNullOrWhiteSpace(origin))
+                {
+                    origins.Add(origin.TrimEnd('/'));
+                }
+            }
+        }
+        var frontendUrl = builder.Configuration["FrontendUrl"] ?? builder.Configuration["BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(frontendUrl))
+        {
+            origins.Add(frontendUrl.TrimEnd('/'));
+        }
+
+        policy.WithOrigins(origins.ToArray())
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .WithExposedHeaders("Idempotency-Replayed", "Location");
+    }
+}));
 
 builder.Services.AddRateLimiter(o =>
 {

@@ -30,4 +30,13 @@ public sealed class SqlPaymentLinkRepository(WalletDbContext db) : IPaymentLinkR
         db.PaymentLinks.Update(link);
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task<IReadOnlyList<PaymentLink>> ListByMerchantAsync(Guid merchantOwnerId, CancellationToken ct)
+    {
+        return await db.PaymentLinks
+            .Where(l => l.MerchantOwnerId == merchantOwnerId)
+            .OrderByDescending(l => l.CreatedAt)
+            .Take(50)
+            .ToListAsync(ct);
+    }
 }

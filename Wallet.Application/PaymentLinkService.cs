@@ -102,6 +102,12 @@ public sealed class PaymentLinkService(
         return Map(link);
     }
 
+    public async Task<IReadOnlyList<PaymentLinkDto>> ListByMerchantAsync(Guid merchantOwnerId, CancellationToken ct)
+    {
+        var list = await links.ListByMerchantAsync(merchantOwnerId, ct);
+        return list.Select(Map).ToList();
+    }
+
     public async Task<CheckoutPublicDetailsDto?> GetByTokenAsync(string token, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;

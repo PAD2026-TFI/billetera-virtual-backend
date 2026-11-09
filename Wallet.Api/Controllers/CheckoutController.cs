@@ -41,6 +41,37 @@ public sealed class CheckoutController(ICheckoutService checkoutService, ICurren
         }
     }
 
+    [HttpPost("/api/v1/me/merchant/payment-links", Order = -1)]
+    [Authorize(Policy = "Client")]
+    [ProducesResponseType<PaymentLinkDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PaymentLinkDto>> CreateMerchantLink(
+        [FromBody] CreatePaymentLinkRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await checkoutService.CreateLinkAsync(request, ct);
+            return CreatedAtAction(nameof(GetLinkByToken), new { token = result.Token }, result);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Datos de cobro inválidos.",
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_INPUT", ["detail"] = ex.Message });
+        }
+    }
+
+    [HttpGet("/api/v1/me/merchant/payment-links", Order = -1)]
+    [Authorize(Policy = "Client")]
+    [ProducesResponseType<IReadOnlyList<PaymentLinkDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PaymentLinkDto>>> GetMerchantLinks(CancellationToken ct)
+    {
+        var list = await checkoutService.ListByMerchantAsync(currentUser.Id, ct);
+        return Ok(list);
+    }
+
     [HttpGet("/api/v1/public/payment-links/{token}", Order = -1)]
     [HttpGet("links/{token}")]
     [AllowAnonymous]

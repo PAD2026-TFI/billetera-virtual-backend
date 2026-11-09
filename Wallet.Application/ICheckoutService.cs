@@ -11,4 +11,5 @@ public interface ICheckoutService
         Guid userId,
         string? idempotencyKey,
         CancellationToken ct);
+    Task<IReadOnlyList<PaymentLinkDto>> ListByMerchantAsync(Guid merchantOwnerId, CancellationToken ct) => Task.FromResult<IReadOnlyList<PaymentLinkDto>>([]);
 }

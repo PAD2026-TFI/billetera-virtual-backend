@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddDbContext<WalletDbContext>(o => o.UseSqlServer(connection,
             sql => sql.CommandTimeout(15)));
         services.AddScoped<IMovementHistoryReader, SqlMovementHistoryReader>();
+        services.AddScoped<ITransferCounterpartyResolver, SqlTransferCounterpartyResolver>();
         services.AddScoped<ITransferStore, SqlTransferStore>();
         services.AddScoped<IDebitCardPaymentStore, SqlDebitCardPaymentStore>();
         services.AddScoped<IDevelopmentFundingStore, SqlDevelopmentFundingStore>();

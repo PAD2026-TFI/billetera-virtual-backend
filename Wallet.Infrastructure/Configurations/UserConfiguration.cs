@@ -19,5 +19,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.Role).HasMaxLength(20).IsRequired();
         builder.Property(user => user.SessionVersion).IsRequired();
         builder.Property(user => user.WalletId);
+        builder.Property(user => user.AccountType).HasMaxLength(20).HasDefaultValue("personal").IsRequired();
+        builder.Property(user => user.IntegrationVersion).HasDefaultValue(0).IsConcurrencyToken();
+        builder.Property(user => user.IntegrationName).HasMaxLength(100);
+        builder.Property(user => user.IntegrationKeyHash).HasMaxLength(64);
+        builder.Property(user => user.IntegrationKeyPrefix).HasMaxLength(20);
+        builder.HasIndex(user => user.IntegrationKeyHash).IsUnique().HasFilter("[IntegrationKeyHash] IS NOT NULL");
     }
 }

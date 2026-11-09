@@ -654,6 +654,13 @@ namespace Wallet.Infrastructure.Migrations
                 {
                     b.HasBaseType("Wallet.Domain.WalletOwner");
 
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("personal");
+
                     b.Property<string>("Dni")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -668,6 +675,33 @@ namespace Wallet.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset?>("IntegrationCreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("IntegrationKeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("IntegrationKeyPrefix")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("IntegrationVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("IntegrationName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset?>("IntegrationRevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("IntegrationRotatedAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -695,6 +729,10 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.Property<Guid?>("WalletId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.HasIndex("IntegrationKeyHash")
+                        .IsUnique()
+                        .HasFilter("[IntegrationKeyHash] IS NOT NULL");
 
                     b.HasIndex("NormalizedEmail")
                         .IsUnique()

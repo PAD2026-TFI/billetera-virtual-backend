@@ -7,7 +7,7 @@ namespace Wallet.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/payment-intents")]
-[Authorize(Policy = "ExternalClient")]
+[Authorize(Policy = "PaymentIntegration")]
 public sealed class PaymentIntentsController(
     ICheckoutService checkoutService,
     PaymentLinkService paymentLinkService,

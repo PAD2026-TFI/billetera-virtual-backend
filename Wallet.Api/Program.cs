@@ -132,6 +132,7 @@ if (enabled)
     builder.Services.AddScoped<IdentityService>();
     builder.Services.AddScoped<WalletService>();
     builder.Services.AddScoped<GatewayService>();
+    builder.Services.AddScoped<MerchantIntegrationService>();
     builder.Services.AddScoped<CardSimulatorService>();
     builder.Services.AddScoped<PaymentLinkService>(sp => ActivatorUtilities.CreateInstance<PaymentLinkService>(
         sp,
@@ -244,6 +245,11 @@ if (enabled)
         o.AddPolicy("Admin", p =>
             p.RequireAuthenticatedUser()
              .RequireRole("Admin"));
+
+        o.AddPolicy("PaymentIntegration", p =>
+            p.AddAuthenticationSchemes(ApiKeyAuthenticationHandler.SchemeName)
+             .RequireAuthenticatedUser()
+             .RequireRole("ExternalClient", "MerchantIntegration"));
 
         o.AddPolicy("ExternalClient", p =>
             p.AddAuthenticationSchemes(ApiKeyAuthenticationHandler.SchemeName)

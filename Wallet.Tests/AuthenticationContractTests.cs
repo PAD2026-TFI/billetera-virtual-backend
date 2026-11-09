@@ -117,7 +117,7 @@ public sealed class AuthenticationContractTests
         using var profile = await client.GetAsync("/api/users/me");
         Assert.Equal(HttpStatusCode.OK, profile.StatusCode);
         using var body = JsonDocument.Parse(await profile.Content.ReadAsStringAsync());
-        Assert.Equal(new[] { "email", "firstName", "id", "lastName" },
+        Assert.Equal(new[] { "accountType", "email", "firstName", "id", "lastName" },
             body.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToArray());
         Assert.Equal(owner.Id, body.RootElement.GetProperty("id").GetGuid());
         Assert.Equal("Ana María", body.RootElement.GetProperty("firstName").GetString());

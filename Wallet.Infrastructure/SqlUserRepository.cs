@@ -11,6 +11,8 @@ public sealed class SqlUserRepository(WalletDbContext db) : IUserRepository
         ExecuteAsync(() => db.Users.SingleOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, ct));
     public Task<User?> FindByIdAsync(Guid id, CancellationToken ct) =>
         ExecuteAsync(() => db.Users.SingleOrDefaultAsync(x => x.Id == id, ct));
+    public Task<User?> FindByIntegrationKeyHashAsync(string hash, CancellationToken ct) =>
+        ExecuteAsync(() => db.Users.SingleOrDefaultAsync(x => x.IntegrationKeyHash == hash, ct));
     public async Task AddAsync(User user, CancellationToken ct)
     {
         db.Users.Add(user);

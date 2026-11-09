@@ -10,7 +10,8 @@ public sealed class ApiKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder,
-    IExternalClientRepository clients) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    IExternalClientRepository clients,
+    IUserRepository users) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string SchemeName = "ApiKey";
     public const string HeaderName = "X-Api-Key";
@@ -40,6 +41,22 @@ public sealed class ApiKeyAuthenticationHandler(
         try
         {
             var hash = GatewayService.HashApiKey(apiKey);
+            if (apiKey.StartsWith("padi_", StringComparison.Ordinal))
+            {
+                var user = await users.FindByIntegrationKeyHashAsync(hash, Context.RequestAborted);
+                if (user is null || !user.IsActive || user.Role != "Client" || user.AccountType != "merchant")
+                    return AuthenticateResult.Fail("API Key inválida o revocada.");
+                var sellerClaims = new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim("sub", user.Id.ToString()),
+                    new Claim(ClaimTypes.Role, "MerchantIntegration"),
+                    new Claim("role", "MerchantIntegration"),
+                    new Claim("scope", "payments:read payments:write")
+                };
+                var seller = new ClaimsPrincipal(new ClaimsIdentity(sellerClaims, SchemeName));
+                return AuthenticateResult.Success(new AuthenticationTicket(seller, SchemeName));
+            }
             var client = await clients.FindByApiKeyHashAsync(hash, Context.RequestAborted);
 
             if (client is null || !client.IsActive)

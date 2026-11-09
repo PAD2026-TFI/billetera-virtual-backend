@@ -12,4 +12,4 @@ Crear una cuenta de vendedor, iniciar sesión, completar el formulario Nuevo cob
 
 ## Evidencia y límites
 
-El 9 de noviembre de 2026 se creó una cuenta ficticia en la app y un enlace por $1500. Se comprobó el acceso al checkout y el aviso Cobro propio. No se realizó un pago ni se verificó una acreditación. La app indica que es un entorno académico sin dinero real. Las pantallas de correo, DNI y rostro completan simulaciones.
+El 9 de noviembre de 2026 se creó una cuenta ficticia en la app y un enlace por $1500. Se comprobó el acceso al checkout y el aviso Cobro propio. Posteriormente se creó una cuenta personal ficticia y se pagó ese enlace con $1500 del bono de bienvenida. Se verificaron Pago aprobado, Cobrado, el mensaje de éxito y los movimientos: comprador $50000 a $48500 y vendedor $50000 a $51500. La app indica que es un entorno académico sin dinero real. Las pantallas de correo, DNI y rostro completan simulaciones.

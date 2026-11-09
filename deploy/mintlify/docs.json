@@ -19,7 +19,8 @@
       {
         "group": "Cobrar con Padi",
         "pages": [
-          "cobrar-desde-app"
+          "cobrar-desde-app",
+          "confirmar-cobro"
         ]
       }
     ]
@@ -35,7 +36,7 @@
     },
     {
       "source": "/confirmacion-de-pagos",
-      "destination": "/cobrar-desde-app"
+      "destination": "/confirmar-cobro"
     }
   ],
   "logo": {

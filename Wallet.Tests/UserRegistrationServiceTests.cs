@@ -185,6 +185,7 @@ public sealed class UserRegistrationServiceTests
         Assert.NotNull(savedWallet);
         Assert.Equal(result.Value.Cvu, savedWallet.Cvu);
         Assert.Equal(result.Value.Alias, savedWallet.Alias);
+        Assert.Equal(UserRegistrationService.WelcomeBonusAmount, savedWallet.Balance);
 
         var userCards = await _cards.GetByUserIdAsync(result.Value.UserId, CancellationToken.None);
         Assert.Single(userCards);

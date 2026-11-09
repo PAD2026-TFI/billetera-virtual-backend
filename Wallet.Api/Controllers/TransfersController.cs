@@ -123,6 +123,42 @@ public sealed class TransfersController(TransferService transfers) : ControllerB
         }
     }
 
+    [HttpGet("/api/v1/me/transfers/recipient", Order = -1)]
+    [ProducesResponseType<TransferRecipientResponse>(200)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(401)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    public async Task<ActionResult<TransferRecipientResponse>> GetRecipient(
+        [FromQuery] string? destination,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(destination))
+        {
+            return Problem(
+                statusCode: 400,
+                title: "Debes ingresar un alias o CVU para buscar.",
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_INPUT" });
+        }
+
+        try
+        {
+            var found = await transfers.LookupRecipientAsync(destination, ct);
+            if (found is null)
+            {
+                return Problem(
+                    statusCode: 404,
+                    title: "No encontramos una cuenta con ese alias, CVU o CBU.",
+                    extensions: new Dictionary<string, object?> { ["code"] = "DESTINATION_UNAVAILABLE" });
+            }
+
+            return Ok(found);
+        }
+        catch (TransferRejectedException e)
+        {
+            return HandleException(e);
+        }
+    }
+
     private ActionResult HandleException(TransferRejectedException e)
     {
         var (status, title) = e.Code switch

@@ -17,8 +17,11 @@ public sealed class UserRegistrationService(
     IAliasGenerator aliasGenerator,
     IUnitOfWork unitOfWork,
     TimeProvider clock,
-    ICardRepository? cards = null)
+    ICardRepository? cards = null,
+    DevelopmentFundingService? fundingService = null)
 {
+    public const decimal WelcomeBonusAmount = 50_000m;
+
     private static bool IsValid(object request) => Validator.TryValidateObject(
         request, new ValidationContext(request), new List<ValidationResult>(), true);
 
@@ -108,6 +111,22 @@ public sealed class UserRegistrationService(
         {
             await tx.RollbackAsync(ct);
             throw;
+        }
+
+        if (fundingService is not null)
+        {
+            try
+            {
+                await fundingService.FundAsync(new DevelopmentFundingRequest(wallet.Id, WelcomeBonusAmount, wallet.Id), ct);
+            }
+            catch (StorageUnavailableException)
+            {
+                wallet.Credit(WelcomeBonusAmount);
+            }
+        }
+        else
+        {
+            wallet.Credit(WelcomeBonusAmount);
         }
 
         var result = new UserRegistrationResult(

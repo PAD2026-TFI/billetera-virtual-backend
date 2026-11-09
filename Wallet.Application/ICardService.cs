@@ -7,4 +7,6 @@ public interface ICardService
     Task<IReadOnlyList<CardDto>> GetUserCardsAsync(Guid userId, CancellationToken ct);
     Task<CardDto> AddCardAsync(Guid userId, CreateCardCommand command, CancellationToken ct);
     Task<CardDto?> GetCardByIdAsync(Guid cardId, Guid userId, CancellationToken ct);
+    Task<IReadOnlyList<CardRequestDto>> GetUserCardRequestsAsync(Guid userId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<CardRequestDto>>([]);
 }

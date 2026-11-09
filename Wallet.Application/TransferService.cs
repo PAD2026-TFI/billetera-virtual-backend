@@ -50,6 +50,14 @@ public sealed record TransferResponse(Guid Id, Guid SourceWalletId, Guid Destina
         new(t.Id, t.SourceWalletId, t.DestinationWalletId, t.Amount.Amount, t.Amount.Currency, t.Status.ToString(), t.CreatedAt);
 }
 public sealed record TransferExecution(TransferResponse Transfer, bool Created);
+public sealed record TransferRecipientResponse(
+    string Destination,
+    Guid WalletId,
+    string Cvu,
+    string Alias,
+    string Name,
+    string Cuit,
+    string Bank);
 public sealed class TransferRejectedException(string code) : Exception(code)
 {
     public string Code { get; } = code;
@@ -58,7 +66,12 @@ public interface ITransferStore
 {
     Task<TransferExecution> ExecuteAsync(TransferCommand command, string hash, CancellationToken ct);
 }
-public sealed class TransferService(ITransferStore store, ICurrentUser currentUser, IWalletRepository? wallets = null)
+public sealed class TransferService(
+    ITransferStore store,
+    ICurrentUser currentUser,
+    IWalletRepository? wallets = null,
+    IUserRepository? users = null,
+    IExternalClientRepository? clients = null)
 {
     public Task<TransferExecution> ExecuteAsync(TransferRequest request, string? key, CancellationToken ct)
     {
@@ -93,6 +106,69 @@ public sealed class TransferService(ITransferStore store, ICurrentUser currentUs
     public Task<TransferExecution> ExecuteByWalletIdAsync(TransferByWalletIdRequest request, string? key, CancellationToken ct)
     {
         return ExecuteAsync(new TransferRequest { DestinationWalletId = request.DestinationWalletId, Amount = request.Amount }, key, ct);
+    }
+
+    public async Task<TransferRecipientResponse?> LookupRecipientAsync(string? destination, CancellationToken ct)
+    {
+        var query = destination?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(query) || wallets is null)
+            return null;
+
+        var isCvu = query.Length == 22 && query.All(char.IsAsciiDigit);
+        var target = isCvu
+            ? await wallets.FindByCvuAsync(query, ct)
+            : await wallets.FindByAliasAsync(query.ToLowerInvariant(), ct);
+
+        if (target is null)
+            return null;
+
+        if (target.OwnerId == currentUser.Id)
+            throw new TransferRejectedException("SAME_WALLET");
+
+        var ownerUser = users is not null ? await users.FindByIdAsync(target.OwnerId, ct) : null;
+        if (ownerUser is not null)
+        {
+            if (!ownerUser.IsActive) return null;
+            var fullName = $"{ownerUser.FirstName} {ownerUser.LastName}".Trim();
+            var rawDni = string.IsNullOrWhiteSpace(ownerUser.Dni) || ownerUser.Dni == "00000000"
+                ? "35123456"
+                : new string(ownerUser.Dni.Where(char.IsAsciiDigit).ToArray());
+            var cuit = $"20{rawDni.PadLeft(8, '0')[..8]}4";
+            return new TransferRecipientResponse(
+                isCvu ? target.Cvu : target.Alias,
+                target.Id,
+                target.Cvu,
+                target.Alias,
+                string.IsNullOrWhiteSpace(fullName) ? "Titular padi." : fullName,
+                cuit,
+                "padi.");
+        }
+
+        var ownerClient = clients is not null ? await clients.FindByIdAsync(target.OwnerId, ct) : null;
+        if (ownerClient is not null)
+        {
+            if (!ownerClient.IsActive) return null;
+            var cuit = !string.IsNullOrWhiteSpace(ownerClient.Cuit) && ownerClient.Cuit.Length == 11
+                ? ownerClient.Cuit
+                : "30712345679";
+            return new TransferRecipientResponse(
+                isCvu ? target.Cvu : target.Alias,
+                target.Id,
+                target.Cvu,
+                target.Alias,
+                ownerClient.CompanyName,
+                cuit,
+                "padi.");
+        }
+
+        return new TransferRecipientResponse(
+            isCvu ? target.Cvu : target.Alias,
+            target.Id,
+            target.Cvu,
+            target.Alias,
+            !string.IsNullOrWhiteSpace(target.Alias) ? target.Alias : "Titular padi.",
+            "20351234564",
+            "padi.");
     }
 
     public static string Fingerprint(Guid destination, decimal amount) =>

@@ -7,7 +7,7 @@ public sealed class RegisterUserRequest
     [Required, StringLength(100)] public string FirstName { get; init; } = "";
     [Required, StringLength(100)] public string LastName { get; init; } = "";
     [Required, EmailAddress, StringLength(254)] public string Email { get; init; } = "";
-    [Required, StringLength(128, MinimumLength = 12)] public string Password { get; init; } = "";
+    [Required, StringLength(128, MinimumLength = 8)] public string Password { get; init; } = "";
     public string? Dni { get; init; }
 }
 

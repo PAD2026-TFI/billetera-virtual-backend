@@ -64,6 +64,8 @@ public static class ApiEndpointCatalog
         ("Transfers", "CreateByCvu") => "Transferir desde mi billetera a un CVU",
         ("Transfers", "CreateByAlias") => "Transferir desde mi billetera a un alias",
         ("Transfers", "CreateByWalletId") => "Transferir desde mi billetera a otra billetera",
+        ("Transfers", "GetRecipient") => "Consultar titular de billetera destino por CVU o alias",
+        ("CardRequests", "GetUserRequests") => "Consultar mis pedidos de tarjeta física",
         ("Cards", "GetUserCards") => "Consultar mis tarjetas asociadas",
         ("Cards", "AddCard") => "Asociar una tarjeta a mi cuenta",
         ("CardRequests", "CreateRequest") => "Solicitar tarjeta física indicando domicilio de entrega",

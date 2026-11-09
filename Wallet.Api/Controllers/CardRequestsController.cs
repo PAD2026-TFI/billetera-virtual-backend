@@ -42,6 +42,15 @@ public sealed class CardRequestsController(ICardService cardService, ICurrentUse
         }
     }
 
+    [HttpGet("/api/v1/me/physical-card-orders", Order = -1)]
+    [ProducesResponseType<IReadOnlyList<CardRequestDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<CardRequestDto>>> GetUserRequests(CancellationToken ct)
+    {
+        var requests = await cardService.GetUserCardRequestsAsync(currentUser.Id, ct);
+        return Ok(requests);
+    }
+
     [HttpGet("/api/v1/me/physical-card-orders/{id:guid}", Order = -1)]
     [HttpGet("{id:guid}/status")]
     [ProducesResponseType<CardRequestDto>(StatusCodes.Status200OK)]

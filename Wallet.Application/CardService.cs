@@ -135,6 +135,18 @@ public sealed class CardService(
         return MapCard(card);
     }
 
+    public async Task<IReadOnlyList<CardRequestDto>> GetUserCardRequestsAsync(Guid userId, CancellationToken ct)
+    {
+        var requests = await cardRequestRepository.GetByUserIdAsync(userId, ct);
+        var result = new List<CardRequestDto>(requests.Count);
+        foreach (var req in requests.OrderByDescending(r => r.RequestedAt))
+        {
+            var address = await addressRepository.FindByIdAsync(req.AddressId, userId, ct);
+            result.Add(MapRequest(req, address));
+        }
+        return result;
+    }
+
     private static CardRequestDto MapRequest(CardRequest r, Address? address) =>
         new(r.Id, r.UserId, r.AddressId, r.Type.ToString(), r.Status.ToString(), r.RequestedAt, r.UpdatedAt,
             address is null ? null : new(address.Id, address.Street, address.Number, address.City, address.State, address.PostalCode, address.Country, address.ValidationStatus.ToString()));

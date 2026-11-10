@@ -127,6 +127,11 @@ internal sealed class TestUserRepository : IUserRepository
     }
     public Task<User?> FindByIntegrationKeyHashAsync(string hash, CancellationToken ct) =>
         Task.FromResult(_users.Values.SingleOrDefault(u => u.IntegrationKeyHash == hash));
+    public Task<bool> ExistsByDniAsync(string dni, CancellationToken ct)
+    {
+        CheckAvailability();
+        return Task.FromResult(_users.Values.Any(u => string.Equals(u.Dni, dni, StringComparison.OrdinalIgnoreCase)));
+    }
     public Task AddAsync(User user, CancellationToken ct)
     {
         CheckAvailability();

@@ -46,7 +46,8 @@ public sealed class SqlDebitCardPaymentStore(DbContextOptions<WalletDbContext> o
 
                 var card = await db.Cards.FromSqlInterpolated(
                     $"SELECT * FROM [Cards] WITH (HOLDLOCK) WHERE [Id] = {command.CardId}").SingleOrDefaultAsync(ct);
-                if (card is null || card.UserId != command.UserId)
+                if (card is null || card.UserId != command.UserId ||
+                    (command.VirtualToken is not null && card.CardToken != command.VirtualToken))
                     throw new UnauthorizedAccessException("Card does not belong to the authenticated user.");
                 if (card.Type != CardType.Debit || !card.IsActive || card.IsExpired(clock.GetUtcNow()))
                     throw new InvalidOperationException("An active, unexpired debit card is required.");

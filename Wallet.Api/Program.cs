@@ -97,6 +97,9 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("credentials", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    o.AddPolicy("padi-card-payments", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     o.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.Headers.RetryAfter = "60";
@@ -139,6 +142,8 @@ if (enabled)
         checkoutBaseUrl));
     builder.Services.AddScoped<ICheckoutService>(sp => sp.GetRequiredService<PaymentLinkService>());
     builder.Services.AddScoped<ICardService, CardService>();
+    builder.Services.AddSingleton(new VirtualCardCredentials(builder.Configuration["VirtualCards:Key"]));
+    builder.Services.AddScoped<VirtualCardService>();
     builder.Services.AddScoped<DevelopmentFundingService>();
     builder.Services.AddDataProtection();
     builder.Services.AddScoped<IMovementCursorCodec, MovementCursorCodec>();

@@ -21,6 +21,7 @@ public sealed class UsersController(IdentityService identity) : IdentityControll
     [ProducesResponseType<UserResponse>(201)]
     [ProducesResponseType<ValidationProblemDetails>(400)]
     [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
     [ProducesResponseType<ProblemDetails>(429)]
     public async Task<ActionResult<UserResponse>> Register(RegisterUserRequest request, CancellationToken ct)
     {
@@ -55,6 +56,7 @@ public sealed class UsersController(IdentityService identity) : IdentityControll
     [ProducesResponseType<ProblemDetails>(401)]
     [ProducesResponseType<ProblemDetails>(403)]
     [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
     public async Task<ActionResult<UserResponse>> Update(UpdateProfileRequest request, CancellationToken ct) =>
         FromResult(await identity.UpdateProfileAsync(request, ct));
 }

@@ -22,6 +22,39 @@ namespace Wallet.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Wallet.Application.EmailVerificationChallenge", b =>
+                {
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<int>("AttemptsLeft")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CodeExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CodeHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset?>("ProofExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ProofHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset>("ResendAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Email");
+
+                    b.ToTable("EmailVerificationChallenges", (string)null);
+                });
+
             modelBuilder.Entity("Wallet.Domain.Address", b =>
                 {
                     b.Property<Guid>("Id")

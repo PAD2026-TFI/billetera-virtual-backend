@@ -19,6 +19,8 @@ public static class DependencyInjection
         services.AddScoped<IDevelopmentFundingStore, SqlDevelopmentFundingStore>();
         services.AddScoped<IWalletRepository, SqlWalletRepository>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
+        services.AddScoped<IEmailVerificationRepository, SqlEmailVerificationRepository>();
+        services.AddScoped<IRegistrationEmailSender, SmtpRegistrationEmailSender>();
         services.AddScoped<IExternalClientRepository, SqlExternalClientRepository>();
         services.AddScoped<IPaymentLinkRepository, SqlPaymentLinkRepository>();
         services.AddScoped<IPaymentRepository, SqlPaymentRepository>();

@@ -11,6 +11,7 @@ public sealed class RegisterUserRequest
     [Required(ErrorMessage = "El DNI es obligatorio.")]
     [RegularExpression(@"^\d{7,8}$", ErrorMessage = "El DNI debe contener 7 u 8 dígitos numéricos.")]
     public string Dni { get; init; } = "";
+    public string? EmailVerificationToken { get; init; }
     [Required, RegularExpression("^(personal|merchant)$")] public string AccountType { get; init; } = "personal";
 }
 

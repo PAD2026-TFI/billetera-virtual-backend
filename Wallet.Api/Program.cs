@@ -126,6 +126,14 @@ if (enabled)
         .Get<JwtSettings>() ?? new();
 
     var key = jwt.GetKey();
+    var mail = builder.Configuration.GetSection("Mail").Get<MailOptions>() ?? new();
+    if (mail.Enabled && (string.IsNullOrWhiteSpace(mail.Host) || mail.Port is < 1 or > 65535 ||
+        !mail.EnableSsl || !System.Net.Mail.MailAddress.TryCreate(mail.Username, out _) || string.IsNullOrWhiteSpace(mail.Password)))
+        throw new InvalidOperationException("Falta configurar el envío de correo con TLS.");
+
+    builder.Services.AddSingleton(mail);
+    builder.Services.AddSingleton(new EmailVerificationSettings(mail.Enabled, key));
+    builder.Services.AddScoped<EmailVerificationService>();
 
     var checkoutBaseUrl = builder.Configuration["FrontendUrl"]
         ?? builder.Configuration["BaseUrl"]

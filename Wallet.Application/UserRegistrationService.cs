@@ -20,9 +20,13 @@ public sealed class UserRegistrationService(
     IIdentityVerifier verifier,
     IdentityVerificationOptions? verificationOptions = null,
     ICardRepository? cards = null,
-    DevelopmentFundingService? fundingService = null)
+    DevelopmentFundingService? fundingService = null,
+    EmailVerificationService? emailVerification = null)
 {
     public const decimal WelcomeBonusAmount = 50_000m;
+
+    private static Result<UserRegistrationResult> VerificationRequired() =>
+        Result<UserRegistrationResult>.Failure("EMAIL_VERIFICATION_REQUIRED", "Verificá el correo antes de crear tu cuenta.");
 
     private static bool IsValid(object request) => Validator.TryValidateObject(
         request, new ValidationContext(request), new List<ValidationResult>(), true);
@@ -35,6 +39,10 @@ public sealed class UserRegistrationService(
     {
         if (!IsValid(request) || string.IsNullOrWhiteSpace(request.Password))
             return Result<UserRegistrationResult>.Failure("INVALID_INPUT", "Revisá los campos obligatorios y sus límites.");
+
+        var requiresVerification = emailVerification is { Enabled: true };
+        if (requiresVerification && !EmailVerificationService.HasProofFormat(request.EmailVerificationToken))
+            return VerificationRequired();
 
         var normalizedEmail = User.NormalizeEmail(request.Email);
         var existingUser = await users.FindByEmailAsync(normalizedEmail, ct);
@@ -134,6 +142,9 @@ public sealed class UserRegistrationService(
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         try
         {
+            if (requiresVerification && !await emailVerification!.TryConsumeAsync(normalizedEmail, request.EmailVerificationToken!, ct))
+                return VerificationRequired();
+
             await users.AddAsync(user, ct);
             await wallets.CreateAsync(wallet, ct);
             if (cards is not null)

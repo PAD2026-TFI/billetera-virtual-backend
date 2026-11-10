@@ -2,10 +2,13 @@
   "profiles": {
     "https": {
       "commandName": "Project",
-      "launchBrowser": false,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7081;http://localhost:5081",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Documentation__Enabled": "true",
+        "IdentityVerification__Enabled": "true"
       }
     }
   }

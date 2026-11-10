@@ -112,4 +112,45 @@ public sealed class IdentityNameMatcherTests
         var normalized = IdentityNameMatcher.NormalizeText("  María - Laura   de   los   Ángeles  ");
         Assert.Equal("MARIA LAURA DE LOS ANGELES", normalized);
     }
+
+    [Theory]
+    [InlineData("Ana", "Peña", "ANA PE\uFFFDA")]       // Unicode replacement char 
+    [InlineData("Ana", "Peña", "ANA PE?A")]         // Signo de pregunta incrustado
+    [InlineData("Ana", "Peña", "ANA PEÃ±A")]        // Decodificación UTF-8 / Latin1 rota
+    [InlineData("Ana", "Peña", "ANA PEA")]          // Caracter 'ñ' omitido por completo
+    [InlineData("Lucas", "Núñez", "LUCAS NUEZ")]     // 'ñ' omitida
+    [InlineData("Lucas", "Núñez", "LUCAS NU?EZ")]    // 'ñ' reemplazada por '?'
+    [InlineData("Lucas", "Núñez", "LUCAS NUÃ‘EZ")]   // 'Ñ' mayúscula decodificada como Ã‘
+    [InlineData("Lucas", "Núñez", "LUCAS NU\uFFFD\uFFFDEZ")] // doble reemplazo corrupto
+    [InlineData("Federico", "Acuña", "FEDERICO ACUA")] // 'ñ' omitida
+    [InlineData("Carlos", "Ibáñez", "CARLOS IBA?EZ")]
+    [InlineData("Carlos", "Ibáñez", "CARLOS IBAEZ")]
+    [InlineData("Esteban", "Cañete", "ESTEBAN CAETE")]
+    [InlineData("Laura", "Muñoz", "LAURA MUOZ")]
+    [InlineData("Laura", "Muñoz", "LAURA MU?OZ")]
+    [InlineData("Martín", "Zúñiga", "MARTIN ZUIGA")]
+    public void Matches_when_tilde_is_corrupted_or_dropped_in_provider(
+        string reqFirst, string reqLast, string verFullName)
+    {
+        Assert.True(IdentityNameMatcher.Matches(reqFirst, reqLast, verFullName));
+    }
+
+    [Theory]
+    [InlineData("Carlos", "Pérez", "CARLOS GOMEZ")]
+    [InlineData("Carlos", "López", "CARLOS GOMEZ")]
+    [InlineData("Pedro", "Díaz", "PEDRO RUIZ")]
+    [InlineData("Juan", "Peña", "JUAN SENA")]
+    [InlineData("María", "Pérez", "MARIO PEREZ")]
+    [InlineData("Mario", "Pérez", "MARIA PEREZ")]
+    [InlineData("Ana", "Ferreyra", "ANA HERRERA")]
+    [InlineData("Carlos", "Pérez", "CARLOS VELEZ")]
+    [InlineData("Juan", "Pérez", "JOSE PEREZ")]
+    [InlineData("Marcos", "Gómez", "MARTIN GOMEZ")]
+    [InlineData("Pedro", "Gómez", "PABLO GOMEZ")]
+    [InlineData("Ana", "Pérez", "EVA PEREZ")]
+    public void Does_not_match_distinct_names_even_with_superficial_similarity(
+        string reqFirst, string reqLast, string verFullName)
+    {
+        Assert.False(IdentityNameMatcher.Matches(reqFirst, reqLast, verFullName));
+    }
 }

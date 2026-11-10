@@ -17,7 +17,7 @@ public sealed record IdentityQuery(IdentityDocumentType Type, string Number);
 /// <summary>
 /// Datos de la identidad verificada devuelta por el proveedor oficial (RENAPER).
 /// </summary>
-public sealed record VerifiedIdentity(string Number, string FirstName, string LastName);
+public sealed record VerifiedIdentity(string Number, string FullName, string? Cuit = null);
 
 /// <summary>
 /// Contrato del servicio de verificación de identidad externa (RENAPER).

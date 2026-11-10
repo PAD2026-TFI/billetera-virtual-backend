@@ -8,6 +8,7 @@ namespace Wallet.Infrastructure.OpenRenaper;
 
 /// <summary>
 /// Cliente HTTP para la integración con el servicio externo de verificación de identidad OpenRENAPER.
+/// Consume el endpoint oficial POST /api/v1/consultas.
 /// </summary>
 public sealed class OpenRenaperClient(
     HttpClient httpClient,
@@ -33,7 +34,7 @@ public sealed class OpenRenaperClient(
         HttpResponseMessage response;
         try
         {
-            response = await httpClient.PostAsJsonAsync("/api/v1/personas/consultar", requestPayload, JsonOptions, ct);
+            response = await httpClient.PostAsJsonAsync("/api/v1/consultas", requestPayload, JsonOptions, ct);
         }
         catch (HttpRequestException ex)
         {
@@ -46,22 +47,39 @@ public sealed class OpenRenaperClient(
             throw new IdentityProviderUnavailableException("Tiempo de espera agotado al consultar el servicio de identidad.", ex);
         }
 
+        // 404: sin_resultados (no se encontraron coincidencias en el padrón)
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            logger.LogInformation("Documento {MaskedDni} no encontrado en OpenRENAPER (HTTP 404)", maskedDni);
+            logger.LogInformation("Documento {MaskedDni} no encontrado en OpenRENAPER (HTTP 404 sin_resultados)", maskedDni);
             return null;
+        }
+
+        // 409: consulta_ambigua (varias personas posibles o datos contradictorios)
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            logger.LogWarning("Consulta ambigua para {MaskedDni} en OpenRENAPER (HTTP 409 consulta_ambigua)", maskedDni);
+            return null;
+        }
+
+        // 429: limite_solicitudes_excedido
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            logger.LogWarning("Límite de solicitudes excedido en OpenRENAPER para {MaskedDni} (HTTP 429)", maskedDni);
+            throw new IdentityProviderUnavailableException("Límite de peticiones alcanzado en el servicio de identidad. Reintentá más tarde.");
+        }
+
+        // Errores de fuentes externas o servidor (500, 502 respuesta_no_interpretable, 503 fuente_no_disponible, 504 tiempo_agotado)
+        if ((int)response.StatusCode >= 500)
+        {
+            logger.LogError("Error de servidor/fuente en OpenRENAPER: HTTP {StatusCode} para {MaskedDni}",
+                response.StatusCode, maskedDni);
+            throw new IdentityProviderUnavailableException($"El servicio de identidad respondió con error de servidor ({response.StatusCode}).");
         }
 
         if (!response.IsSuccessStatusCode)
         {
-            logger.LogWarning("Respuesta fallida de OpenRENAPER: HTTP {StatusCode} para {MaskedDni}",
+            logger.LogWarning("Respuesta no exitosa de OpenRENAPER: HTTP {StatusCode} para {MaskedDni}",
                 response.StatusCode, maskedDni);
-
-            if ((int)response.StatusCode >= 500)
-            {
-                throw new IdentityProviderUnavailableException($"El servicio de identidad respondió con error de servidor ({response.StatusCode}).");
-            }
-
             return null;
         }
 
@@ -76,28 +94,14 @@ public sealed class OpenRenaperClient(
             throw new IdentityProviderUnavailableException("Respuesta inválida recibida del servicio de identidad.", ex);
         }
 
-        if (body is null || (body.Valido.HasValue && !body.Valido.Value))
+        if (body is null || string.IsNullOrWhiteSpace(body.Nombre))
         {
-            logger.LogInformation("OpenRENAPER indicó identidad inválida o vacía para {MaskedDni}", maskedDni);
+            logger.LogInformation("OpenRENAPER devolvió respuesta sin nombre para {MaskedDni}", maskedDni);
             return null;
         }
 
-        if (body.Fallecido.HasValue && body.Fallecido.Value)
-        {
-            logger.LogWarning("El documento {MaskedDni} figura como fallecido en el padrón", maskedDni);
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(body.Nombre) || string.IsNullOrWhiteSpace(body.Apellido))
-        {
-            logger.LogWarning("Respuesta de OpenRENAPER sin campos completos de nombre y apellido para {MaskedDni}", maskedDni);
-            return null;
-        }
-
-        return new VerifiedIdentity(
-            query.Number,
-            body.Nombre.Trim(),
-            body.Apellido.Trim());
+        var returnedNumber = !string.IsNullOrWhiteSpace(body.Dni) ? body.Dni.Trim() : query.Number;
+        return new VerifiedIdentity(returnedNumber, body.Nombre.Trim(), body.Cuit?.Trim());
     }
 
     private static string Mask(string? value)

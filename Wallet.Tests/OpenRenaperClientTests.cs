@@ -28,7 +28,7 @@ public sealed class OpenRenaperClientTests
 
         var httpClient = new HttpClient(messageHandler)
         {
-            BaseAddress = new Uri("https://openrenaper.test")
+            BaseAddress = new Uri("https://api-openrenaper.matiasagustinibanez.com")
         };
 
         var client = new OpenRenaperClient(httpClient, NullLogger<OpenRenaperClient>.Instance);
@@ -40,12 +40,12 @@ public sealed class OpenRenaperClientTests
     {
         var jsonResponse = """
         {
-            "tipo": "dni",
-            "numero": "30123456",
-            "nombre": "  Ana María  ",
-            "apellido": "  Pérez  ",
-            "valido": true,
-            "fallecido": false
+            "nombre": "  Ana María Pérez  ",
+            "dni": "30123456",
+            "cuit": "27301234560",
+            "edad": 35,
+            "sexo": "Femenino",
+            "provincia_ubicacion": "Buenos Aires"
         }
         """;
 
@@ -58,18 +58,30 @@ public sealed class OpenRenaperClientTests
 
         Assert.NotNull(result);
         Assert.Equal("30123456", result.Number);
-        Assert.Equal("Ana María", result.FirstName);
-        Assert.Equal("Pérez", result.LastName);
+        Assert.Equal("Ana María Pérez", result.FullName);
+        Assert.Equal("27301234560", result.Cuit);
 
         var request = Assert.Single(sentRequests);
         Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Equal("/api/v1/personas/consultar", request.RequestUri!.AbsolutePath);
+        Assert.Equal("/api/v1/consultas", request.RequestUri!.AbsolutePath);
     }
 
     [Fact]
-    public async Task FindAsync_returns_null_when_status_is_404_not_found()
+    public async Task FindAsync_returns_null_when_status_is_404_sin_resultados()
     {
-        var (client, _) = CreateClient(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)));
+        var errorResponse = """
+        {
+            "codigo": "sin_resultados",
+            "mensaje": "No se encontraron coincidencias.",
+            "fuente": null,
+            "detalles": []
+        }
+        """;
+
+        var (client, _) = CreateClient(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = new StringContent(errorResponse, Encoding.UTF8, "application/json")
+        }));
 
         var result = await client.FindAsync(new IdentityQuery(IdentityDocumentType.Dni, "99999999"));
 
@@ -77,15 +89,41 @@ public sealed class OpenRenaperClientTests
     }
 
     [Fact]
-    public async Task FindAsync_returns_null_when_valido_flag_is_false()
+    public async Task FindAsync_returns_null_when_status_is_409_consulta_ambigua()
     {
-        var jsonResponse = """
+        var errorResponse = """
         {
-            "tipo": "dni",
-            "numero": "30123456",
-            "nombre": "Desconocido",
-            "apellido": "Desconocido",
-            "valido": false
+            "codigo": "consulta_ambigua",
+            "mensaje": "La consulta tiene varias coincidencias posibles; consultar por CUIT.",
+            "fuente": null,
+            "detalles": []
+        }
+        """;
+
+        var (client, _) = CreateClient(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = new StringContent(errorResponse, Encoding.UTF8, "application/json")
+        }));
+
+        var result = await client.FindAsync(new IdentityQuery(IdentityDocumentType.Dni, "30123456"));
+
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task FindAsync_returns_null_when_nombre_is_missing_or_empty_in_response(string? nombre)
+    {
+        var jsonResponse = $$"""
+        {
+            "nombre": {{(nombre == null ? "null" : $"\"{nombre}\"")}},
+            "dni": "30123456",
+            "cuit": null,
+            "edad": null,
+            "sexo": null,
+            "provincia_ubicacion": null
         }
         """;
 
@@ -100,53 +138,26 @@ public sealed class OpenRenaperClientTests
     }
 
     [Fact]
-    public async Task FindAsync_returns_null_when_person_is_deceased()
+    public async Task FindAsync_throws_unavailable_exception_on_429_rate_limit()
     {
-        var jsonResponse = """
+        var errorResponse = """
         {
-            "tipo": "dni",
-            "numero": "10123456",
-            "nombre": "Juan",
-            "apellido": "Pérez",
-            "valido": true,
-            "fallecido": true
+            "codigo": "limite_solicitudes_excedido",
+            "mensaje": "Se alcanzó el límite de peticiones. Reintentá más tarde.",
+            "fuente": null,
+            "detalles": [{ "limite": "ip" }]
         }
         """;
 
-        var (client, _) = CreateClient(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        var (client, _) = CreateClient(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.TooManyRequests)
         {
-            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+            Content = new StringContent(errorResponse, Encoding.UTF8, "application/json")
         }));
 
-        var result = await client.FindAsync(new IdentityQuery(IdentityDocumentType.Dni, "10123456"));
+        var ex = await Assert.ThrowsAsync<IdentityProviderUnavailableException>(() =>
+            client.FindAsync(new IdentityQuery(IdentityDocumentType.Dni, "30123456")));
 
-        Assert.Null(result);
-    }
-
-    [Theory]
-    [InlineData("", "Perez")]
-    [InlineData("Juan", "")]
-    [InlineData("   ", "   ")]
-    public async Task FindAsync_returns_null_when_names_are_missing_in_response(string firstName, string lastName)
-    {
-        var jsonResponse = $$"""
-        {
-            "tipo": "dni",
-            "numero": "30123456",
-            "nombre": "{{firstName}}",
-            "apellido": "{{lastName}}",
-            "valido": true
-        }
-        """;
-
-        var (client, _) = CreateClient(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
-        }));
-
-        var result = await client.FindAsync(new IdentityQuery(IdentityDocumentType.Dni, "30123456"));
-
-        Assert.Null(result);
+        Assert.Contains("límite", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

@@ -15,7 +15,27 @@ public static class IdentityNameMatcher
     };
 
     /// <summary>
-    /// Determina si los nombres y apellidos ingresados coinciden de manera razonable con los registrados oficialmente.
+    /// Determina si los nombres y apellidos ingresados coinciden de manera razonable con el nombre completo oficial.
+    /// Verifica que al menos un token significativo de los nombres y de los apellidos ingresados esté presente en el nombre oficial.
+    /// </summary>
+    public static bool Matches(
+        string? requestedFirstName,
+        string? requestedLastName,
+        string? verifiedFullName)
+    {
+        if (string.IsNullOrWhiteSpace(requestedFirstName) ||
+            string.IsNullOrWhiteSpace(requestedLastName) ||
+            string.IsNullOrWhiteSpace(verifiedFullName))
+        {
+            return false;
+        }
+
+        return TokensMatch(requestedFirstName, verifiedFullName) &&
+               TokensMatch(requestedLastName, verifiedFullName);
+    }
+
+    /// <summary>
+    /// Determina si los nombres y apellidos ingresados coinciden de manera razonable con los registrados oficialmente en campos separados.
     /// </summary>
     public static bool Matches(
         string? requestedFirstName,

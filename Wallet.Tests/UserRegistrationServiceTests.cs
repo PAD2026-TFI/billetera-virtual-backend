@@ -139,7 +139,7 @@ public sealed class UserRegistrationServiceTests
             if (Handler is not null)
                 return Task.FromResult(Handler(query));
 
-            return Task.FromResult<VerifiedIdentity?>(new VerifiedIdentity(query.Number, "Carlos", "Gomez"));
+            return Task.FromResult<VerifiedIdentity?>(new VerifiedIdentity(query.Number, "Carlos Gomez"));
         }
     }
 
@@ -292,7 +292,7 @@ public sealed class UserRegistrationServiceTests
     [Fact]
     public async Task RegisterAsync_fails_when_name_mismatches_renaper()
     {
-        _verifier.Handler = query => new VerifiedIdentity(query.Number, "Juan", "Perez");
+        _verifier.Handler = query => new VerifiedIdentity(query.Number, "Juan Perez");
 
         var request = new RegisterUserRequest
         {
@@ -361,7 +361,7 @@ public sealed class UserRegistrationServiceTests
     [Fact]
     public async Task RegisterAsync_succeeds_and_marks_identity_verified_when_renaper_matches()
     {
-        _verifier.Handler = query => new VerifiedIdentity(query.Number, "CARLOS ALBERTO", "GOMEZ");
+        _verifier.Handler = query => new VerifiedIdentity(query.Number, "CARLOS ALBERTO GOMEZ");
 
         var request = new RegisterUserRequest
         {

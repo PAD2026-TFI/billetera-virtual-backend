@@ -56,7 +56,7 @@ public sealed class IdentityVerificationIntegrationTests
         using (client)
         {
             verifier.Handler = (q, _) => Task.FromResult<VerifiedIdentity?>(
-                new VerifiedIdentity("30123456", "Ana María", "Pérez"));
+                new VerifiedIdentity("30123456", "Ana María Pérez"));
 
             var request = new RegisterUserRequest
             {
@@ -119,7 +119,7 @@ public sealed class IdentityVerificationIntegrationTests
         using (client)
         {
             verifier.Handler = (q, _) => Task.FromResult<VerifiedIdentity?>(
-                new VerifiedIdentity("30123456", "Carlos Alberto", "González"));
+                new VerifiedIdentity("30123456", "Carlos Alberto González"));
 
             var request = new RegisterUserRequest
             {
@@ -184,7 +184,7 @@ public sealed class IdentityVerificationIntegrationTests
         using (client)
         {
             verifier.Handler = (q, _) => Task.FromResult<VerifiedIdentity?>(
-                new VerifiedIdentity("30123456", "Ana", "Pérez"));
+                new VerifiedIdentity("30123456", "Ana Pérez"));
 
             // Pre-seed an existing user with DNI 30123456
             var existingUser = User.Create("Ana", "Pérez", "existing@example.com", DateTimeOffset.UtcNow, dni: "30123456");

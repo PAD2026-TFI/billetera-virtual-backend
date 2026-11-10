@@ -67,7 +67,7 @@ public sealed class UserRegistrationService(
             if (found is null)
                 return Result<UserRegistrationResult>.Failure("IDENTITY_NOT_FOUND", "El DNI ingresado no fue encontrado en el registro nacional de las personas.");
 
-            if (!IdentityNameMatcher.Matches(request.FirstName, request.LastName, found.FirstName, found.LastName))
+            if (!IdentityNameMatcher.Matches(request.FirstName, request.LastName, found.FullName))
                 return Result<UserRegistrationResult>.Failure("IDENTITY_MISMATCH", "Los datos de nombre y apellido no coinciden con los registrados ante RENAPER.");
 
             isVerified = true;

@@ -7,7 +7,7 @@ public sealed class OpenRenaperOptions
 {
     public const string SectionName = "OpenRenaper";
 
-    public string BaseUrl { get; set; } = "https://openrenaper.local";
+    public string BaseUrl { get; set; } = "https://api-openrenaper.matiasagustinibanez.com";
 
-    public int TimeoutSeconds { get; set; } = 5;
+    public int TimeoutSeconds { get; set; } = 15;
 }

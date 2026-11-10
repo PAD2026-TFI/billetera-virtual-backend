@@ -83,6 +83,29 @@ public sealed class IdentityNameMatcherTests
         Assert.False(IdentityNameMatcher.Matches(reqFirst, reqLast, verFirst, verLast));
     }
 
+    [Theory]
+    [InlineData("Ana", "Pérez", "ANA MARIA PEREZ")]
+    [InlineData("Ana María", "Pérez", "PEREZ ANA")]
+    [InlineData("María Laura", "de la Cruz", "CRUZ MARIA")]
+    [InlineData("Juan", "Gómez", "GOMEZ JUAN CARLOS")]
+    public void Matches_single_full_name_string_when_first_and_last_name_tokens_present(
+        string reqFirst, string reqLast, string verFullName)
+    {
+        Assert.True(IdentityNameMatcher.Matches(reqFirst, reqLast, verFullName));
+    }
+
+    [Theory]
+    [InlineData("Ana", "Pérez", "CARLOS PEREZ")]
+    [InlineData("Ana", "Pérez", "ANA GOMEZ")]
+    [InlineData("Juan", "Pérez", "PERSONA DE EJEMPLO")]
+    [InlineData("Ana", "Pérez", "")]
+    [InlineData("Ana", "Pérez", null)]
+    public void Does_not_match_single_full_name_when_first_or_last_name_missing(
+        string reqFirst, string reqLast, string? verFullName)
+    {
+        Assert.False(IdentityNameMatcher.Matches(reqFirst, reqLast, verFullName));
+    }
+
     [Fact]
     public void NormalizeText_collapses_multiple_spaces_and_special_characters()
     {

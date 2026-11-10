@@ -152,4 +152,40 @@ public sealed class GatewayService(
             client.CreatedAt,
             client.LastRotatedAt);
     }
+
+    public async Task<bool> TestWebhookAsync(
+        Guid clientId,
+        IWebhookDispatcher dispatcher,
+        CancellationToken ct)
+    {
+        var client = await clients.FindByIdAsync(clientId, ct)
+            ?? throw new KeyNotFoundException($"External client '{clientId}' was not found.");
+
+        if (string.IsNullOrWhiteSpace(client.WebhookUrl))
+            throw new InvalidOperationException("Webhook URL is not configured.");
+
+        var now = clock.GetUtcNow();
+        var notification = new WebhookNotification(
+            "webhook.test",
+            new WebhookPaymentData(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "test-link-token",
+                1000.00m,
+                "ARS",
+                "Completed",
+                "Simulator",
+                "TEST-AUTH-OK",
+                Guid.NewGuid(),
+                now),
+            now);
+
+        await dispatcher.DispatchPaymentSucceededAsync(
+            client.WebhookUrl,
+            client.WebhookSecret,
+            notification,
+            ct);
+
+        return true;
+    }
 }

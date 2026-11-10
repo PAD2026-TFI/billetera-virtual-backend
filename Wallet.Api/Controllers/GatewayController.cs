@@ -118,6 +118,36 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpPost("/api/v1/integrations/webhook/test", Order = -1)]
+    [HttpPost("webhook/test")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> TestWebhook(
+        [FromServices] IWebhookDispatcher dispatcher,
+        CancellationToken ct)
+    {
+        try
+        {
+            await gateway.TestWebhookAsync(currentUser.Id, dispatcher, ct);
+            return Ok(new { success = true, message = "Notificación de prueba enviada exitosamente." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Webhook no configurado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "WEBHOOK_NOT_CONFIGURED", ["detail"] = ex.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
     [HttpGet("/api/v1/integrations/wallet", Order = -1)]
     [HttpGet("wallet")]
     [Authorize(Policy = "ExternalClient")]

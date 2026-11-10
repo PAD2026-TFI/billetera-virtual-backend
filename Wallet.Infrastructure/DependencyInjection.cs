@@ -31,6 +31,8 @@ public static class DependencyInjection
         services.AddSingleton<ICvuGenerator, CvuGenerator>();
         services.AddSingleton<IAliasGenerator, AliasGenerator>();
         services.AddScoped<UserRegistrationService>();
+        services.AddHttpClient("WebhookClient");
+        services.AddScoped<IWebhookDispatcher, HttpWebhookDispatcher>();
         return services;
     }
 }

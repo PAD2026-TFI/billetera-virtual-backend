@@ -357,6 +357,317 @@
           }
         ]
       }
+    },
+    "/api/v1/integrations/webhook": {
+      "put": {
+        "tags": [
+          "Webhooks y notificaciones"
+        ],
+        "summary": "Configurar URL de webhook para eventos en tiempo real",
+        "operationId": "Gateway_ConfigureWebhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "webhookUrl",
+                  "webhookSecret"
+                ],
+                "properties": {
+                  "webhookUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048,
+                    "description": "URL HTTPS pública donde Padi enviará los eventos POST"
+                  },
+                  "webhookSecret": {
+                    "type": "string",
+                    "minLength": 32,
+                    "maxLength": 256,
+                    "description": "Secreto compartido para firmar la notificación con HMAC-SHA256"
+                  }
+                }
+              },
+              "example": {
+                "webhookUrl": "https://mitienda.com/api/padi/webhook",
+                "webhookSecret": "secreto_compartido_de_al_menos_32_caracteres_123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook configurado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "companyName": {
+                      "type": "string"
+                    },
+                    "cuit": {
+                      "type": "string"
+                    },
+                    "contactEmail": {
+                      "type": "string"
+                    },
+                    "webhookUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de webhook inválidos"
+          },
+          "401": {
+            "description": "No autorizado / API Key inválida"
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Webhooks y notificaciones"
+        ],
+        "summary": "Desactivar suscripción a webhooks",
+        "operationId": "Gateway_DeactivateWebhook",
+        "responses": {
+          "200": {
+            "description": "Webhook desactivado exitosamente"
+          },
+          "401": {
+            "description": "No autorizado"
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/transfers": {
+      "post": {
+        "tags": [
+          "Transferencias y retiros B2B"
+        ],
+        "summary": "Transferir fondos desde la billetera corporativa a un usuario/jugador",
+        "operationId": "Gateway_ProcessPayment",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "UUID único para deduplicar la transferencia ante reintentos"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "destinationWalletId",
+                  "amount"
+                ],
+                "properties": {
+                  "destinationWalletId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Identificador único de la billetera destino"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "format": "double",
+                    "description": "Importe en ARS a transferir"
+                  }
+                }
+              },
+              "example": {
+                "destinationWalletId": "c7a40b93-5491-4cf1-bf50-136faad91b94",
+                "amount": 5000
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transferencia realizada con éxito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "sourceWalletId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "destinationWalletId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "amount": {
+                      "type": "number",
+                      "format": "double"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o billeteras idénticas"
+          },
+          "409": {
+            "description": "Saldo insuficiente o conflicto de idempotencia"
+          },
+          "422": {
+            "description": "Billetera destino no disponible o inexistente"
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/set-password": {
+      "post": {
+        "tags": [
+          "Acceso de Comercios B2B a la App"
+        ],
+        "summary": "Configurar credenciales para acceder a la aplicación web/móvil",
+        "operationId": "Gateway_SetPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password"
+                ],
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128,
+                    "description": "Contraseña para iniciar sesión en la app"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "nullable": true,
+                    "description": "Correo de acceso (opcional, usa contactEmail por defecto)"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Nombre de la persona o razón social"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Apellido de contacto"
+                  }
+                }
+              },
+              "example": {
+                "password": "PasswordSuperSeguro123!",
+                "email": "admin@casinoroyale.com",
+                "firstName": "Casino",
+                "lastName": "Royale"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Credenciales creadas correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "accountType": {
+                      "type": "string"
+                    },
+                    "walletId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Contraseña menor a 8 caracteres o entrada inválida"
+          },
+          "401": {
+            "description": "No autorizado / API Key inválida"
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
     }
   },
   "components": {

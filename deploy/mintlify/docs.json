@@ -42,6 +42,14 @@
               "api/endpoints/listar-pagos",
               "api/endpoints/consultar-pago"
             ]
+          },
+          {
+            "group": "Operaciones B2B avanzadas",
+            "pages": [
+              "api/endpoints/configurar-webhook",
+              "api/endpoints/transferencias-b2b",
+              "api/endpoints/habilitar-acceso-app"
+            ]
           }
         ]
       }

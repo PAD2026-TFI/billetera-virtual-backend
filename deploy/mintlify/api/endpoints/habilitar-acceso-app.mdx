@@ -1,0 +1,90 @@
+---
+title: "Habilitá acceso a la App para Comercios B2B"
+description: "Creá credenciales de usuario y contraseña para que los comercios registrados por API puedan acceder a la app web y móvil con la misma billetera."
+sidebarTitle: "Crear contraseña comercio"
+keywords: [contraseña, password, login, b2b, app, vendedor]
+openapi: "openapi-comercios.json POST /api/v1/integrations/set-password"
+---
+
+Cuando un comercio o plataforma se da de alta automáticamente mediante el endpoint de integraciones B2B (`/api/v1/integrations/register`), recibe su `ApiKey` y su billetera corporativa.
+
+Para que los administradores o dueños del comercio puedan iniciar sesión en la aplicación web (`padi-billetera.netlify.app`) o móvil y visualizar sus cobros, transferencias y movimientos en tiempo real, deben configurar una contraseña a través de este endpoint.
+
+## Requisitos de la solicitud
+
+Enviá una petición HTTP `POST` a `/api/v1/integrations/set-password` autenticada con tu `X-Api-Key`:
+
+### Cuerpo JSON (`application/json`)
+
+| Campo | Tipo | Obligatorio | Descripción |
+| --- | --- | --- | --- |
+| `password` | String | Sí | Contraseña para el inicio de sesión (mínimo 8 caracteres, máximo 128). |
+| `email` | String | No | Correo electrónico de acceso. Si no se envía, se utiliza el `contactEmail` registrado al dar de alta el comercio. |
+| `firstName` | String | No | Nombre del responsable o contacto. Si se omite, se utiliza el nombre de la empresa. |
+| `lastName` | String | No | Apellido del responsable o contacto (por defecto `Comercio`). |
+
+<CodeGroup>
+
+```powershell PowerShell
+$apiBase = 'https://padi.runasp.net'
+$headers = @{
+    'X-Api-Key' = $env:PADI_API_KEY
+    'Content-Type' = 'application/json'
+}
+$body = @{
+    password = 'MiPasswordSeguro2026!'
+    email = 'admin@casinoroyale.com'
+    firstName = 'Administrador'
+    lastName = 'Casino Royale'
+} | ConvertTo-Json
+
+$usuario = Invoke-RestMethod -Method Post `
+    -Uri "$apiBase/api/v1/integrations/set-password" `
+    -Headers $headers -Body $body
+
+$usuario | Select-Object email, accountType, walletId, message
+```
+
+```javascript JavaScript para servidor
+const apiBase = 'https://padi.runasp.net';
+const apiKey = process.env.PADI_API_KEY;
+
+const response = await fetch(`${apiBase}/api/v1/integrations/set-password`, {
+  method: 'POST',
+  headers: {
+    'X-Api-Key': apiKey,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    password: 'MiPasswordSeguro2026!',
+    email: 'admin@casinoroyale.com',
+    firstName: 'Administrador',
+    lastName: 'Casino Royale',
+  }),
+});
+
+const result = await response.json();
+console.log('Usuario habilitado para la app:', result.email);
+```
+
+</CodeGroup>
+
+## Respuesta del servidor
+
+Devuelve un código de estado **200 OK** con la confirmación de las credenciales asignadas a la billetera corporativa:
+
+```json
+{
+  "userId": "d1e2f3a4-b5c6-7d8e-9f0a-1b2c3d4e5f6a",
+  "email": "admin@casinoroyale.com",
+  "firstName": "Administrador",
+  "lastName": "Casino Royale",
+  "accountType": "merchant",
+  "walletId": "98488ff7-bdc9-4060-b911-f0b526c42ef4",
+  "message": "Credenciales creadas exitosamente. Ya podés ingresar a la aplicación web y móvil con tu correo y contraseña."
+}
+```
+
+<Note>
+Al completar esta configuración, el usuario queda vinculado a la billetera original del comercio y con rol `merchant`. Cualquier cobro o transferencia procesada por API impactará instantáneamente en la app.
+</Note>

@@ -1,0 +1,93 @@
+---
+title: "Transferencias B2B y pago de premios"
+description: "Transferí fondos desde la billetera de tu comercio hacia cualquier usuario o jugador de Padi de forma atómica e idempotente."
+sidebarTitle: "Transferencias B2B"
+keywords: [transferencias, payout, premios, b2b, balance, billetera]
+openapi: "openapi-comercios.json POST /api/v1/integrations/transfers"
+---
+
+El endpoint de transferencias de la pasarela permite que un sistema externo (como un casino en línea, casa de apuestas o plataforma de pagos masivos) transfiera saldo en tiempo real desde su billetera corporativa hacia billeteras de clientes particulares.
+
+## Parámetros de la solicitud
+
+Enviá tu solicitud HTTP `POST` a `/api/v1/integrations/transfers` con las siguientes credenciales y encabezados:
+
+- `X-Api-Key`: Tu clave de integración B2B emitida por Padi.
+- `Idempotency-Key` *(Recomendado)*: Identificador único tipo UUID generado por tu servidor para evitar pagos duplicados ante caídas de red o reintentos.
+
+### Cuerpo JSON (`application/json`)
+
+| Campo | Tipo | Obligatorio | Descripción |
+| --- | --- | --- | --- |
+| `destinationWalletId` | UUID string | Sí | Identificador único de la billetera destino del receptor. |
+| `amount` | Decimal | Sí | Monto en pesos argentinos (ARS) a debitar de la billetera del comercio y acreditar al destinatario. |
+
+<CodeGroup>
+
+```powershell PowerShell
+$apiBase = 'https://padi.runasp.net'
+$headers = @{
+    'X-Api-Key' = $env:PADI_API_KEY
+    'Idempotency-Key' = [guid]::NewGuid().ToString()
+    'Content-Type' = 'application/json'
+}
+$body = @{
+    destinationWalletId = 'c7a40b93-5491-4cf1-bf50-136faad91b94'
+    amount = 5000.00
+} | ConvertTo-Json
+
+$transferencia = Invoke-RestMethod -Method Post `
+    -Uri "$apiBase/api/v1/integrations/transfers" `
+    -Headers $headers -Body $body
+
+$transferencia | Select-Object id, amount, currency, status, createdAt
+```
+
+```javascript JavaScript para servidor
+const apiBase = 'https://padi.runasp.net';
+const apiKey = process.env.PADI_API_KEY;
+
+const response = await fetch(`${apiBase}/api/v1/integrations/transfers`, {
+  method: 'POST',
+  headers: {
+    'X-Api-Key': apiKey,
+    'Idempotency-Key': crypto.randomUUID(),
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    destinationWalletId: 'c7a40b93-5491-4cf1-bf50-136faad91b94',
+    amount: 5000.00,
+  }),
+});
+
+const result = await response.json();
+console.log('Transferencia realizada con éxito:', result.id);
+```
+
+</CodeGroup>
+
+## Respuesta y códigos de estado
+
+Una transferencia exitosa devuelve HTTP **201 Created** (o **200 OK** si se trató de una repetición idempotente):
+
+```json
+{
+  "id": "7f8b9e6a-1234-4a5b-9c8d-e0f1a2b3c4d5",
+  "sourceWalletId": "98488ff7-bdc9-4060-b911-f0b526c42ef4",
+  "destinationWalletId": "c7a40b93-5491-4cf1-bf50-136faad91b94",
+  "amount": 5000.00,
+  "currency": "ARS",
+  "status": "Completed",
+  "createdAt": "2026-11-10T23:15:00+00:00"
+}
+```
+
+## Manejo de errores frecuentes
+
+| HTTP | Código | Causa |
+| --- | --- | --- |
+| 400 | `SAME_WALLET` | La billetera destino no puede ser la misma que la billetera emisora. |
+| 400 | `INVALID_INPUT` | El cuerpo no contiene los campos requeridos o el monto es menor o igual a cero. |
+| 409 | `INSUFFICIENT_FUNDS` | La billetera corporativa del comercio no cuenta con saldo suficiente para cubrir la transferencia. |
+| 409 | `IDEMPOTENCY_CONFLICT` | Se intentó reutilizar una misma `Idempotency-Key` con un destinatario o importe diferente. |
+| 422 | `DESTINATION_UNAVAILABLE` | La billetera destino especificada no existe, está inactiva o bloqueada. |

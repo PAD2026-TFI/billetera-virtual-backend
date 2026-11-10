@@ -1,14 +1,14 @@
 ---
 title: "Creá tu cuenta de vendedor en Padi"
-description: "Registrate como vendedor desde la aplicación de Padi, recorré las pantallas de alta y accedé a Cobros y Ventas para generar tu primer enlace de pago."
+description: "Registrate como vendedor desde la aplicación de Padi, verificá tu correo con un código y accedé a Cobros y Ventas para generar tu primer enlace de pago."
 sidebarTitle: "Cuenta de vendedor"
-keywords: [vendedor, registro, cuenta, Netlify]
+keywords: [vendedor, registro, cuenta, verificación de correo, Netlify]
 ---
 
 Para cobrar desde la aplicación Padi, creá una cuenta de tipo **Vendedor** en [padi-billetera.netlify.app](https://padi-billetera.netlify.app/). Al finalizar el alta, la app te ofrece entrar directamente a la pantalla de cobros.
 
 <Note>
-La app se presenta como un entorno de pruebas, sin dinero real y con fines académicos y demostrativos. El recorrido que sigue se verificó en la aplicación publicada el 9 de noviembre de 2026.
+Padi es un entorno de pruebas con fines académicos y demostrativos, sin dinero real.
 </Note>
 
 ## Completar el registro
@@ -21,11 +21,13 @@ La app se presenta como un entorno de pruebas, sin dinero real y con fines acad�
 
     ![Registro de Padi con la opción Vendedor seleccionada y datos ficticios de prueba](/images/registro-vendedor.png)
   </Step>
-  <Step title="Ingresá tu correo">
-    Completá **Correo electrónico** y pulsá **Enviar código**. La siguiente pantalla muestra seis casilleros para un código numérico y la opción de reenviarlo después de la cuenta regresiva.
+  <Step title="Verificá tu correo">
+    Completá **Correo electrónico** con una dirección a la que tengas acceso y pulsá **Enviar código**. Vas a recibir un código de seis dígitos de **padinotificaciones@gmail.com**. El código vence en 10 minutos.
+
+    Si el correo no aparece, revisá **Spam** y comprobá la dirección que ingresaste. Cuando termine la cuenta regresiva, podés pulsar **Reenviar código**. Si pediste otro, usá el más reciente.
   </Step>
   <Step title="Continuá a la contraseña">
-    Completá los seis casilleros y pulsá **Continuar a contraseña** cuando aparezca habilitado.
+    Ingresá el código que recibiste en los seis casilleros y pulsá **Verificar código**. Cuando la app confirme el código, elegí **Continuar a contraseña**.
 
     En **Creá tu contraseña**, ingresá y repetí una clave de al menos ocho caracteres, con una mayúscula, una minúscula y un número. Pulsá **Continuar a validación de DNI**.
   </Step>
@@ -40,7 +42,7 @@ La app se presenta como un entorno de pruebas, sin dinero real y con fines acad�
 </Steps>
 
 <Warning>
-En la versión de prueba verificada, el paso del código acepta seis dígitos sin comprobarlos contra un servicio de correo. Las pantallas de DNI y validación facial también completan una simulación. Este recorrido no acredita una verificación real de correo, documento o identidad. Usá datos ficticios para las pruebas.
+El código confirma que tenés acceso al correo ingresado. El escaneo del DNI y la captura de la foto para la validación facial siguen siendo pasos simulados. Usá datos ficticios para probar esas pantallas.
 </Warning>
 
 ## Entrar a tus cobros

@@ -9,6 +9,7 @@ public sealed class RegisterUserRequest
     [Required, EmailAddress, StringLength(254)] public string Email { get; init; } = "";
     [Required, StringLength(128, MinimumLength = 8)] public string Password { get; init; } = "";
     public string? Dni { get; init; }
+    public string? EmailVerificationToken { get; init; }
     [Required, RegularExpression("^(personal|merchant)$")] public string AccountType { get; init; } = "personal";
 }
 

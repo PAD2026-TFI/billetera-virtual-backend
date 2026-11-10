@@ -52,3 +52,16 @@ Verificación ejecutada: cuatro escenarios, con dos importaciones en cada uno:
 - Esquema hasta SupportPendingCardDeliveryAddress, con CVU/alias existentes, valores faltantes y CUIT real preservado.
 
 Todos pasaron; la segunda importación conservó exactamente los mismos datos de billeteras. El modelo EF no presenta diferencias pendientes respecto de la migración final.
+
+## Verificación de correo al crear una cuenta
+
+La migración `AddRegistrationEmailVerification` agrega la tabla de desafíos de correo. Para un hosting que ya tenga aplicada `20261109201218_AddMerchantApiIntegration`, usá el script incremental `padi_email_verification.sql` en **SQL Import**. Verificá primero que la migración anterior figure en `__EFMigrationsHistory`. Si la base está más atrasada, generá un script EF desde su última migración aplicada hasta `AddRegistrationEmailVerification`.
+
+Para publicar el registro con verificación, coordiná estos pasos en el mismo despliegue.
+
+1. Importá la migración y verificá que figure en el historial.
+2. Publicá el backend. En las variables del sitio de MonsterASP, configurá `Mail__Host`, `Mail__Port`, `Mail__EnableSsl`, `Mail__Username` y `Mail__Password`. Para Gmail usá `smtp.gmail.com`, puerto `587` y TLS activado. El usuario es el remitente y la contraseña es la de aplicación de ese Gmail.
+3. Agregá `Mail__Enabled=true` y reiniciá el backend. Desde ese momento, las altas por API requieren la verificación. Publicá el frontend que llama a los endpoints nuevos como parte de este mismo cambio.
+4. Probá un registro con un correo de prueba que puedas abrir. Comprobá que llegue el código, que la app rechace uno incorrecto y que la cuenta se cree después de verificar el correcto. Probá también el login con una cuenta anterior.
+
+El código vence en 10 minutos y admite cinco intentos. El reenvío se habilita después de un minuto. La confirmación devuelve un token válido por 20 minutos, ligado al correo y consumido al crear la cuenta. Las altas de desarrollo conservan el flujo anterior mientras `Mail__Enabled` esté desactivado.

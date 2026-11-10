@@ -63,6 +63,23 @@ public sealed class User : WalletOwner
     public DateTimeOffset? IntegrationRotatedAt { get; private set; }
     public DateTimeOffset? IntegrationRevokedAt { get; private set; }
 
+    /// <summary>
+    /// Fecha y hora (UTC) en que la identidad del usuario fue verificada ante el registro oficial (RENAPER).
+    /// Null si el usuario no ha sido verificado.
+    /// </summary>
+    public DateTimeOffset? IdentityVerifiedAt { get; private set; }
+
+    /// <summary>
+    /// Marca la identidad del usuario como verificada ante el registro oficial.
+    /// </summary>
+    public void MarkIdentityVerified(DateTimeOffset now)
+    {
+        if (now > DateTimeOffset.UtcNow.AddMinutes(5))
+            throw new ArgumentException("La fecha de verificación no puede ser futura.", nameof(now));
+
+        IdentityVerifiedAt = now.ToUniversalTime();
+    }
+
     public void SetAccountType(string accountType)
     {
         if (accountType is not ("personal" or "merchant"))
@@ -190,12 +207,11 @@ public sealed class User : WalletOwner
 
     private static string ValidateDni(string dni)
     {
-        if (string.IsNullOrWhiteSpace(dni))
-            return "00000000";
+        ArgumentException.ThrowIfNullOrWhiteSpace(dni, nameof(dni));
 
         var trimmed = dni.Trim();
-        if (trimmed.Length < 6 || trimmed.Length > 20 || !trimmed.All(char.IsLetterOrDigit))
-            throw new ArgumentException("DNI must contain between 6 and 20 alphanumeric characters.", nameof(dni));
+        if (trimmed.Length is < 7 or > 8 || !trimmed.All(char.IsAsciiDigit))
+            throw new ArgumentException("El DNI debe contener 7 u 8 dígitos numéricos.", nameof(dni));
 
         return trimmed;
     }

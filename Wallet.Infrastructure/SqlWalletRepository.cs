@@ -42,7 +42,16 @@ public sealed class SqlWalletRepository(WalletDbContext db) : IWalletRepository
     {
         try
         {
-            return await db.Wallets.AsNoTracking().SingleOrDefaultAsync(w => w.OwnerId == userId, ct);
+            var wallet = await db.Wallets.AsNoTracking().SingleOrDefaultAsync(w => w.OwnerId == userId, ct);
+            if (wallet is not null) return wallet;
+
+            var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == userId, ct);
+            if (user?.WalletId is not null)
+            {
+                return await db.Wallets.AsNoTracking().SingleOrDefaultAsync(w => w.Id == user.WalletId.Value, ct);
+            }
+
+            return null;
         }
         catch (SqlException e)
         {

@@ -148,6 +148,44 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpPost("/api/v1/integrations/set-password", Order = -1)]
+    [HttpPost("set-password")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<SetMerchantPasswordResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SetMerchantPasswordResponse>> SetPassword(
+        [FromBody] SetMerchantPasswordRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var response = await gateway.SetPasswordAsync(currentUser.Id, request, ct);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Datos de contraseña inválidos.",
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_PASSWORD", ["detail"] = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "CREDENTIALS_CONFLICT" });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
     [HttpGet("/api/v1/integrations/wallet", Order = -1)]
     [HttpGet("wallet")]
     [Authorize(Policy = "ExternalClient")]

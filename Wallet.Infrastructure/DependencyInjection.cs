@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, SqlUnitOfWork>();
         services.AddSingleton<ICvuGenerator, CvuGenerator>();
         services.AddSingleton<IAliasGenerator, AliasGenerator>();
+        services.AddScoped<IIdentityVerifier, PassThroughIdentityVerifier>();
         services.AddScoped<UserRegistrationService>();
         return services;
     }

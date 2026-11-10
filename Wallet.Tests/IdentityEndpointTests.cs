@@ -47,7 +47,7 @@ public sealed class IdentityEndpointTests
         });
         using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost") });
         var registration = new RegisterUserRequest { FirstName = "Ana", LastName = "Pérez",
-            Email = "ana@example.com", Password = "Frase de prueba 2026!" };
+            Email = "ana@example.com", Password = "Frase de prueba 2026!", Dni = "30123456" };
         var registered = await client.PostAsJsonAsync("/api/users", registration);
         Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
         Assert.Equal("/api/v1/me/profile", registered.Headers.Location!.ToString());

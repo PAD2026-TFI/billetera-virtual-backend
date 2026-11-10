@@ -18,6 +18,9 @@ public sealed class UserRegistrationServiceTests
         public Task<User?> FindByIdAsync(Guid id, CancellationToken ct) =>
             Task.FromResult(_byEmail.Values.FirstOrDefault(u => u.Id == id));
 
+        public Task<bool> ExistsByDniAsync(string dni, CancellationToken ct) =>
+            Task.FromResult(_byEmail.Values.Any(u => u.Dni == dni));
+
         public Task<User?> FindByDniAsync(string dni, CancellationToken ct) =>
             Task.FromResult(_byEmail.Values.FirstOrDefault(u => u.Dni == dni));
 
@@ -127,6 +130,20 @@ public sealed class UserRegistrationServiceTests
         public Task UpdateAsync(Card card, CancellationToken ct) => Task.CompletedTask;
     }
 
+    private sealed class FakeIdentityVerifier : IIdentityVerifier
+    {
+        public Func<IdentityQuery, VerifiedIdentity?>? Handler { get; set; }
+
+        public Task<VerifiedIdentity?> FindAsync(IdentityQuery query, CancellationToken ct = default)
+        {
+            if (Handler is not null)
+                return Task.FromResult(Handler(query));
+
+            return Task.FromResult<VerifiedIdentity?>(new VerifiedIdentity(query.Number, "Carlos", "Gomez"));
+        }
+    }
+
+    private readonly FakeIdentityVerifier _verifier = new();
     private readonly InMemoryUserRepository _users = new();
     private readonly InMemoryWalletRepository _wallets = new();
     private readonly InMemoryCardRepository _cards = new();
@@ -147,7 +164,9 @@ public sealed class UserRegistrationServiceTests
             _aliasGenerator,
             _uow,
             _clock,
-            _cards);
+            _verifier,
+            verificationOptions: new IdentityVerificationOptions { Enabled = true },
+            cards: _cards);
     }
 
     [Fact]
@@ -222,5 +241,139 @@ public sealed class UserRegistrationServiceTests
         var second = await _service.RegisterAsync(duplicateRequest, CancellationToken.None);
         Assert.False(second.IsSuccess);
         Assert.Equal("EMAIL_ALREADY_REGISTERED", second.Error!.Code);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_fails_when_dni_already_exists()
+    {
+        var firstRequest = new RegisterUserRequest
+        {
+            FirstName = "Carlos",
+            LastName = "Gomez",
+            Email = "carlos1@test.com",
+            Password = "SecurePassword123!",
+            Dni = "34567890"
+        };
+        var first = await _service.RegisterAsync(firstRequest, CancellationToken.None);
+        Assert.True(first.IsSuccess);
+
+        var duplicateDniRequest = new RegisterUserRequest
+        {
+            FirstName = "Carlos",
+            LastName = "Gomez",
+            Email = "carlos2@test.com",
+            Password = "SecurePassword123!",
+            Dni = "34567890"
+        };
+        var second = await _service.RegisterAsync(duplicateDniRequest, CancellationToken.None);
+        Assert.False(second.IsSuccess);
+        Assert.Equal("DNI_ALREADY_REGISTERED", second.Error!.Code);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_fails_when_identity_not_found_in_renaper()
+    {
+        _verifier.Handler = _ => null;
+
+        var request = new RegisterUserRequest
+        {
+            FirstName = "Carlos",
+            LastName = "Gomez",
+            Email = "carlos.notfound@test.com",
+            Password = "SecurePassword123!",
+            Dni = "34567890"
+        };
+
+        var result = await _service.RegisterAsync(request, CancellationToken.None);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("IDENTITY_NOT_FOUND", result.Error!.Code);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_fails_when_name_mismatches_renaper()
+    {
+        _verifier.Handler = query => new VerifiedIdentity(query.Number, "Juan", "Perez");
+
+        var request = new RegisterUserRequest
+        {
+            FirstName = "Carlos",
+            LastName = "Gomez",
+            Email = "carlos.mismatch@test.com",
+            Password = "SecurePassword123!",
+            Dni = "34567890"
+        };
+
+        var result = await _service.RegisterAsync(request, CancellationToken.None);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("IDENTITY_MISMATCH", result.Error!.Code);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_fails_when_renaper_provider_is_unavailable()
+    {
+        _verifier.Handler = _ => throw new IdentityProviderUnavailableException();
+
+        var request = new RegisterUserRequest
+        {
+            FirstName = "Carlos",
+            LastName = "Gomez",
+            Email = "carlos.down@test.com",
+            Password = "SecurePassword123!",
+            Dni = "34567890"
+        };
+
+        var result = await _service.RegisterAsync(request, CancellationToken.None);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("IDENTITY_PROVIDER_UNAVAILABLE", result.Error!.Code);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_succeeds_without_verification_when_disabled_in_options()
+    {
+        _verifier.Handler = _ => throw new Exception("Should not be called when disabled");
+
+        var disabledService = new UserRegistrationService(
+            _users,
+            _wallets,
+            _passwords,
+            _cvuGenerator,
+            _aliasGenerator,
+            _uow,
+            _clock,
+            _verifier,
+            verificationOptions: new IdentityVerificationOptions { Enabled = false },
+            cards: _cards);
+
+        var request = new RegisterUserRequest
+        {
+            FirstName = "Carlos",
+            LastName = "Gomez",
+            Email = "carlos.disabled@test.com",
+            Password = "SecurePassword123!",
+            Dni = "34567899"
+        };
+
+        var result = await disabledService.RegisterAsync(request, CancellationToken.None);
+        Assert.True(result.IsSuccess);
+        Assert.False(result.Value!.IdentityVerified);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_succeeds_and_marks_identity_verified_when_renaper_matches()
+    {
+        _verifier.Handler = query => new VerifiedIdentity(query.Number, "CARLOS ALBERTO", "GOMEZ");
+
+        var request = new RegisterUserRequest
+        {
+            FirstName = "Carlos",
+            LastName = "Gomez",
+            Email = "carlos.verified@test.com",
+            Password = "SecurePassword123!",
+            Dni = "34567892"
+        };
+
+        var result = await _service.RegisterAsync(request, CancellationToken.None);
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value!.IdentityVerified);
     }
 }

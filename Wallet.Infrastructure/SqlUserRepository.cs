@@ -13,11 +13,14 @@ public sealed class SqlUserRepository(WalletDbContext db) : IUserRepository
         ExecuteAsync(() => db.Users.SingleOrDefaultAsync(x => x.Id == id, ct));
     public Task<User?> FindByIntegrationKeyHashAsync(string hash, CancellationToken ct) =>
         ExecuteAsync(() => db.Users.SingleOrDefaultAsync(x => x.IntegrationKeyHash == hash, ct));
+    public Task<bool> ExistsByDniAsync(string dni, CancellationToken ct) =>
+        ExecuteAsync(() => db.Users.AnyAsync(x => x.Dni == dni, ct));
     public async Task AddAsync(User user, CancellationToken ct)
     {
         db.Users.Add(user);
         try { await ExecuteAsync(() => db.SaveChangesAsync(ct)); }
         catch (DuplicateEmailException) { db.Entry(user).State = EntityState.Detached; throw; }
+        catch (DuplicateDniException) { db.Entry(user).State = EntityState.Detached; throw; }
     }
     public async Task SaveAsync(CancellationToken ct) => await ExecuteAsync(() => db.SaveChangesAsync(ct));
     public async Task<bool> IsReadyAsync(CancellationToken ct)
@@ -35,8 +38,13 @@ public sealed class SqlUserRepository(WalletDbContext db) : IUserRepository
     {
         try { return await operation(); }
         catch (DbUpdateConcurrencyException) { throw new ConcurrentUpdateException(); }
-        catch (DbUpdateException e) when (e.InnerException is SqlException { Number: 2601 or 2627 })
-        { throw new DuplicateEmailException(); }
+        catch (DbUpdateException e) when (e.InnerException is SqlException sqlEx && sqlEx.Number is 2601 or 2627)
+        {
+            if (sqlEx.Message.Contains("IX_Users_Dni", StringComparison.OrdinalIgnoreCase))
+                throw new DuplicateDniException();
+
+            throw new DuplicateEmailException();
+        }
         catch (DbUpdateException e) when (e.InnerException is SqlException)
         { throw new StorageUnavailableException(e); }
         catch (SqlException e) { throw new StorageUnavailableException(e); }

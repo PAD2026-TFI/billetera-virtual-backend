@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Wallet.Application;
+using Wallet.Infrastructure.OpenRenaper;
 
 namespace Wallet.Infrastructure;
 
@@ -28,7 +30,13 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, SqlUnitOfWork>();
         services.AddSingleton<ICvuGenerator, CvuGenerator>();
         services.AddSingleton<IAliasGenerator, AliasGenerator>();
-        services.AddScoped<IIdentityVerifier, PassThroughIdentityVerifier>();
+        services.AddHttpClient<IIdentityVerifier, OpenRenaperClient>((sp, client) =>
+        {
+            var opt = sp.GetService<IOptions<OpenRenaperOptions>>()?.Value ?? new OpenRenaperOptions();
+            if (Uri.TryCreate(opt.BaseUrl, UriKind.Absolute, out var uri))
+                client.BaseAddress = uri;
+            client.Timeout = TimeSpan.FromSeconds(opt.TimeoutSeconds > 0 ? opt.TimeoutSeconds : 5);
+        });
         services.AddScoped<UserRegistrationService>();
         return services;
     }

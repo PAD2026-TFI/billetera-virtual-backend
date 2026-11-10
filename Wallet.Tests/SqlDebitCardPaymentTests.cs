@@ -24,11 +24,11 @@ public sealed class SqlDebitCardPaymentTests
         public SqlTransferTests.Pair Pair { get; private set; } = null!;
         public Card Card { get; private set; } = null!;
         public PaymentLink Link { get; private set; } = null!;
-        public static async Task<Fixture> Create(decimal balance = 1000m, decimal amount = 300m)
+        public static async Task<Fixture> Create(decimal balance = 1000m, decimal amount = 300m, string brand = "VISA DEBITO")
         {
             var pair = await SqlTransferTests.Pair.Create(balance);
             var now = DateTimeOffset.UtcNow;
-            var card = Card.Create(pair.Sender.Id, "Titular Debit", "VISA DEBITO", CardType.Debit, "1234", 12, now.Year + 5, now);
+            var card = Card.Create(pair.Sender.Id, "Titular Debit", brand, CardType.Debit, "1234", 12, now.Year + 5, now);
             var link = PaymentLink.Create(pair.Destination.Id, amount, "Compra", null, PaymentLinkType.SingleUse, now, merchantOwnerId: pair.Receiver.Id);
             await using var db = new WalletDbContext(Options());
             db.Cards.Add(card); db.PaymentLinks.Add(link); await db.SaveChangesAsync();
@@ -179,6 +179,49 @@ public sealed class SqlDebitCardPaymentTests
         Assert.Equal(700m, (await db.Wallets.SingleAsync(w => w.Id == f.Pair.Source.Id)).Balance.Amount);
         Assert.Equal(300m, (await db.Wallets.SingleAsync(w => w.Id == f.Pair.Destination.Id)).Balance.Amount);
         Assert.Equal(1, await db.Payments.CountAsync(p => p.Id == receipt.PaymentId));
+    }
+
+    [AzureSqlFact]
+    public async Task Guest_virtual_card_payment_requires_credentials_and_debits_the_holder_only_once()
+    {
+        await using var f = await Fixture.Create(brand: VirtualCardCredentials.Brand);
+        await using var host = new IdentityTestHost(Environment.GetEnvironmentVariable("WALLET_TEST_CONNECTION"));
+        using var guest = host.Client();
+        using var holder = host.Client();
+        var detailsPath = $"/api/v1/me/cards/{f.Card.Id}/virtual-credentials";
+        Assert.Equal(HttpStatusCode.Unauthorized, (await guest.PostAsync(detailsPath, null)).StatusCode);
+        holder.DefaultRequestHeaders.Authorization = new("Bearer", host.Token(f.Pair.Receiver));
+        Assert.Equal(HttpStatusCode.NotFound, (await holder.PostAsync(detailsPath, null)).StatusCode);
+        holder.DefaultRequestHeaders.Authorization = new("Bearer", host.Token(f.Pair.Sender));
+        var detailsResponse = await holder.PostAsync(detailsPath, null);
+        Assert.Equal(HttpStatusCode.OK, detailsResponse.StatusCode);
+        Assert.True(detailsResponse.Headers.CacheControl!.NoStore);
+        var details = (await detailsResponse.Content.ReadFromJsonAsync<VirtualCardDetails>())!;
+        Assert.True(CardSimulatorService.ValidateLuhn(details.CardNumber));
+        Assert.EndsWith(f.Card.CardNumberLast4, details.CardNumber);
+
+        const string payPath = "/api/v1/public/checkout/padi-card-payments";
+        guest.DefaultRequestHeaders.Add("Idempotency-Key", "guest-purchase");
+        var wrongCvv = details.Cvv == "000" ? "001" : "000";
+        var rejected = await guest.PostAsJsonAsync(payPath, new { token = f.Link.Token, card = details with { Cvv = wrongCvv } });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, rejected.StatusCode);
+        await f.AssertUnchanged(1000m);
+
+        var request = new { token = f.Link.Token, card = details };
+        var paid = await guest.PostAsJsonAsync(payPath, request);
+        Assert.Equal(HttpStatusCode.OK, paid.StatusCode);
+        var receipt = (await paid.Content.ReadFromJsonAsync<CheckoutReceiptDto>())!;
+        var repeated = await guest.PostAsJsonAsync(payPath, request);
+        Assert.Equal(HttpStatusCode.OK, repeated.StatusCode);
+        var replay = (await repeated.Content.ReadFromJsonAsync<CheckoutReceiptDto>())!;
+        Assert.Equal(receipt.PaymentId, replay.PaymentId);
+        Assert.True(replay.IdempotencyReplayed);
+
+        await using var db = new WalletDbContext(Options());
+        Assert.Equal(700m, (await db.Wallets.SingleAsync(w => w.Id == f.Pair.Source.Id)).Balance.Amount);
+        Assert.Equal(300m, (await db.Wallets.SingleAsync(w => w.Id == f.Pair.Destination.Id)).Balance.Amount);
+        Assert.Equal(1, await db.Payments.CountAsync(p => p.PaymentLinkId == f.Link.Id));
+        Assert.Equal(1, await db.Transfers.CountAsync(t => t.SourceWalletId == f.Pair.Source.Id));
     }
 
     [AzureSqlFact]

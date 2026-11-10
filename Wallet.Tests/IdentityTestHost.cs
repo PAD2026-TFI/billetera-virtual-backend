@@ -37,6 +37,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
         builder.UseSetting("ConnectionStrings:DefaultConnection", sqlConnection ??
             "Server=unused;Database=unused;Integrated Security=true");
         builder.UseSetting("Jwt:Key", Convert.ToBase64String(Key));
+        builder.UseSetting("VirtualCards:Key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         builder.UseSetting("Jwt:Issuer", "Wallet.Api");
         builder.UseSetting("Jwt:Audience", "Wallet.Client");
         builder.UseSetting("Jwt:LifetimeMinutes", "15");

@@ -88,7 +88,7 @@ public sealed class CardService(
             var defaultCard = Card.Create(
                 userId,
                 holder,
-                "VISA DÉBITO",
+                VirtualCardCredentials.Brand,
                 CardType.Debit,
                 last4,
                 12,
@@ -108,12 +108,16 @@ public sealed class CardService(
         if (userId == Guid.Empty)
             throw new ArgumentException("User identifier cannot be empty.", nameof(userId));
 
+        if (string.Equals(command.Brand?.Trim(), VirtualCardCredentials.Brand, StringComparison.OrdinalIgnoreCase) ||
+            command.CardToken?.Trim().StartsWith(VirtualCardCredentials.TokenPrefix, StringComparison.OrdinalIgnoreCase) == true)
+            throw new ArgumentException("Las credenciales de una tarjeta virtual de Padi se emiten desde la billetera.");
+
         var now = clock.GetUtcNow();
 
         var card = Card.Create(
             userId,
             command.CardHolderName,
-            command.Brand,
+            command.Brand ?? "",
             command.Type,
             command.CardNumberLast4,
             command.ExpirationMonth,

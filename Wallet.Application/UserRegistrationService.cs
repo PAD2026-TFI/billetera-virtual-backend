@@ -84,7 +84,7 @@ public sealed class UserRegistrationService(
         var card = Card.Create(
             user.Id,
             cardHolder,
-            "VISA DÉBITO",
+            VirtualCardCredentials.Brand,
             CardType.Debit,
             last4,
             12,

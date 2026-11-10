@@ -47,6 +47,12 @@ Antes de entregar o activar un servicio, comprobá `status: "Succeeded"`, `payme
 
 Para enlaces **MultiUse**, varios pagos pueden compartir `paymentLinkId`. No dedupliques solamente por el enlace: cada pago tiene su propio id.
 
+## Si el comprador tuvo un problema en el checkout
+
+Si el comprador informa que la tarjeta fue rechazada, pedile que revise en **Mi tarjeta → Mostrar datos de la tarjeta** los datos vigentes y el saldo de la billetera asociada. Los datos se ingresan en el checkout de Padi.
+
+Si la pantalla se interrumpió y el comprador no sabe si pagó, verificá primero si tu comercio recibió un pago por ese enlace. Podés consultar de nuevo desde tu servidor con la API Key. Mantené el pedido pendiente hasta confirmar el cobro.
+
 ## Tené en cuenta los límites del listado
 
 El listado de pagos devuelve los más recientes, con `limit=20` por defecto y un máximo efectivo de 100. No tiene cursor ni filtros de fechas. Un pago que ya no está entre los últimos resultados puede quedar fuera del listado.

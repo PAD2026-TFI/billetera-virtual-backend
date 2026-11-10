@@ -85,7 +85,9 @@ Crear enlaces no deduplica solicitudes con **Idempotency-Key**. Un reintento pue
 
 Tu servidor devuelve a tu frontend el **checkoutUrl** recibido. Redirigí al comprador a esa dirección o mostrá el QR de **qrCodeUrl**. No reconstruyas las URLs a partir del dominio de Netlify.
 
-El comprador realiza el pago en el checkout de Padi. La API Key identifica al comercio y no reemplaza la autenticación del comprador. Si el vendedor abre su propio cobro con la misma cuenta, verá **Cobro propio**.
+El comprador elige **Saldo de padi.** para pagar con sesión o **Tarjeta** para usar su débito virtual de Padi sin iniciar sesión en el checkout. En ambos casos el cobro se debita de la billetera del comprador. El servidor del comercio usa la API Key para crear y consultar cobros. El checkout de Padi se encarga de capturar los datos de pago.
+
+Si el vendedor abre el enlace desde la cuenta que lo generó, verá **Cobro propio**. Para probar el flujo usá una billetera compradora distinta. Consultá los [pasos del comprador y la confirmación del cobro](/confirmar-cobro).
 
 ## 3. Recuperá el enlace cuando lo necesites
 
@@ -131,6 +133,8 @@ foreach ($pago in $coincidentes) {
 ```
 
 La [consulta por id del pago](/api/endpoints/consultar-pago) permite verificar un cobro identificado. Antes de entregar el pedido, comprobá **Succeeded**, el enlace, el importe y la moneda. Guardá el **id del pago** y actualizá el pedido de forma que volver a procesar el mismo pago no duplique la entrega.
+
+La respuesta de pagos recibidos identifica el medio en **paymentMethod**. Los cobros con tarjeta virtual se registran como **Card** y se confirman con **Succeeded**, igual que los cobros con saldo.
 
 Si no encontrás un pago válido, el pedido permanece pendiente de confirmación. El regreso del comprador a tu sitio o una captura de su comprobante no confirman el cobro por sí solos.
 

@@ -9,19 +9,26 @@ Después de [compartir el link o el QR](/cobrar-desde-app), comprobá el pago de
 
 ## Qué hace el comprador
 
-El comprador abre el enlace o escanea el QR y revisa el concepto y el total en el checkout. Para pagar con saldo de Padi, usa su propia cuenta, selecciona **Saldo de padi.** y pulsa **Pagar … con mi saldo**.
+El comprador abre el enlace o escanea el QR y revisa el concepto y el total en el checkout. Puede elegir cómo pagar.
+
+- **Saldo de padi.** Inicia sesión con su cuenta, selecciona **Saldo de padi.** y pulsa **Pagar … con mi saldo**.
+- **Tarjeta.** Puede pagar sin iniciar sesión en el checkout con una tarjeta de débito virtual de Padi activa y vigente. Desde su cuenta, abre **Mi tarjeta → Mostrar datos de la tarjeta** y consulta el número, el titular, el vencimiento y el código de seguridad. Después los ingresa en **Tarjeta** en el checkout. El importe se descuenta del saldo de la billetera asociada a la tarjeta y se acredita en la billetera del comercio.
+
+Si el formulario muestra **Revisá el número de la tarjeta** y el comprador tenía Padi abierto antes de la actualización, pedile que vuelva a abrir la app y consulte los datos en **Mi tarjeta**. Las tarjetas Padi emitidas antes del cambio que sigan activas y vigentes se habilitan para el checkout al mostrar sus datos. El número y el código que mostraba la versión anterior eran de demostración. Volver a iniciar sesión no cambia los datos habilitados.
+
+Pedile al comprador que ingrese los datos de su tarjeta directamente en el checkout de Padi. La opción **Tarjeta** admite las tarjetas virtuales de débito emitidas por Padi para este entorno de prueba.
 
 Cuando el pago se completa, el comprador ve **Pago aprobado**, el importe, el concepto, el medio de pago, la fecha y el número de operación. Esa pantalla corresponde al comprador; verificá la recepción desde tu propia cuenta de vendedor.
 
 <Note>
-No podés pagar el cobro con la misma cuenta que lo generó. Si abrís el checkout desde tu sesión de vendedor, aparece **Cobro propio**. El comprador debe usar otra cuenta con saldo suficiente.
+El pago requiere una billetera compradora distinta de la billetera que recibe el cobro, también cuando se paga con tarjeta sin iniciar sesión. Si abrís el checkout desde tu sesión de vendedor, aparece **Cobro propio**. La billetera compradora debe tener saldo suficiente.
 </Note>
 
 ## Verificar el cobro en tu cuenta
 
 <Steps>
   <Step title="Revisá el estado en Cobros">
-    Entrá a **Cobros**. En **Cobros generados recientemente**, buscá el concepto y el importe del pedido. Después del pago, el estado cambia de **Activo** a **Cobrado**.
+    Entrá a **Cobros**. En **Cobros generados recientemente**, buscá el concepto y el importe del pedido. Después del pago de un enlace de uso único, el estado cambia de **Activo** a **Cobrado**. Si creaste un enlace de uso múltiple desde la API, puede seguir **Activo**. Consultá sus [pagos recibidos](/api/endpoints/listar-pagos) para verificar cada cobro.
 
     Si habías salido de la pantalla, volvé a abrir **Cobros** para consultar el listado actualizado.
   </Step>
@@ -61,6 +68,8 @@ Este recorrido se verificó con dos cuentas ficticias en la aplicación publicad
 | Vendedor | $50.000 | $51.500 |
 
 Se comprobó **Pago aprobado** en el comprador, **Cobrado** y **¡Cobro recibido con éxito!** en el vendedor, y los movimientos correspondientes en ambas cuentas.
+
+También se verificó un cobro de **$100** con tarjeta de débito virtual de Padi y sin sesión en el checkout. Se consultaron los datos en **Mi tarjeta** desde la cuenta compradora, se ingresaron en el checkout y se comprobó **Pago aprobado**, el débito al comprador y la acreditación al vendedor.
 
 <Note>
 Padi es un entorno académico y demostrativo, sin dinero real. Los importes de esta prueba ilustran el recorrido verificado; no representan una promesa de bono o de saldo inicial para todos los usuarios.

@@ -24,7 +24,8 @@ public sealed class RegistrationEmailController(EmailVerificationService verific
 
         try
         {
-            return Accepted(await verification.SendAsync(email.Address, ct));
+            var result = await verification.SendAsync(email.Address, ct);
+            return result.IsSuccess ? Accepted(result.Value) : FromResult(result);
         }
         catch (RegistrationEmailUnavailableException)
         {

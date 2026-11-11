@@ -29,7 +29,7 @@ public sealed class IdentityVerificationIntegrationTests
     }
 
     private static (WebApplicationFactory<Program> factory, HttpClient client, TestUserRepository users, StubIdentityVerifier verifier)
-        CreateTestApp(bool verificationEnabled = true)
+        CreateTestApp(bool verificationEnabled = true, bool mailEnabled = false)
     {
         var verifier = new StubIdentityVerifier();
         var baseHost = new IdentityTestHost();
@@ -37,6 +37,13 @@ public sealed class IdentityVerificationIntegrationTests
         var factory = baseHost.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("IdentityVerification:Enabled", verificationEnabled ? "true" : "false");
+            if (mailEnabled)
+            {
+                builder.UseSetting("Mail:Enabled", "true");
+                builder.UseSetting("Mail:Host", "smtp.example.com");
+                builder.UseSetting("Mail:Username", "padi@example.com");
+                builder.UseSetting("Mail:Password", "test-only");
+            }
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IIdentityVerifier>();
@@ -367,6 +374,26 @@ public sealed class IdentityVerificationIntegrationTests
             var body = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(body);
             Assert.Equal("IDENTITY_PROVIDER_UNAVAILABLE", doc.RootElement.GetProperty("code").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task SendEmailVerificationCode_returns_conflict_when_email_already_registered()
+    {
+        var (app, client, users, _) = CreateTestApp(verificationEnabled: true, mailEnabled: true);
+        await using (app)
+        using (client)
+        {
+            var existingEmail = "already-registered@padi.com";
+            var existingUser = User.RegisterClient("30123456", "Juan", "Pérez", existingEmail, DateTimeOffset.UtcNow);
+            await users.AddAsync(existingUser, CancellationToken.None);
+
+            var response = await client.PostAsJsonAsync("/api/v1/auth/email-verification", new { email = existingEmail });
+
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("EMAIL_ALREADY_REGISTERED", doc.RootElement.GetProperty("code").GetString());
         }
     }
 

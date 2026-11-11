@@ -41,6 +41,7 @@ public sealed class IdentityEndpointTests
         {
             b.UseEnvironment("Development");
             b.UseSetting("Identity:Enabled", "true");
+            b.UseSetting("IdentityVerification:Enabled", "false");
             b.UseSetting("ConnectionStrings:DefaultConnection", "Server=unused;Database=unused;Integrated Security=true");
             b.UseSetting("Jwt:Key", Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)));
             b.ConfigureTestServices(s => { s.RemoveAll<IUserRepository>(); s.AddSingleton<IUserRepository>(users); });

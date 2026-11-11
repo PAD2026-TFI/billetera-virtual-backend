@@ -58,21 +58,23 @@ public sealed class EmailVerificationService(
     private const int MaxAttempts = 5;
     public bool Enabled => settings.Enabled;
 
-    public async Task<RegistrationCodeSent> SendAsync(string email, CancellationToken ct)
+    public async Task<Result<RegistrationCodeSent>> SendAsync(string email, CancellationToken ct)
     {
         var destination = email.Trim();
         var normalized = User.NormalizeEmail(destination);
-        var sent = new RegistrationCodeSent(ResendDelaySeconds);
         if (await users.FindByEmailAsync(normalized, ct) is not null)
-            return sent;
+            return Result<RegistrationCodeSent>.Failure(
+                "EMAIL_ALREADY_REGISTERED",
+                "Este correo electrónico ya está registrado. Iniciá sesión o usá otro correo.");
 
+        var sent = new RegistrationCodeSent(ResendDelaySeconds);
         var code = RandomNumberGenerator.GetInt32(1_000_000).ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
         await using (var tx = await unitOfWork.BeginTransactionAsync(ct))
         {
             var challenge = await challenges.FindForUpdateAsync(normalized, ct);
             var now = clock.GetUtcNow();
             if (challenge is not null && challenge.ResendAt > now)
-                return sent;
+                return Result<RegistrationCodeSent>.Success(sent);
 
             if (challenge is null)
             {
@@ -89,7 +91,7 @@ public sealed class EmailVerificationService(
         }
 
         await sender.SendCodeAsync(destination, code, ct);
-        return sent;
+        return Result<RegistrationCodeSent>.Success(sent);
     }
 
     public async Task<Result<RegistrationEmailProof>> VerifyAsync(string email, string code, CancellationToken ct)

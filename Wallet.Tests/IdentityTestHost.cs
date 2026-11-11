@@ -34,6 +34,7 @@ internal sealed class IdentityTestHost(string? sqlConnection = null) : WebApplic
         builder.UseEnvironment("Development");
         builder.UseSetting("Documentation:Enabled", "true");
         builder.UseSetting("Identity:Enabled", "true");
+        builder.UseSetting("IdentityVerification:Enabled", "false");
         builder.UseSetting("ConnectionStrings:DefaultConnection", sqlConnection ??
             "Server=unused;Database=unused;Integrated Security=true");
         builder.UseSetting("Jwt:Key", Convert.ToBase64String(Key));

@@ -21,6 +21,8 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, SqlUserRepository>();
         services.AddScoped<IEmailVerificationRepository, SqlEmailVerificationRepository>();
         services.AddScoped<IRegistrationEmailSender, SmtpRegistrationEmailSender>();
+        services.AddScoped<IPasswordResetRepository, SqlPasswordResetRepository>();
+        services.AddScoped<IPasswordResetEmailSender, SmtpRegistrationEmailSender>();
         services.AddScoped<IExternalClientRepository, SqlExternalClientRepository>();
         services.AddScoped<IPaymentLinkRepository, SqlPaymentLinkRepository>();
         services.AddScoped<IPaymentRepository, SqlPaymentRepository>();

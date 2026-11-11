@@ -134,6 +134,7 @@ if (enabled)
     builder.Services.AddSingleton(mail);
     builder.Services.AddSingleton(new EmailVerificationSettings(mail.Enabled, key));
     builder.Services.AddScoped<EmailVerificationService>();
+    builder.Services.AddScoped<PasswordResetService>();
 
     var checkoutBaseUrl = builder.Configuration["FrontendUrl"]
         ?? builder.Configuration["BaseUrl"]

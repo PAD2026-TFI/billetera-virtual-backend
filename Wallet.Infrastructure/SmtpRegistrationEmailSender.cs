@@ -17,30 +17,42 @@ public sealed class MailOptions
     public string Password { get; init; } = "";
 }
 
-public sealed class SmtpRegistrationEmailSender(MailOptions options, ILogger<SmtpRegistrationEmailSender> logger) : IRegistrationEmailSender
+public sealed class SmtpRegistrationEmailSender(MailOptions options, ILogger<SmtpRegistrationEmailSender> logger)
+    : IRegistrationEmailSender, IPasswordResetEmailSender
 {
-    public async Task SendCodeAsync(string email, string code, CancellationToken ct)
+    public Task SendCodeAsync(string email, string code, CancellationToken ct) => SendAsync(
+        email, code, "Tu código para empezar en Padi", "¡Hola! Qué lindo tenerte por acá",
+        "Vimos que estás creando una cuenta en Padi. Te dejamos el código para que puedas seguir desde la app.",
+        "¡Nos vemos en la app!", "registro", ct);
+
+    public Task SendPasswordResetCodeAsync(string email, string code, CancellationToken ct) => SendAsync(
+        email, code, "Tu código para restablecer la contraseña de Padi", "Restablecé tu contraseña",
+        "Recibimos un pedido para cambiar la contraseña de tu cuenta de Padi. Ingresá este código en la app para elegir una nueva.",
+        "Si no fuiste vos, no compartas el código: tu contraseña actual sigue funcionando.", "recuperación de contraseña", ct);
+
+    private async Task SendAsync(string email, string code, string subject, string heading, string intro,
+        string closing, string purpose, CancellationToken ct)
     {
         try
         {
             using var message = new MailMessage
             {
                 From = new MailAddress(options.Username, "Padi"),
-                Subject = "Tu código para empezar en Padi",
+                Subject = subject,
                 SubjectEncoding = Encoding.UTF8
             };
             message.To.Add(new MailAddress(email));
 
             var plainText = $"""
-                ¡Hola! Qué lindo tenerte por acá
+                {heading}
 
-                Vimos que estás creando una cuenta en Padi. Te dejamos el código para que puedas seguir desde la app.
+                {intro}
 
                 {code}
 
                 Usalo dentro de los próximos 10 minutos. Si no lo pediste, podés ignorar este correo.
 
-                ¡Nos vemos en la app!
+                {closing}
                 El equipo de Padi
                 """;
 
@@ -54,13 +66,13 @@ public sealed class SmtpRegistrationEmailSender(MailOptions options, ILogger<Smt
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:552px;background:#F5F0FF;color:#2A0E7A;font-family:Arial,sans-serif;border:1px solid #ded5ee;border-radius:12px;overflow:hidden;">
                         <tr><td bgcolor="#5B2EE0" style="padding:20px 28px;color:#FFFFFF;font-size:24px;font-weight:bold;">padi.</td></tr>
                         <tr><td style="padding:24px 28px;font-size:16px;line-height:1.45;">
-                          <h1 style="font-size:24px;margin:0 0 16px;">¡Hola! Qué lindo tenerte por acá</h1>
-                          <p style="margin:0 0 16px;">Vimos que estás creando una cuenta en Padi. Te dejamos el código para que puedas seguir desde la app.</p>
+                          <h1 style="font-size:24px;margin:0 0 16px;">{WebUtility.HtmlEncode(heading)}</h1>
+                          <p style="margin:0 0 16px;">{WebUtility.HtmlEncode(intro)}</p>
                           <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                             <tr><td align="center" bgcolor="#FFD54A" style="padding:16px;color:#2A0E7A;font-family:monospace;font-size:32px;font-weight:bold;">{WebUtility.HtmlEncode(code)}</td></tr>
                           </table>
                           <p style="margin:16px 0;">Usalo dentro de los próximos 10 minutos. Si no lo pediste, podés ignorar este correo.</p>
-                          <p style="margin:0;">¡Nos vemos en la app!<br>El equipo de Padi</p>
+                          <p style="margin:0;">{WebUtility.HtmlEncode(closing)}<br>El equipo de Padi</p>
                         </td></tr>
                       </table>
                     </td></tr>
@@ -85,7 +97,7 @@ public sealed class SmtpRegistrationEmailSender(MailOptions options, ILogger<Smt
         catch (Exception ex) when (ex is SmtpException or FormatException or InvalidOperationException ||
             ex is OperationCanceledException && !ct.IsCancellationRequested)
         {
-            logger.LogWarning("No se pudo enviar el código de registro por SMTP ({Status}).",
+            logger.LogWarning("No se pudo enviar el código de {Purpose} por SMTP ({Status}).", purpose,
                 ex is SmtpException smtpError ? smtpError.StatusCode.ToString() : ex.GetType().Name);
             throw new RegistrationEmailUnavailableException();
         }

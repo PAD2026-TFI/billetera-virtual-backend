@@ -763,6 +763,19 @@ namespace Wallet.Infrastructure.Migrations
                     b.Property<int>("SessionVersion")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("TwoFactorEnabledAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("TwoFactorLastUsedStep")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TwoFactorSecret")
+                        .IsConcurrencyToken()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.Property<Guid?>("WalletId")
                         .HasColumnType("uniqueidentifier");
 

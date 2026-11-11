@@ -27,5 +27,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.IntegrationKeyHash).HasMaxLength(64);
         builder.Property(user => user.IntegrationKeyPrefix).HasMaxLength(20);
         builder.HasIndex(user => user.IntegrationKeyHash).IsUnique().HasFilter("[IntegrationKeyHash] IS NOT NULL");
+        builder.Property(user => user.TwoFactorSecret).HasMaxLength(512).IsConcurrencyToken();
+        builder.Property(user => user.TwoFactorEnabledAt).IsConcurrencyToken();
+        builder.Property(user => user.TwoFactorLastUsedStep).IsConcurrencyToken();
+        builder.Ignore(user => user.IsTwoFactorEnabled);
     }
 }

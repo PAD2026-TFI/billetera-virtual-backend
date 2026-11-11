@@ -9,7 +9,8 @@ public sealed class IdentityService(
     ITokenService tokens,
     ICurrentUser currentUser,
     TimeProvider clock,
-    UserRegistrationService? registrationService = null)
+    UserRegistrationService? registrationService = null,
+    TwoFactorService? twoFactor = null)
 {
     private static bool IsValid(object request) => Validator.TryValidateObject(
         request, new ValidationContext(request), new List<ValidationResult>(), true);
@@ -70,14 +71,17 @@ public sealed class IdentityService(
         return false;
     }
 
-    public async Task<Result<TokenResponse>> LoginAsync(LoginRequest request, CancellationToken ct)
+    public async Task<Result<LoginOutcome>> LoginAsync(LoginRequest request, CancellationToken ct)
     {
-        if (!IsValid(request)) return Result<TokenResponse>.Failure("INVALID_INPUT", "Entrada inválida.");
+        if (!IsValid(request)) return Result<LoginOutcome>.Failure("INVALID_INPUT", "Entrada inválida.");
         var user = await users.FindByEmailAsync(User.NormalizeEmail(request.Email), ct);
         if (user is null || !passwords.Verify(user, request.Password) || !user.IsActive)
-            return Result<TokenResponse>.Failure("INVALID_CREDENTIALS", "No se pudo iniciar sesión.");
-
-        return Result<TokenResponse>.Success(tokens.Create(user));
+            return Result<LoginOutcome>.Failure("INVALID_CREDENTIALS", "No se pudo iniciar sesión.");
+        if (user.IsTwoFactorEnabled)
+            return twoFactor is null
+                ? Result<LoginOutcome>.Failure("TWO_FACTOR_UNAVAILABLE", "La verificación en dos pasos no está disponible.")
+                : Result<LoginOutcome>.Success(new(null, twoFactor.CreateChallenge(user)));
+        return Result<LoginOutcome>.Success(new(tokens.Create(user), null));
     }
 
     public async Task<Result<UserResponse>> GetProfileAsync(CancellationToken ct)

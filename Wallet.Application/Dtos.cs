@@ -8,7 +8,9 @@ public sealed class RegisterUserRequest
     [Required, StringLength(100)] public string LastName { get; init; } = "";
     [Required, EmailAddress, StringLength(254)] public string Email { get; init; } = "";
     [Required, StringLength(128, MinimumLength = 8)] public string Password { get; init; } = "";
-    public string? Dni { get; init; }
+    [Required(ErrorMessage = "El DNI es obligatorio.")]
+    [RegularExpression(@"^\d{7,8}$", ErrorMessage = "El DNI debe contener 7 u 8 dígitos numéricos.")]
+    public string Dni { get; init; } = "";
     public string? EmailVerificationToken { get; init; }
     [Required, RegularExpression("^(personal|merchant)$")] public string AccountType { get; init; } = "personal";
 }
@@ -36,7 +38,8 @@ public sealed record UserRegistrationResult(
     Guid WalletId,
     string Cvu,
     string Alias,
-    string AccountType = "personal");
+    string AccountType = "personal",
+    bool IdentityVerified = false);
 
 public sealed record TokenResponse(string AccessToken, string TokenType, int ExpiresIn);
 

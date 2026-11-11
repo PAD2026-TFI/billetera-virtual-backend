@@ -56,7 +56,8 @@ public sealed class SqlTransferAtomicityTests
             await db.Transfers.Where(t => t.SourceWalletId == SourceId).ExecuteDeleteAsync();
             await db.DevelopmentFundings.Where(f => f.WalletId == SourceId).ExecuteDeleteAsync();
             await db.Wallets.Where(w => w.Id == SourceId || w.Id == DestinationId).ExecuteDeleteAsync();
-            await db.Users.Where(u => u.Id == Sender.Id || u.Id == _receiverId).ExecuteDeleteAsync();
+            db.Users.RemoveRange(await db.Users.Where(u => u.Id == Sender.Id || u.Id == _receiverId).ToListAsync());
+            await db.SaveChangesAsync();
         }
     }
 

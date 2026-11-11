@@ -23,7 +23,7 @@ public sealed class SqlWalletBalanceTests
         user.SetPasswordHash(new IdentityPasswordService().Hash(user, IdentityTestHost.Password));
         var wallet = DomainWallet.Create(user.Id, DateTimeOffset.UtcNow);
         // Sólo fixture: esta historia no implementa cargas de saldo.
-        typeof(DomainWallet).GetProperty(nameof(DomainWallet.Balance))!.SetValue(wallet, Wallet.Domain.Money.From(12345.67m));
+        wallet.Credit(12345.67m);
         try
         {
             await using (var db = NewDb())
@@ -52,17 +52,18 @@ public sealed class SqlWalletBalanceTests
             }
             await using (var db = NewDb())
             {
-                var stored = await db.Wallets.AsNoTracking().SingleAsync(w => w.UserId == user.Id);
+                var stored = await db.Wallets.AsNoTracking().SingleAsync(w => w.OwnerId == user.Id);
                 Assert.Equal(version, stored.RowVersion);
                 Assert.Equal(12345.67m, stored.Balance);
-                Assert.Equal(1, await db.Wallets.CountAsync(w => w.UserId == user.Id));
+                Assert.Equal(1, await db.Wallets.CountAsync(w => w.OwnerId == user.Id));
             }
         }
         finally
         {
             await using var db = NewDb();
-            await db.Wallets.Where(w => w.UserId == user.Id).ExecuteDeleteAsync();
-            await db.Users.Where(u => u.Id == user.Id).ExecuteDeleteAsync();
+            await db.Wallets.Where(w => w.OwnerId == user.Id).ExecuteDeleteAsync();
+            db.Users.RemoveRange(await db.Users.Where(u => u.Id == user.Id).ToListAsync());
+            await db.SaveChangesAsync();
         }
     }
 }

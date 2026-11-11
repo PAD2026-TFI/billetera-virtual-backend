@@ -7,6 +7,7 @@ public interface IUserRepository
     Task<User?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken);
     Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<User?> FindByIntegrationKeyHashAsync(string hash, CancellationToken ct) => Task.FromResult<User?>(null);
+    Task<bool> ExistsByDniAsync(string dni, CancellationToken cancellationToken) => Task.FromResult(false);
     Task AddAsync(User user, CancellationToken cancellationToken);
     Task SaveAsync(CancellationToken cancellationToken);
     Task<bool> IsReadyAsync(CancellationToken cancellationToken);
@@ -20,5 +21,6 @@ public interface ITokenService { TokenResponse Create(User user); }
 public interface ICurrentUser { Guid Id { get; } }
 
 public sealed class DuplicateEmailException : Exception { }
+public sealed class DuplicateDniException : Exception { }
 public sealed class ConcurrentUpdateException : Exception { }
 public sealed class StorageUnavailableException(Exception inner) : Exception("Storage unavailable", inner) { }

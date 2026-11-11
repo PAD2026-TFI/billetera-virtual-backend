@@ -42,7 +42,8 @@ public sealed class SqlIdentityTests
         finally
         {
             await using var db = NewDb();
-            await db.Users.Where(x => x.NormalizedEmail == User.NormalizeEmail(email)).ExecuteDeleteAsync();
+            db.Users.RemoveRange(await db.Users.Where(x => x.NormalizedEmail == User.NormalizeEmail(email)).ToListAsync());
+            await db.SaveChangesAsync();
         }
     }
 }

@@ -709,6 +709,9 @@ namespace Wallet.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTimeOffset?>("IdentityVerifiedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset?>("IntegrationCreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -762,6 +765,10 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.Property<Guid?>("WalletId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.HasIndex("Dni")
+                        .IsUnique()
+                        .HasFilter("[Dni] <> '00000000'");
 
                     b.HasIndex("IntegrationKeyHash")
                         .IsUnique()

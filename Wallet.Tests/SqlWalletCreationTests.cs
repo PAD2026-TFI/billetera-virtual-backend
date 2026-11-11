@@ -26,8 +26,9 @@ public sealed class SqlWalletCreationTests
     private static async Task Cleanup(Guid userId)
     {
         await using var db = NewDb();
-        await db.Wallets.Where(w => w.UserId == userId).ExecuteDeleteAsync();
-        await db.Users.Where(u => u.Id == userId).ExecuteDeleteAsync();
+        await db.Wallets.Where(w => w.OwnerId == userId).ExecuteDeleteAsync();
+        db.Users.RemoveRange(await db.Users.Where(u => u.Id == userId).ToListAsync());
+        await db.SaveChangesAsync();
     }
 
     [AzureSqlFact]
@@ -62,9 +63,11 @@ public sealed class SqlWalletCreationTests
             }
             await using (var db = NewDb())
             {
-                Assert.Equal(1, await db.Wallets.CountAsync(w => w.UserId == user.Id));
+                Assert.Equal(1, await db.Wallets.CountAsync(w => w.OwnerId == user.Id));
                 // Sólo fixture: simulo saldo futuro sin introducir un endpoint de carga.
-                await db.Wallets.Where(w => w.UserId == user.Id).ExecuteUpdateAsync(s => s.SetProperty(w => w.Balance, 125.50m));
+                var wallet = await db.Wallets.SingleAsync(w => w.OwnerId == user.Id);
+                wallet.Credit(125.50m);
+                await db.SaveChangesAsync();
             }
             // Otro host y otro DbContext: no reutilizo estado ni tracking del primer request.
             await using var restarted = new IdentityTestHost(Environment.GetEnvironmentVariable("WALLET_TEST_CONNECTION"));
@@ -102,17 +105,18 @@ public sealed class SqlWalletCreationTests
                 orphan.Wallets.Add(DomainWallet.Create(Guid.NewGuid(), DateTimeOffset.UtcNow));
                 await Assert.ThrowsAsync<DbUpdateException>(() => orphan.SaveChangesAsync());
             }
-            foreach (var (property, invalid) in new[]
-            {
-                (nameof(DomainWallet.Currency), (object)"USD"),
-                (nameof(DomainWallet.Currency), (object)"ars"),
-                (nameof(DomainWallet.Balance), (object)(-1m))
-            })
+            foreach (var invalidCurrency in new[] { "USD", "ars" })
             {
                 await using var db = NewDb();
-                var wallet = await db.Wallets.SingleAsync(w => w.UserId == user.Id);
-                typeof(DomainWallet).GetProperty(property)!.SetValue(wallet, invalid);
-                await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+                await Assert.ThrowsAsync<Microsoft.Data.SqlClient.SqlException>(() =>
+                    db.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE [Wallets] SET [Currency] = {invalidCurrency} WHERE [OwnerId] = {user.Id}"));
+            }
+            await using (var db = NewDb())
+            {
+                await Assert.ThrowsAsync<Microsoft.Data.SqlClient.SqlException>(() =>
+                    db.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE [Wallets] SET [Balance] = {-1m} WHERE [OwnerId] = {user.Id}"));
             }
             await using (var db = NewDb())
             {

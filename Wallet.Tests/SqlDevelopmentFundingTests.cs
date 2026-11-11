@@ -38,7 +38,8 @@ public sealed class SqlDevelopmentFundingTests
         await db.Movements.Where(m => m.WalletId == walletId).ExecuteDeleteAsync();
         await db.DevelopmentFundings.Where(f => f.WalletId == walletId).ExecuteDeleteAsync();
         await db.Wallets.Where(w => w.Id == walletId).ExecuteDeleteAsync();
-        await db.Users.Where(u => u.Id == userId).ExecuteDeleteAsync();
+        db.Users.RemoveRange(await db.Users.Where(u => u.Id == userId).ToListAsync());
+        await db.SaveChangesAsync();
     }
 
     [AzureSqlFact]

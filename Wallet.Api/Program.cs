@@ -160,6 +160,13 @@ if (enabled)
     builder.Services.AddSingleton(jwt);
     builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
+    builder.Services.Configure<Wallet.Infrastructure.OpenRenaper.OpenRenaperOptions>(
+        builder.Configuration.GetSection(Wallet.Infrastructure.OpenRenaper.OpenRenaperOptions.SectionName));
+    builder.Services.Configure<IdentityVerificationOptions>(
+        builder.Configuration.GetSection(IdentityVerificationOptions.SectionName));
+    builder.Services.AddSingleton(sp =>
+        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<IdentityVerificationOptions>>().Value);
+
     builder.Services.AddInfrastructure(connection);
 
     builder.Services.AddAuthentication(

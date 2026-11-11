@@ -38,7 +38,7 @@ public sealed class MerchantIntegrationTests
         client.PostAsJsonAsync("/api/v1/integrations/payment-links", new { amount = 1500, title = "Pedido 1042" });
 
     [Fact]
-    public async Task Key_creates_links_for_the_same_owner_and_wallet_and_cannot_debit_or_manage_keys()
+    public async Task Key_creates_links_for_the_same_owner_and_wallet_and_cannot_manage_keys()
     {
         await using var host = new IdentityTestHost();
         using var seller = SellerClient(host, out var user);
@@ -62,7 +62,8 @@ public sealed class MerchantIntegrationTests
         Assert.Equal(createdWallets, host.Wallets.Creates);
         var appLinks = await seller.GetFromJsonAsync<PaymentLinkDto[]>("/api/v1/me/merchant/payment-links");
         Assert.Contains(appLinks!, item => item.Id == link.Id);
-        Assert.Equal(HttpStatusCode.Forbidden, (await external.PostAsJsonAsync("/api/v1/integrations/transfers", new { })).StatusCode);
+        Assert.Contains("transfers:write", issued.Integration.Scopes);
+        Assert.Equal(HttpStatusCode.BadRequest, (await external.PostAsJsonAsync("/api/v1/integrations/transfers", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await external.GetAsync("/api/v1/integrations/wallet")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await external.GetAsync(Endpoint)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await seller.PostAsJsonAsync("/api/v1/integrations/payment-links", new { amount = 1, title = "JWT" })).StatusCode);

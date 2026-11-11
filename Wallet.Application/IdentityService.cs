@@ -59,6 +59,22 @@ public sealed class IdentityService(
         return Result<UserResponse>.Success(Map(user));
     }
 
+    public async Task<Result<IdentityValidationResult>> ValidateIdentityAsync(
+        ValidateIdentityRequest request, CancellationToken ct = default)
+    {
+        if (registrationService is not null)
+            return await registrationService.ValidateIdentityAsync(request, ct);
+
+        if (!IsValid(request))
+            return Result<IdentityValidationResult>.Failure("INVALID_INPUT", "Revisá los datos ingresados.");
+
+        var effectiveDni = request.Dni.Trim();
+        if (await users.ExistsByDniAsync(effectiveDni, ct))
+            return Result<IdentityValidationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
+
+        return Result<IdentityValidationResult>.Success(new IdentityValidationResult(true, effectiveDni));
+    }
+
     private static bool IsStorageOrConnectionException(Exception ex)
     {
         var type = ex.GetType().FullName ?? "";

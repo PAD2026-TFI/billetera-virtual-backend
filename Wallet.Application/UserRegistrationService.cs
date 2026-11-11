@@ -201,4 +201,53 @@ public sealed class UserRegistrationService(
 
         return Result<UserRegistrationResult>.Success(result);
     }
+
+    /// <summary>
+    /// Valida preliminarmente la identidad ingresada (DNI, Nombre y Apellido) ante OpenRENAPER
+    /// y comprueba que el DNI no se encuentre registrado previamente en el sistema.
+    /// </summary>
+    public async Task<Result<IdentityValidationResult>> ValidateIdentityAsync(
+        ValidateIdentityRequest request, CancellationToken ct = default)
+    {
+        if (!IsValid(request))
+            return Result<IdentityValidationResult>.Failure("INVALID_INPUT", "Revisá los datos ingresados.");
+
+        var effectiveDni = request.Dni.Trim();
+
+        // 1. Verificación de unicidad de DNI en base de datos local
+        if (await users.ExistsByDniAsync(effectiveDni, ct))
+            return Result<IdentityValidationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
+
+        // 2. Consulta al verificador de identidad (RENAPER)
+        var isVerificationEnabled = verificationOptions?.Enabled ?? false;
+        if (isVerificationEnabled)
+        {
+            VerifiedIdentity? found;
+            try
+            {
+                found = await verifier.FindAsync(new IdentityQuery(IdentityDocumentType.Dni, effectiveDni), ct);
+            }
+            catch (IdentityProviderUnavailableException)
+            {
+                return Result<IdentityValidationResult>.Failure(
+                    "IDENTITY_PROVIDER_UNAVAILABLE",
+                    "El servicio de validación de identidad no está disponible temporalmente.");
+            }
+
+            if (found is null)
+                return Result<IdentityValidationResult>.Failure(
+                    "IDENTITY_NOT_FOUND",
+                    "No se encontró una identidad registrada con ese documento.");
+
+            if (!IdentityNameMatcher.Matches(request.FirstName, request.LastName, found.FullName))
+                return Result<IdentityValidationResult>.Failure(
+                    "IDENTITY_MISMATCH",
+                    "Los nombres y apellidos no coinciden con los registros oficiales.");
+
+            return Result<IdentityValidationResult>.Success(
+                new IdentityValidationResult(true, effectiveDni, found.FullName));
+        }
+
+        return Result<IdentityValidationResult>.Success(new IdentityValidationResult(true, effectiveDni));
+    }
 }

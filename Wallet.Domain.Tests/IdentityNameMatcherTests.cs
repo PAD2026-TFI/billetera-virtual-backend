@@ -88,6 +88,10 @@ public sealed class IdentityNameMatcherTests
     [InlineData("Ana María", "Pérez", "PEREZ ANA")]
     [InlineData("María Laura", "de la Cruz", "CRUZ MARIA")]
     [InlineData("Juan", "Gómez", "GOMEZ JUAN CARLOS")]
+    [InlineData("Ana", "Gonzalez", "Ana María de la Paz Gonzalez")]
+    [InlineData("Ana", "Gonzalez", "GONZALEZ, ANA MARIA DE LA PAZ")]
+    [InlineData("Ana María", "Gonzalez", "GONZALEZ ANA MARIA DE LA PAZ")]
+    [InlineData("Ana", "de la Paz Gonzalez", "GONZALEZ ANA MARIA DE LA PAZ")]
     public void Matches_single_full_name_string_when_first_and_last_name_tokens_present(
         string reqFirst, string reqLast, string verFullName)
     {

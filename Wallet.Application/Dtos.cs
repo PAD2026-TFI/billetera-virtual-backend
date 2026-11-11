@@ -2,6 +2,24 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Wallet.Application;
 
+public sealed class ValidateIdentityRequest
+{
+    [Required(ErrorMessage = "El nombre es obligatorio."), StringLength(100)]
+    public string FirstName { get; init; } = "";
+
+    [Required(ErrorMessage = "El apellido es obligatorio."), StringLength(100)]
+    public string LastName { get; init; } = "";
+
+    [Required(ErrorMessage = "El DNI es obligatorio.")]
+    [RegularExpression(@"^\d{7,8}$", ErrorMessage = "El DNI debe contener 7 u 8 dígitos numéricos.")]
+    public string Dni { get; init; } = "";
+}
+
+public sealed record IdentityValidationResult(
+    bool Valid,
+    string Dni,
+    string? FullName = null);
+
 public sealed class RegisterUserRequest
 {
     [Required, StringLength(100)] public string FirstName { get; init; } = "";

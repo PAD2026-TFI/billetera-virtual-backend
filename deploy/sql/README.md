@@ -68,14 +68,14 @@ El código vence en 10 minutos y admite cinco intentos. El reenvío se habilita 
 
 ## Verificación en dos pasos (TOTP)
 
-La migración `20261111011754_AddTwoFactorAuthentication` agrega tres columnas opcionales a `Users` (`TwoFactorSecret`, `TwoFactorEnabledAt`, `TwoFactorLastUsedStep`). No modifica datos existentes: todas las cuentas quedan sin verificación en dos pasos y su inicio de sesión no cambia.
+La migración `20261111015222_AddTwoFactorAuthentication` agrega tres columnas opcionales a `Users` (`TwoFactorSecret`, `TwoFactorEnabledAt`, `TwoFactorLastUsedStep`). No modifica datos existentes: todas las cuentas quedan sin verificación en dos pasos y su inicio de sesión no cambia.
 
 Para un hosting que ya tenga aplicada `20261110152252_AddRegistrationEmailVerification`, importá `padi_two_factor.sql` en **SQL Import**. Es idempotente: importarlo dos veces no duplica columnas ni el registro en `__EFMigrationsHistory`.
 
 Orden obligatorio en el despliegue:
 
 1. Respaldar la base.
-2. Importar `padi_two_factor.sql` y verificar que `20261111011754_AddTwoFactorAuthentication` figure en `__EFMigrationsHistory`.
+2. Importar `padi_two_factor.sql` y verificar que `20261111015222_AddTwoFactorAuthentication` figure en `__EFMigrationsHistory`.
 3. Recién después, publicar la API. Si se publica antes, EF consulta columnas inexistentes y falla el acceso a usuarios.
 4. Publicar el frontend con la pantalla de activación en Mi perfil.
 

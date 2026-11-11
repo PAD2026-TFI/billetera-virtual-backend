@@ -39,8 +39,12 @@ public sealed class IdentityService(
         if (!IsValid(request) || string.IsNullOrWhiteSpace(request.Password))
             return Result<UserResponse>.Failure("INVALID_INPUT", "Revisá los campos obligatorios y sus límites.");
 
+        var effectiveDni = request.Dni.Trim();
+        if (await users.ExistsByDniAsync(effectiveDni, ct))
+            return Result<UserResponse>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
+
         User user;
-        try { user = User.Create(request.FirstName, request.LastName, request.Email, clock.GetUtcNow(), request.Dni); }
+        try { user = User.RegisterClient(effectiveDni, request.FirstName, request.LastName, request.Email, clock.GetUtcNow()); }
         catch (ArgumentException) { return Result<UserResponse>.Failure("INVALID_INPUT", "Datos de usuario inválidos."); }
 
         user.SetAccountType(request.AccountType);
@@ -49,6 +53,8 @@ public sealed class IdentityService(
         try { await users.AddAsync(user, ct); }
         catch (DuplicateEmailException)
         { return Result<UserResponse>.Failure("EMAIL_ALREADY_REGISTERED", "El email ya está registrado."); }
+        catch (DuplicateDniException)
+        { return Result<UserResponse>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI."); }
 
         return Result<UserResponse>.Success(Map(user));
     }
@@ -56,7 +62,7 @@ public sealed class IdentityService(
     private static bool IsStorageOrConnectionException(Exception ex)
     {
         var type = ex.GetType().FullName ?? "";
-        if (type.Contains("SqlException") || type.Contains("DbUpdate") || type.Contains("StorageUnavailable"))
+        if (type.Contains("SqlException") || type.Contains("DbUpdate") || type.Contains("StorageUnavailable") || type.Contains("Timeout"))
             return true;
 
         if (ex.InnerException is not null)
@@ -92,11 +98,14 @@ public sealed class IdentityService(
         var user = await users.FindByIdAsync(currentUser.Id, ct);
         if (user is null || !user.IsActive)
             return Result<UserResponse>.Failure("ACCESS_DENIED", "Acceso no permitido.");
+
         try { user.UpdateProfile(request.FirstName, request.LastName); }
         catch (ArgumentException) { return Result<UserResponse>.Failure("INVALID_INPUT", "Perfil inválido."); }
+
         try { await users.SaveAsync(ct); }
         catch (ConcurrentUpdateException)
         { return Result<UserResponse>.Failure("PROFILE_CONFLICT", "El perfil cambió. Consultalo nuevamente."); }
+
         return Result<UserResponse>.Success(Map(user));
     }
 }

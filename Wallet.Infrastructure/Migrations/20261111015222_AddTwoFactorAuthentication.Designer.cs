@@ -12,7 +12,7 @@ using Wallet.Infrastructure;
 namespace Wallet.Infrastructure.Migrations
 {
     [DbContext(typeof(WalletDbContext))]
-    [Migration("20261111011754_AddTwoFactorAuthentication")]
+    [Migration("20261111015222_AddTwoFactorAuthentication")]
     partial class AddTwoFactorAuthentication
     {
         /// <inheritdoc />
@@ -712,6 +712,9 @@ namespace Wallet.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTimeOffset?>("IdentityVerifiedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset?>("IntegrationCreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -775,6 +778,10 @@ namespace Wallet.Infrastructure.Migrations
 
                     b.Property<Guid?>("WalletId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.HasIndex("Dni")
+                        .IsUnique()
+                        .HasFilter("[Dni] <> '00000000'");
 
                     b.HasIndex("IntegrationKeyHash")
                         .IsUnique()

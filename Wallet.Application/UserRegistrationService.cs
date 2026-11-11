@@ -6,8 +6,8 @@ namespace Wallet.Application;
 
 /// <summary>
 /// Servicio de dominio de aplicación que orquesta el onboarding automático de usuarios.
-/// Garantiza la creación atómica del Usuario, generación de CVU/Alias únicos y creación de su Billetera virtual
-/// dentro de la misma transacción de base de datos (Unit of Work).
+/// Garantiza la verificación de identidad (RENAPER), la creación atómica del Usuario,
+/// generación de CVU/Alias únicos y creación de su Billetera virtual dentro de la misma transacción.
 /// </summary>
 public sealed class UserRegistrationService(
     IUserRepository users,
@@ -17,6 +17,8 @@ public sealed class UserRegistrationService(
     IAliasGenerator aliasGenerator,
     IUnitOfWork unitOfWork,
     TimeProvider clock,
+    IIdentityVerifier verifier,
+    IdentityVerificationOptions? verificationOptions = null,
     ICardRepository? cards = null,
     DevelopmentFundingService? fundingService = null,
     EmailVerificationService? emailVerification = null)
@@ -30,7 +32,8 @@ public sealed class UserRegistrationService(
         request, new ValidationContext(request), new List<ValidationResult>(), true);
 
     /// <summary>
-    /// Registra un nuevo usuario en la plataforma generando automáticamente su CVU y Alias y creando su Billetera asociada de forma transaccional.
+    /// Registra un nuevo usuario en la plataforma validando previamente su identidad ante el registro civil,
+    /// asegurando que el DNI sea único y generando automáticamente su CVU, Alias y Billetera asociada.
     /// </summary>
     public async Task<Result<UserRegistrationResult>> RegisterAsync(RegisterUserRequest request, CancellationToken ct)
     {
@@ -47,8 +50,38 @@ public sealed class UserRegistrationService(
             return Result<UserRegistrationResult>.Failure("EMAIL_ALREADY_REGISTERED", "El email ya está registrado.");
 
         var now = clock.GetUtcNow();
-        var effectiveDni = string.IsNullOrWhiteSpace(request.Dni) ? "00000000" : request.Dni.Trim();
+        var effectiveDni = request.Dni.Trim();
 
+        // 1. Verificación previa de unicidad de DNI en repositorio local
+        if (await users.ExistsByDniAsync(effectiveDni, ct))
+            return Result<UserRegistrationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
+
+        // 2. Consulta al verificador de identidad (RENAPER) fuera de transacción
+        var isVerificationEnabled = verificationOptions?.Enabled ?? false;
+        var isVerified = false;
+
+        if (isVerificationEnabled)
+        {
+            VerifiedIdentity? found;
+            try
+            {
+                found = await verifier.FindAsync(new IdentityQuery(IdentityDocumentType.Dni, effectiveDni), ct);
+            }
+            catch (IdentityProviderUnavailableException)
+            {
+                return Result<UserRegistrationResult>.Failure("IDENTITY_PROVIDER_UNAVAILABLE", "El servicio de validación de identidad no está disponible temporalmente.");
+            }
+
+            if (found is null)
+                return Result<UserRegistrationResult>.Failure("IDENTITY_NOT_FOUND", "El DNI ingresado no fue encontrado en el registro nacional de las personas.");
+
+            if (!IdentityNameMatcher.Matches(request.FirstName, request.LastName, found.FullName))
+                return Result<UserRegistrationResult>.Failure("IDENTITY_MISMATCH", "Los datos de nombre y apellido no coinciden con los registrados ante RENAPER.");
+
+            isVerified = true;
+        }
+
+        // 3. Creación de la entidad de dominio User
         User user;
         try
         {
@@ -59,9 +92,15 @@ public sealed class UserRegistrationService(
             return Result<UserRegistrationResult>.Failure("INVALID_INPUT", "Datos de usuario inválidos.");
         }
 
+        if (isVerified)
+        {
+            user.MarkIdentityVerified(now);
+        }
+
         user.SetAccountType(request.AccountType);
         user.SetPasswordHash(passwords.Hash(user, request.Password));
 
+        // 4. Generación de credenciales financieras (CVU y Alias)
         string cvu;
         var cvuAttempts = 0;
         do
@@ -99,6 +138,7 @@ public sealed class UserRegistrationService(
             now.Year + 5,
             now);
 
+        // 5. Persistencia atómica de entidades en la base de datos
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
         try
         {
@@ -119,12 +159,18 @@ public sealed class UserRegistrationService(
             await tx.RollbackAsync(ct);
             return Result<UserRegistrationResult>.Failure("EMAIL_ALREADY_REGISTERED", "El email ya está registrado.");
         }
+        catch (DuplicateDniException)
+        {
+            await tx.RollbackAsync(ct);
+            return Result<UserRegistrationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
+        }
         catch
         {
             await tx.RollbackAsync(ct);
             throw;
         }
 
+        // 6. Acreditación de fondos de bienvenida
         if (fundingService is not null)
         {
             try
@@ -150,7 +196,8 @@ public sealed class UserRegistrationService(
             wallet.Id,
             wallet.Cvu,
             wallet.Alias,
-            user.AccountType);
+            user.AccountType,
+            IdentityVerified: isVerified);
 
         return Result<UserRegistrationResult>.Success(result);
     }

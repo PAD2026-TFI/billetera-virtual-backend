@@ -10,6 +10,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.ToTable("Users");
         builder.Property(user => user.Dni).HasMaxLength(20).IsRequired();
+        builder.HasIndex(user => user.Dni).IsUnique().HasFilter("[Dni] <> '00000000'");
+        builder.Property(user => user.IdentityVerifiedAt);
         builder.Property(user => user.FirstName).HasMaxLength(100).IsRequired();
         builder.Property(user => user.LastName).HasMaxLength(100).IsRequired();
         builder.Property(user => user.Email).HasMaxLength(254).IsRequired();

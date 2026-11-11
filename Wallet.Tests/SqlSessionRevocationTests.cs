@@ -62,7 +62,8 @@ public sealed class SqlSessionRevocationTests
         finally
         {
             await using var cleanup = NewDb();
-            await cleanup.Users.Where(u => u.Id == user.Id).ExecuteDeleteAsync();
+            cleanup.Users.RemoveRange(await cleanup.Users.Where(u => u.Id == user.Id).ToListAsync());
+            await cleanup.SaveChangesAsync();
         }
     }
 }

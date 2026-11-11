@@ -219,7 +219,7 @@ public sealed class UserRegistrationService(
             return Result<IdentityValidationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
 
         // 2. Consulta al verificador de identidad (RENAPER)
-        var isVerificationEnabled = verificationOptions?.Enabled ?? false;
+        var isVerificationEnabled = verificationOptions?.Enabled ?? true;
         if (isVerificationEnabled)
         {
             VerifiedIdentity? found;

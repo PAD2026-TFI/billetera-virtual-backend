@@ -72,7 +72,9 @@ public sealed class IdentityService(
         if (await users.ExistsByDniAsync(effectiveDni, ct))
             return Result<IdentityValidationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
 
-        return Result<IdentityValidationResult>.Success(new IdentityValidationResult(true, effectiveDni));
+        return Result<IdentityValidationResult>.Failure(
+            "IDENTITY_PROVIDER_UNAVAILABLE",
+            "El servicio de validación de identidad no se encuentra configurado.");
     }
 
     private static bool IsStorageOrConnectionException(Exception ex)

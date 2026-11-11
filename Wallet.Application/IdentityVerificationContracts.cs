@@ -59,5 +59,5 @@ public sealed class IdentityVerificationOptions
 {
     public const string SectionName = "IdentityVerification";
 
-    public bool Enabled { get; init; } = false;
+    public bool Enabled { get; init; } = true;
 }

@@ -65,3 +65,20 @@ Para publicar el registro con verificación, coordiná estos pasos en el mismo d
 4. Probá un registro con un correo de prueba que puedas abrir. Comprobá que llegue el código, que la app rechace uno incorrecto y que la cuenta se cree después de verificar el correcto. Probá también el login con una cuenta anterior.
 
 El código vence en 10 minutos y admite cinco intentos. El reenvío se habilita después de un minuto. La confirmación devuelve un token válido por 20 minutos, ligado al correo y consumido al crear la cuenta. Las altas de desarrollo conservan el flujo anterior mientras `Mail__Enabled` esté desactivado.
+
+## Verificación en dos pasos (TOTP)
+
+La migración `20261111011754_AddTwoFactorAuthentication` agrega tres columnas opcionales a `Users` (`TwoFactorSecret`, `TwoFactorEnabledAt`, `TwoFactorLastUsedStep`). No modifica datos existentes: todas las cuentas quedan sin verificación en dos pasos y su inicio de sesión no cambia.
+
+Para un hosting que ya tenga aplicada `20261110152252_AddRegistrationEmailVerification`, importá `padi_two_factor.sql` en **SQL Import**. Es idempotente: importarlo dos veces no duplica columnas ni el registro en `__EFMigrationsHistory`.
+
+Orden obligatorio en el despliegue:
+
+1. Respaldar la base.
+2. Importar `padi_two_factor.sql` y verificar que `20261111011754_AddTwoFactorAuthentication` figure en `__EFMigrationsHistory`.
+3. Recién después, publicar la API. Si se publica antes, EF consulta columnas inexistentes y falla el acceso a usuarios.
+4. Publicar el frontend con la pantalla de activación en Mi perfil.
+
+El secreto de cada usuario se guarda cifrado con AES-GCM usando una clave derivada de `Jwt:Key`. Cambiar `Jwt:Key` invalida los secretos guardados.
+
+Esta versión no incluye códigos de recuperación. Si alguien pierde el celular con la app de autenticación, o si cambia `Jwt:Key`, la verificación se desactiva a mano poniendo en NULL las tres columnas `TwoFactor*` de ese usuario; después puede volver a activarla desde Mi perfil.

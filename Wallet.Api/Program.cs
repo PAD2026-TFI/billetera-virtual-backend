@@ -140,6 +140,8 @@ if (enabled)
         ?? builder.Configuration["Checkout:BaseUrl"]
         ?? "https://localhost:7081";
 
+    builder.Services.AddSingleton(TwoFactorSettings.FromMasterKey(key));
+    builder.Services.AddScoped<TwoFactorService>();
     builder.Services.AddScoped<IdentityService>();
     builder.Services.AddScoped<WalletService>();
     builder.Services.AddScoped<GatewayService>();

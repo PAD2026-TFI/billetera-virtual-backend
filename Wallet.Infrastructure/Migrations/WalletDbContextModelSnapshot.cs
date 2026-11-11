@@ -760,6 +760,16 @@ namespace Wallet.Infrastructure.Migrations
                     b.Property<int>("SessionVersion")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("TwoFactorEnabledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("TwoFactorLastUsedStep")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TwoFactorSecret")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.Property<Guid?>("WalletId")
                         .HasColumnType("uniqueidentifier");
 

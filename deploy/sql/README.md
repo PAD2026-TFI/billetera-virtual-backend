@@ -82,3 +82,16 @@ Orden obligatorio en el despliegue:
 Antes de activar TOTP en el host, configurá `TwoFactor__Key` con 32 bytes aleatorios codificados en Base64. Conservá ese valor entre despliegues para poder leer los secretos cifrados. Cuando el host usa esta variable, la rotación de `Jwt__Key` deja accesibles los secretos TOTP. Si omitís la variable, se usa `Jwt__Key` como clave maestra y cambiarla después de activar TOTP deja inaccesibles los secretos.
 
 La recuperación ante pérdida del autenticador requiere que soporte verifique la titularidad, restablezca los tres campos `TwoFactor*` del usuario y revoque sus sesiones. El usuario puede volver a activar TOTP desde Mi perfil.
+
+## Recuperación de contraseña por correo
+
+La migración `20261111120034_AddPasswordReset` crea la tabla `PasswordResetChallenges`, donde se guarda el hash del código de recuperación, su vencimiento, la espera para reenviarlo y los intentos que quedan. No modifica tablas existentes.
+
+Para un hosting que ya tenga aplicada `20261111015222_AddTwoFactorAuthentication`, importá `padi_password_reset.sql` en **SQL Import**. Es idempotente: importarlo dos veces no duplica la tabla ni el registro en `__EFMigrationsHistory`.
+
+Orden obligatorio en el despliegue:
+
+1. Respaldar la base.
+2. Importar `padi_password_reset.sql` y verificar que `20261111120034_AddPasswordReset` figure en `__EFMigrationsHistory`.
+3. Publicar la API. Usa la misma configuración `Mail__*` que la verificación de correo del registro; no agrega variables nuevas.
+4. Publicar el frontend con la pantalla de recuperación, que llama a `POST /api/v1/auth/password-reset` y a `POST /api/v1/auth/password-reset/confirm`.

@@ -55,6 +55,31 @@ namespace Wallet.Infrastructure.Migrations
                     b.ToTable("EmailVerificationChallenges", (string)null);
                 });
 
+            modelBuilder.Entity("Wallet.Application.PasswordResetChallenge", b =>
+                {
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<int>("AttemptsLeft")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CodeExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CodeHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset>("ResendAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Email");
+
+                    b.ToTable("PasswordResetChallenges", (string)null);
+                });
+
             modelBuilder.Entity("Wallet.Domain.Address", b =>
                 {
                     b.Property<Guid>("Id")

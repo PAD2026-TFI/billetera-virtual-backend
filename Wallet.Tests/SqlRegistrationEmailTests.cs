@@ -92,7 +92,7 @@ public sealed class SqlRegistrationEmailTests
     private static Task<HttpResponseMessage> Register(HttpClient client, string email, string? token) =>
         client.PostAsJsonAsync(RegisterPath, new
         {
-            firstName = "Ana", lastName = "Prueba", email, password = IdentityTestHost.Password,
+            dni = "30765432", firstName = "Ana", lastName = "Prueba", email, password = IdentityTestHost.Password,
             emailVerificationToken = token
         });
 

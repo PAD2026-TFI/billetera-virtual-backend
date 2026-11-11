@@ -70,7 +70,8 @@ public sealed class SqlMovementRegistrationTests
             await db.Transfers.Where(t => ids.Contains(t.SourceWalletId)).ExecuteDeleteAsync();
             await db.DevelopmentFundings.Where(f => ids.Contains(f.WalletId)).ExecuteDeleteAsync();
             await db.Wallets.Where(w => ids.Contains(w.Id)).ExecuteDeleteAsync();
-            await db.Users.Where(u => userIds.Contains(u.Id)).ExecuteDeleteAsync();
+            db.Users.RemoveRange(await db.Users.Where(u => userIds.Contains(u.Id)).ToListAsync());
+            await db.SaveChangesAsync();
         }
     }
 }

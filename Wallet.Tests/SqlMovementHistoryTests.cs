@@ -49,7 +49,8 @@ public sealed class SqlMovementHistoryTests
             await cleanup.Movements.Where(m => m.WalletId == wallet.Id).ExecuteDeleteAsync();
             await cleanup.DevelopmentFundings.Where(f => f.WalletId == wallet.Id).ExecuteDeleteAsync();
             await cleanup.Wallets.Where(w => w.Id == wallet.Id).ExecuteDeleteAsync();
-            await cleanup.Users.Where(u => u.Id == user.Id).ExecuteDeleteAsync();
+            cleanup.Users.RemoveRange(await cleanup.Users.Where(u => u.Id == user.Id).ToListAsync());
+            await cleanup.SaveChangesAsync();
         }
     }
     private sealed class FixedClock : TimeProvider

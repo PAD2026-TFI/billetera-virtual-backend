@@ -12,6 +12,14 @@ public sealed class TransferRequest
     [Required] public decimal? Amount { get; init; }
 }
 
+public sealed class B2BTransferRequest
+{
+    public Guid? DestinationWalletId { get; init; }
+    public string? Alias { get; init; }
+    public string? Cvu { get; init; }
+    [Required] public decimal? Amount { get; init; }
+}
+
 public sealed class TransferByCvuRequest
 {
     [Required, StringLength(22, MinimumLength = 22, ErrorMessage = "El CVU debe tener exactamente 22 dígitos.")]
@@ -85,6 +93,22 @@ public sealed class TransferService(
         } catch (ArgumentException) { throw new TransferRejectedException("INVALID_AMOUNT"); }
         var command = new TransferCommand(currentUser.Id, destination, monetaryAmount, parsedKey);
         return store.ExecuteAsync(command, Fingerprint(destination, amount), ct);
+    }
+
+    public Task<TransferExecution> ExecuteB2BAsync(B2BTransferRequest request, string? key, CancellationToken ct)
+    {
+        if (request.Amount is not decimal amount)
+            throw new TransferRejectedException("INVALID_INPUT");
+
+        return (request.DestinationWalletId, request.Alias?.Trim(), request.Cvu?.Trim()) switch
+        {
+            (Guid id, null, null) => ExecuteAsync(new TransferRequest { DestinationWalletId = id, Amount = amount }, key, ct),
+            (null, { Length: >= 6 and <= 40 } alias, null) when alias.All(c => char.IsLetterOrDigit(c) || c is '.' or '-') =>
+                ExecuteByAliasAsync(new TransferByAliasRequest { Alias = alias, Amount = amount }, key, ct),
+            (null, null, { Length: 22 } cvu) when cvu.All(char.IsAsciiDigit) =>
+                ExecuteByCvuAsync(new TransferByCvuRequest { Cvu = cvu, Amount = amount }, key, ct),
+            _ => throw new TransferRejectedException("INVALID_INPUT")
+        };
     }
 
     public async Task<TransferExecution> ExecuteByCvuAsync(TransferByCvuRequest request, string? key, CancellationToken ct)

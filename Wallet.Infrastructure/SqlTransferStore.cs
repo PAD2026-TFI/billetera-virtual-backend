@@ -38,6 +38,11 @@ public sealed class SqlTransferStore(DbContextOptions<WalletDbContext> options, 
     {
         var sourceId = await db.Wallets.AsNoTracking().Where(w => w.OwnerId == command.SourceUserId)
             .Select(w => w.Id).SingleOrDefaultAsync(ct);
+        if (sourceId == Guid.Empty)
+        {
+            sourceId = await db.Users.AsNoTracking().Where(u => u.Id == command.SourceUserId && u.WalletId != null)
+                .Select(u => u.WalletId!.Value).SingleOrDefaultAsync(ct);
+        }
         if (sourceId == Guid.Empty) throw new TransferRejectedException("SOURCE_WALLET_NOT_FOUND");
 
         // Recuperar una confirmada no requiere otra vez saldo ni un destino aún activo.

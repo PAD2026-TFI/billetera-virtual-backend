@@ -54,6 +54,11 @@ public sealed class SqlDebitCardPaymentStore(DbContextOptions<WalletDbContext> o
                 Transfer.ValidateAmount(link.Amount);
                 var sourceId = await db.Wallets.AsNoTracking().Where(w => w.OwnerId == command.UserId)
                     .Select(w => w.Id).SingleOrDefaultAsync(ct);
+                if (sourceId == Guid.Empty)
+                {
+                    sourceId = await db.Users.AsNoTracking().Where(u => u.Id == command.UserId && u.WalletId != null)
+                        .Select(u => u.WalletId!.Value).SingleOrDefaultAsync(ct);
+                }
                 if (sourceId == Guid.Empty) throw new TransferRejectedException("SOURCE_WALLET_NOT_FOUND");
                 if (sourceId == link.DestinationWalletId) throw new TransferRejectedException("SAME_WALLET");
 

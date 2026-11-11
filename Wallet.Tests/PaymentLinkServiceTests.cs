@@ -212,14 +212,104 @@ public sealed class PaymentLinkServiceTests
         payment.MarkSucceeded(null, "AUTH-123", DateTimeOffset.UtcNow);
         await _payments.CreateAsync(payment, CancellationToken.None);
 
-        // Comercio dueño debe ver su cobro
         var resultA = await _service.GetPaymentByIdAsync(payment.Id, merchantA, CancellationToken.None);
         Assert.NotNull(resultA);
         Assert.Equal(500m, resultA.Amount);
 
-        // Comercio ajeno debe recibir null
         var resultB = await _service.GetPaymentByIdAsync(payment.Id, merchantB, CancellationToken.None);
         Assert.Null(resultB);
+    }
+
+    [Fact]
+    public async Task ProcessCheckoutAsync_dispatches_webhook_notification_to_merchant()
+    {
+        var clients = new InMemoryExternalClientRepo();
+        var dispatcher = new RecordingWebhookDispatcher();
+        var merchant = ExternalClient.Create("Gaming Co.", "30712345679", "tech@gaming.com", DateTimeOffset.UtcNow);
+        var secret = new string('x', 32);
+        merchant.ConfigureWebhook("https://gaming.example.com/api/webhooks/deposits", secret);
+        await clients.CreateAsync(merchant, CancellationToken.None);
+
+        var service = new PaymentLinkService(
+            _links,
+            _payments,
+            _wallets,
+            _users,
+            _transfers,
+            _funding,
+            _cardSimulator,
+            _currentUser,
+            _clock,
+            clients: clients,
+            webhookDispatcher: dispatcher);
+
+        var link = PaymentLink.Create(
+            Guid.NewGuid(),
+            1200m,
+            "Carga de Fichas",
+            "Depósito de jugador",
+            PaymentLinkType.SingleUse,
+            DateTimeOffset.UtcNow,
+            merchantOwnerId: merchant.Id);
+
+        await _links.CreateAsync(link, CancellationToken.None);
+
+        var request = new ProcessCheckoutRequest(
+            CheckoutPaymentMethod.Card,
+            link.Token,
+            new CardPaymentDetails("4532015112830366", "Jugador 1", 12, 2028, "123"));
+
+        var receipt = await service.ProcessCheckoutAsync(link.Token, request, "test-webhook-idemp", CancellationToken.None);
+
+        Assert.NotNull(receipt);
+        Assert.Single(dispatcher.Dispatched);
+
+        var (url, dispatchedSecret, notification) = dispatcher.Dispatched[0];
+        Assert.Equal("https://gaming.example.com/api/webhooks/deposits", url);
+        Assert.Equal(secret, dispatchedSecret);
+        Assert.Equal("payment.succeeded", notification.Event);
+        Assert.Equal(link.Token, notification.Data.Token);
+        Assert.Equal(1200m, notification.Data.Amount);
+        Assert.Equal("Completed", notification.Data.Status);
+        Assert.Equal(receipt.PaymentId, notification.Data.PaymentId);
+    }
+
+    private sealed class RecordingWebhookDispatcher : IWebhookDispatcher
+    {
+        public List<(string Url, string? Secret, WebhookNotification Notification)> Dispatched { get; } = [];
+
+        public Task DispatchPaymentSucceededAsync(
+            string webhookUrl,
+            string? webhookSecret,
+            WebhookNotification notification,
+            CancellationToken ct = default)
+        {
+            Dispatched.Add((webhookUrl, webhookSecret, notification));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryExternalClientRepo : IExternalClientRepository
+    {
+        private readonly Dictionary<Guid, ExternalClient> _clients = [];
+
+        public Task<ExternalClient?> FindByApiKeyHashAsync(string apiKeyHash, CancellationToken ct) =>
+            Task.FromResult(_clients.Values.FirstOrDefault(c => c.ApiKeyHash == apiKeyHash));
+
+        public Task<ExternalClient?> FindByIdAsync(Guid id, CancellationToken ct) =>
+            Task.FromResult(_clients.GetValueOrDefault(id));
+
+        public Task CreateAsync(ExternalClient client, CancellationToken ct)
+        {
+            _clients[client.Id] = client;
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(ExternalClient client, CancellationToken ct)
+        {
+            _clients[client.Id] = client;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class InMemoryPaymentLinkRepository : IPaymentLinkRepository

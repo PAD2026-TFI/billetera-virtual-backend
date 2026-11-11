@@ -118,6 +118,74 @@ public sealed class GatewayController(
         }
     }
 
+    [HttpPost("/api/v1/integrations/webhook/test", Order = -1)]
+    [HttpPost("webhook/test")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> TestWebhook(
+        [FromServices] IWebhookDispatcher dispatcher,
+        CancellationToken ct)
+    {
+        try
+        {
+            await gateway.TestWebhookAsync(currentUser.Id, dispatcher, ct);
+            return Ok(new { success = true, message = "Notificación de prueba enviada exitosamente." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Webhook no configurado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "WEBHOOK_NOT_CONFIGURED", ["detail"] = ex.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
+    [HttpPost("/api/v1/integrations/set-password", Order = -1)]
+    [HttpPost("set-password")]
+    [Authorize(Policy = "ExternalClient")]
+    [ProducesResponseType<SetMerchantPasswordResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SetMerchantPasswordResponse>> SetPassword(
+        [FromBody] SetMerchantPasswordRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var response = await gateway.SetPasswordAsync(currentUser.Id, request, ct);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Datos de contraseña inválidos.",
+                extensions: new Dictionary<string, object?> { ["code"] = "INVALID_PASSWORD", ["detail"] = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "CREDENTIALS_CONFLICT" });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(statusCode: 404, title: "Comercio no encontrado.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CLIENT_NOT_FOUND" });
+        }
+    }
+
     [HttpGet("/api/v1/integrations/wallet", Order = -1)]
     [HttpGet("wallet")]
     [Authorize(Policy = "ExternalClient")]
@@ -159,7 +227,7 @@ public sealed class GatewayController(
     [ProducesResponseType<ProblemDetails>(409)]
     [ProducesResponseType<ProblemDetails>(422)]
     public async Task<ActionResult<TransferResponse>> ProcessPayment(
-        TransferRequest request,
+        B2BTransferRequest request,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         [FromHeader(Name = "X-Api-Key")] string? apiKey,
         CancellationToken ct)
@@ -171,7 +239,7 @@ public sealed class GatewayController(
 
         try
         {
-            var result = await transfers.ExecuteAsync(request, idempotencyKey, ct);
+            var result = await transfers.ExecuteB2BAsync(request, idempotencyKey, ct);
             Response.Headers["Idempotency-Replayed"] = result.Created ? "false" : "true";
             return StatusCode(result.Created ? 201 : 200, result.Transfer);
         }

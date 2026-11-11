@@ -18,7 +18,9 @@ public sealed class PaymentLinkService(
     TimeProvider clock,
     ICardRepository? cards = null,
     string? baseUrl = null,
-    IDebitCardPaymentStore? debitCardPayments = null) : ICheckoutService
+    IDebitCardPaymentStore? debitCardPayments = null,
+    IExternalClientRepository? clients = null,
+    IWebhookDispatcher? webhookDispatcher = null) : ICheckoutService
 {
     private readonly string _baseUrl = baseUrl ?? "https://localhost:7081";
 
@@ -333,6 +335,7 @@ public sealed class PaymentLinkService(
         link.MarkCompleted(now);
         await links.UpdateAsync(link, ct);
         await payments.CreateAsync(payment, ct);
+        await TryDispatchWebhookAsync(link, payment, now, ct);
 
         return new CheckoutReceiptDto(
             payment.Id,
@@ -475,6 +478,7 @@ public sealed class PaymentLinkService(
         link.MarkCompleted(now);
         await links.UpdateAsync(link, ct);
         await payments.CreateAsync(payment, ct);
+        await TryDispatchWebhookAsync(link, payment, now, ct);
 
         return new CheckoutReceiptDto(
             payment.Id,
@@ -568,5 +572,42 @@ public sealed class PaymentLinkService(
         var payer = payerId.HasValue ? payerId.Value.ToString("N") : "ANONYMOUS";
         var canonical = $"{linkId:N}|{amount.ToString("0.00", CultureInfo.InvariantCulture)}|{method}|{last4}|{payer}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+
+    private async Task TryDispatchWebhookAsync(PaymentLink link, Payment payment, DateTimeOffset completedAt, CancellationToken ct)
+    {
+        if (!link.MerchantOwnerId.HasValue || clients is null || webhookDispatcher is null)
+            return;
+
+        try
+        {
+            var client = await clients.FindByIdAsync(link.MerchantOwnerId.Value, ct);
+            if (client is null || string.IsNullOrWhiteSpace(client.WebhookUrl))
+                return;
+
+            var notification = new WebhookNotification(
+                "payment.succeeded",
+                new WebhookPaymentData(
+                    payment.Id,
+                    link.Id,
+                    link.Token,
+                    payment.Amount.Amount,
+                    payment.Currency,
+                    "Completed",
+                    payment.Method.ToString(),
+                    payment.AuthorizationCode,
+                    payment.DestinationWalletId,
+                    completedAt),
+                completedAt);
+
+            await webhookDispatcher.DispatchPaymentSucceededAsync(
+                client.WebhookUrl,
+                client.WebhookSecret,
+                notification,
+                ct);
+        }
+        catch
+        {
+        }
     }
 }

@@ -40,6 +40,8 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(opt.TimeoutSeconds > 0 ? opt.TimeoutSeconds : 5);
         });
         services.AddScoped<UserRegistrationService>();
+        services.AddHttpClient("WebhookClient");
+        services.AddScoped<IWebhookDispatcher, HttpWebhookDispatcher>();
         return services;
     }
 }

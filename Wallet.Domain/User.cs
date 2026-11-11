@@ -114,6 +114,54 @@ public sealed class User : WalletOwner
         IntegrationRevokedAt = now.ToUniversalTime();
     }
 
+    /// <summary>
+    /// Secreto TOTP cifrado. Mientras TwoFactorEnabledAt es null, es una configuración pendiente de confirmar.
+    /// </summary>
+    public string? TwoFactorSecret { get; private set; }
+
+    public DateTimeOffset? TwoFactorEnabledAt { get; private set; }
+
+    /// <summary>
+    /// Último paso TOTP aceptado; impide reutilizar el mismo código.
+    /// </summary>
+    public long? TwoFactorLastUsedStep { get; private set; }
+
+    public bool IsTwoFactorEnabled => TwoFactorEnabledAt is not null && TwoFactorSecret is not null;
+
+    public void BeginTwoFactorSetup(string protectedSecret)
+    {
+        if (IsTwoFactorEnabled)
+            throw new InvalidOperationException("La verificación en dos pasos ya está activa.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(protectedSecret);
+        if (protectedSecret.Length > 512)
+            throw new ArgumentException("Secreto inválido.", nameof(protectedSecret));
+        TwoFactorSecret = protectedSecret;
+        TwoFactorLastUsedStep = null;
+    }
+
+    public void EnableTwoFactor(long step, DateTimeOffset now)
+    {
+        if (TwoFactorSecret is null || IsTwoFactorEnabled)
+            throw new InvalidOperationException("No hay una configuración pendiente de confirmar.");
+        TwoFactorEnabledAt = now.ToUniversalTime();
+        TwoFactorLastUsedStep = step;
+    }
+
+    public bool TryUseTwoFactorStep(long step)
+    {
+        if (!IsTwoFactorEnabled || TwoFactorLastUsedStep is { } last && step <= last)
+            return false;
+        TwoFactorLastUsedStep = step;
+        return true;
+    }
+
+    public void DisableTwoFactor()
+    {
+        TwoFactorSecret = null;
+        TwoFactorEnabledAt = null;
+        TwoFactorLastUsedStep = null;
+    }
+
     private User() { } // Materialización EF Core.
 
     private User(Guid id, string dni, string firstName, string lastName, string email, DateTimeOffset createdAt)

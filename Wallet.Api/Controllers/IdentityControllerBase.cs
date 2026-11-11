@@ -12,7 +12,9 @@ public abstract class IdentityControllerBase : ControllerBase
         var status = error.Code switch
         {
             "EMAIL_ALREADY_REGISTERED" or "PROFILE_CONFLICT" or "DNI_ALREADY_REGISTERED" => 409,
-            "INVALID_CREDENTIALS" => 401,
+            "TWO_FACTOR_ALREADY_ENABLED" or "TWO_FACTOR_NOT_ENABLED" or "TWO_FACTOR_SETUP_REQUIRED" or "TWO_FACTOR_CONFLICT" => 409,
+            "INVALID_CREDENTIALS" or "TWO_FACTOR_CHALLENGE_EXPIRED" or "TWO_FACTOR_LOGIN_FAILED" => 401,
+            "TWO_FACTOR_UNAVAILABLE" => 503,
             "ACCESS_DENIED" => 403,
             "IDENTITY_NOT_FOUND" or "IDENTITY_MISMATCH" => 422,
             "IDENTITY_PROVIDER_UNAVAILABLE" => 503,

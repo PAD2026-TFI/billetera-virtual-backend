@@ -46,6 +46,23 @@ public sealed class AuthController(IdentityService identity, TwoFactorService tw
         FromResult(await twoFactor.CompleteLoginAsync(request, ct));
 
     /// <summary>
+    /// Valida preliminarmente los datos de identidad (DNI, Nombre y Apellido) ante OpenRENAPER
+    /// y verifica que el DNI no se encuentre registrado previamente.
+    /// </summary>
+    [HttpPost("validate-identity")]
+    [EnableRateLimiting("credentials")]
+    [Consumes("application/json")]
+    [ProducesResponseType<IdentityValidationResult>(200)]
+    [ProducesResponseType<ValidationProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(409)]
+    [ProducesResponseType<ProblemDetails>(422)]
+    [ProducesResponseType<ProblemDetails>(429)]
+    [ProducesResponseType<ProblemDetails>(503)]
+    public async Task<ActionResult<IdentityValidationResult>> ValidateIdentity(
+        ValidateIdentityRequest request, CancellationToken ct) =>
+        FromResult(await identity.ValidateIdentityAsync(request, ct));
+
+    /// <summary>
     /// Ruta legacy de compatibilidad hacia atrás.
     /// </summary>
     [HttpPost("/api/auth/login")]

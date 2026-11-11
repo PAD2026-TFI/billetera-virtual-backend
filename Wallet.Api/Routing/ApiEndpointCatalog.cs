@@ -54,6 +54,7 @@ public static class ApiEndpointCatalog
     public static string Summary(string controller, string action) => (controller, action) switch
     {
         ("Auth", "Login") => "Iniciar sesión y obtener JWT",
+        ("Auth", "ValidateIdentity") => "Validar DNI, nombre y apellido ante OpenRENAPER",
         ("Users", "Register") => "Registrar cliente con billetera y tarjeta virtual",
         ("Users", "GetMe") => "Consultar mi perfil",
         ("Users", "Update") => "Actualizar mi perfil",

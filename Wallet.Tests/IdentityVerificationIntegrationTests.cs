@@ -240,6 +240,137 @@ public sealed class IdentityVerificationIntegrationTests
     }
 
     [Fact]
+    public async Task ValidateIdentity_succeeds_when_renaper_confirms_person()
+    {
+        var (app, client, users, verifier) = CreateTestApp(verificationEnabled: true);
+        await using (app)
+        using (client)
+        {
+            verifier.Handler = (q, _) => Task.FromResult<VerifiedIdentity?>(
+                new VerifiedIdentity("30123456", "Ana María Pérez"));
+
+            var request = new ValidateIdentityRequest
+            {
+                FirstName = "Ana",
+                LastName = "Pérez",
+                Dni = "30123456"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/v1/auth/validate-identity", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<IdentityValidationResult>();
+            Assert.NotNull(body);
+            Assert.True(body.Valid);
+            Assert.Equal("30123456", body.Dni);
+            Assert.Equal("Ana María Pérez", body.FullName);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateIdentity_returns_conflict_when_dni_already_registered()
+    {
+        var (app, client, users, verifier) = CreateTestApp(verificationEnabled: true);
+        await using (app)
+        using (client)
+        {
+            var existingUser = User.Create("Carlos", "Gómez", "carlos@test.com", DateTimeOffset.UtcNow, dni: "30123456");
+            await users.AddAsync(existingUser, CancellationToken.None);
+
+            var request = new ValidateIdentityRequest
+            {
+                FirstName = "Carlos",
+                LastName = "Gómez",
+                Dni = "30123456"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/v1/auth/validate-identity", request);
+
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("DNI_ALREADY_REGISTERED", doc.RootElement.GetProperty("code").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task ValidateIdentity_returns_unprocessable_when_identity_not_found_in_renaper()
+    {
+        var (app, client, users, verifier) = CreateTestApp(verificationEnabled: true);
+        await using (app)
+        using (client)
+        {
+            verifier.Handler = (q, _) => Task.FromResult<VerifiedIdentity?>(null);
+
+            var request = new ValidateIdentityRequest
+            {
+                FirstName = "Ana",
+                LastName = "Pérez",
+                Dni = "30123456"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/v1/auth/validate-identity", request);
+
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("IDENTITY_NOT_FOUND", doc.RootElement.GetProperty("code").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task ValidateIdentity_returns_unprocessable_when_name_mismatches_renaper()
+    {
+        var (app, client, users, verifier) = CreateTestApp(verificationEnabled: true);
+        await using (app)
+        using (client)
+        {
+            verifier.Handler = (q, _) => Task.FromResult<VerifiedIdentity?>(
+                new VerifiedIdentity("30123456", "Juan Alberto Gómez"));
+
+            var request = new ValidateIdentityRequest
+            {
+                FirstName = "Ana",
+                LastName = "Pérez",
+                Dni = "30123456"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/v1/auth/validate-identity", request);
+
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("IDENTITY_MISMATCH", doc.RootElement.GetProperty("code").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task ValidateIdentity_returns_service_unavailable_when_renaper_fails()
+    {
+        var (app, client, users, verifier) = CreateTestApp(verificationEnabled: true);
+        await using (app)
+        using (client)
+        {
+            verifier.Handler = (q, _) => throw new IdentityProviderUnavailableException("timeout", new Exception());
+
+            var request = new ValidateIdentityRequest
+            {
+                FirstName = "Ana",
+                LastName = "Pérez",
+                Dni = "30123456"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/v1/auth/validate-identity", request);
+
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("IDENTITY_PROVIDER_UNAVAILABLE", doc.RootElement.GetProperty("code").GetString());
+        }
+    }
+
+    [Fact]
     [Trait("Category", "ExternalIntegration")]
     public async Task ExternalIntegration_OpenRenaper_connectivity_test()
     {

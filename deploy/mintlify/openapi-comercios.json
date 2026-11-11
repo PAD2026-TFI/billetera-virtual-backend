@@ -3,7 +3,7 @@
   "info": {
     "title": "Padi: cobros para sistemas externos",
     "version": "v1",
-    "description": "Creá enlaces y consultá los cobros de tu cuenta de vendedor con la API Key obtenida desde la app."
+    "description": "Creá enlaces, consultá cobros y transferí saldo desde la billetera de tu comercio con tu API Key."
   },
   "servers": [
     {
@@ -609,7 +609,7 @@
             "description": "API Key ausente o inválida"
           },
           "403": {
-            "description": "La API Key no corresponde a un cliente externo"
+            "description": "La credencial autenticada carece de permiso para transferir"
           },
           "404": {
             "description": "Billetera de origen inexistente"
@@ -629,7 +629,7 @@
             "ApiKey": []
           }
         ],
-        "description": "Requiere una API Key de ExternalClient. Padi debita la billetera de esa integración y acredita la billetera destino."
+        "description": "Acepta la API Key de Vendedor generada en Integraciones o la clave de cliente externo. Padi identifica y debita la billetera asociada a la clave y acredita la billetera destino."
       }
     },
     "/api/v1/integrations/set-password": {
@@ -739,7 +739,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-Api-Key",
-        "description": "API Key generada en Integraciones de la app. Guardala y usala desde el servidor de tu comercio."
+        "description": "API Key activa de Vendedor generada en Integraciones o clave de cliente externo. Guardala y usala desde el servidor de tu comercio."
       }
     },
     "schemas": {

@@ -227,7 +227,7 @@ public sealed class GatewayController(
     [ProducesResponseType<ProblemDetails>(409)]
     [ProducesResponseType<ProblemDetails>(422)]
     public async Task<ActionResult<TransferResponse>> ProcessPayment(
-        TransferRequest request,
+        B2BTransferRequest request,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         [FromHeader(Name = "X-Api-Key")] string? apiKey,
         CancellationToken ct)
@@ -239,7 +239,7 @@ public sealed class GatewayController(
 
         try
         {
-            var result = await transfers.ExecuteAsync(request, idempotencyKey, ct);
+            var result = await transfers.ExecuteB2BAsync(request, idempotencyKey, ct);
             Response.Headers["Idempotency-Replayed"] = result.Created ? "false" : "true";
             return StatusCode(result.Created ? 201 : 200, result.Transfer);
         }

@@ -1,93 +1,95 @@
 ---
 title: "Transferencias B2B y pago de premios"
-description: "Transferí fondos desde la billetera de tu comercio hacia cualquier usuario o jugador de Padi de forma atómica e idempotente."
+description: "Transferí saldo desde la billetera de tu integración B2B por alias, CVU o ID de billetera."
 sidebarTitle: "Transferencias B2B"
-keywords: [transferencias, payout, premios, b2b, balance, billetera]
+keywords: [transferencias, retiros, alias, CVU, B2B, billetera]
 openapi: "openapi-comercios.json POST /api/v1/integrations/transfers"
 ---
 
-El endpoint de transferencias de la pasarela permite que un sistema externo (como un casino en línea, casa de apuestas o plataforma de pagos masivos) transfiera saldo en tiempo real desde su billetera corporativa hacia billeteras de clientes particulares.
+Usá esta operación desde tu servidor para debitar la billetera de tu integración B2B y acreditar una billetera Padi. En la demo se mueve saldo de prueba. La operación requiere la API Key de un cliente externo (`ExternalClient`). La clave que genera un usuario Vendedor desde **Integraciones** está habilitada para crear y consultar cobros.
 
-## Parámetros de la solicitud
+## Enviá la transferencia
 
-Enviá tu solicitud HTTP `POST` a `/api/v1/integrations/transfers` con las siguientes credenciales y encabezados:
+Hacé un `POST` a `https://padi.runasp.net/api/v1/integrations/transfers` con `Content-Type: application/json` y tu clave en `X-Api-Key`.
 
-- `X-Api-Key`: Tu clave de integración B2B emitida por Padi.
-- `Idempotency-Key` *(Recomendado)*: Identificador único tipo UUID generado por tu servidor para evitar pagos duplicados ante caídas de red o reintentos.
+Generá y guardá un UUID por retiro antes de enviarlo por primera vez. Mandalo en `Idempotency-Key` y reutilizalo si tenés que repetir la solicitud. El encabezado es opcional para la API. Si lo omitís, Padi genera una clave nueva para cada llamada y un reintento puede crear otra transferencia.
 
-### Cuerpo JSON (`application/json`)
+En el JSON, mandá el importe y **exactamente uno** de los tres campos de destino.
 
-| Campo | Tipo | Obligatorio | Descripción |
-| --- | --- | --- | --- |
-| `destinationWalletId` | UUID string | Sí | Identificador único de la billetera destino del receptor. |
-| `amount` | Decimal | Sí | Monto en pesos argentinos (ARS) a debitar de la billetera del comercio y acreditar al destinatario. |
+| Campo | Qué enviar |
+| --- | --- |
+| `amount` | Importe obligatorio en ARS, entre 0,01 y 780.400,00, con hasta dos decimales. |
+| `alias` | Alias de Padi de 6 a 40 caracteres. Admite letras, números, puntos y guiones. |
+| `cvu` | CVU de Padi como texto de 22 dígitos. Así conserva los ceros iniciales. |
+| `destinationWalletId` | UUID de la billetera destino. |
 
 <CodeGroup>
 
-```powershell PowerShell
-$apiBase = 'https://padi.runasp.net'
-$headers = @{
-    'X-Api-Key' = $env:PADI_API_KEY
-    'Idempotency-Key' = [guid]::NewGuid().ToString()
-    'Content-Type' = 'application/json'
+```json Alias
+{
+  "alias": "jugador.padi",
+  "amount": 2000
 }
-$body = @{
-    destinationWalletId = 'c7a40b93-5491-4cf1-bf50-136faad91b94'
-    amount = 5000.00
-} | ConvertTo-Json
-
-$transferencia = Invoke-RestMethod -Method Post `
-    -Uri "$apiBase/api/v1/integrations/transfers" `
-    -Headers $headers -Body $body
-
-$transferencia | Select-Object id, amount, currency, status, createdAt
 ```
 
-```javascript JavaScript para servidor
-const apiBase = 'https://padi.runasp.net';
-const apiKey = process.env.PADI_API_KEY;
+```json CVU
+{
+  "cvu": "0000123400000000000123",
+  "amount": 2000
+}
+```
 
-const response = await fetch(`${apiBase}/api/v1/integrations/transfers`, {
-  method: 'POST',
-  headers: {
-    'X-Api-Key': apiKey,
-    'Idempotency-Key': crypto.randomUUID(),
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    destinationWalletId: 'c7a40b93-5491-4cf1-bf50-136faad91b94',
-    amount: 5000.00,
-  }),
-});
-
-const result = await response.json();
-console.log('Transferencia realizada con éxito:', result.id);
+```json ID de billetera
+{
+  "destinationWalletId": "c7a40b93-5491-4cf1-bf50-136faad91b94",
+  "amount": 2000
+}
 ```
 
 </CodeGroup>
 
-## Respuesta y códigos de estado
+## Ejemplo desde el servidor
 
-Una transferencia exitosa devuelve HTTP **201 Created** (o **200 OK** si se trató de una repetición idempotente):
+En este ejemplo, `retiro` representa una solicitud que ya guardaste. Su `idempotencyKey` es el UUID persistido para esa operación.
 
-```json
-{
-  "id": "7f8b9e6a-1234-4a5b-9c8d-e0f1a2b3c4d5",
-  "sourceWalletId": "98488ff7-bdc9-4060-b911-f0b526c42ef4",
-  "destinationWalletId": "c7a40b93-5491-4cf1-bf50-136faad91b94",
-  "amount": 5000.00,
-  "currency": "ARS",
-  "status": "Completed",
-  "createdAt": "2026-11-10T23:15:00+00:00"
+```javascript JavaScript para servidor
+async function enviarRetiro(retiro) {
+  const response = await fetch('https://padi.runasp.net/api/v1/integrations/transfers', {
+    method: 'POST',
+    headers: {
+      'X-Api-Key': process.env.PADI_API_KEY,
+      'Idempotency-Key': retiro.idempotencyKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ alias: retiro.alias, amount: retiro.amount }),
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(`Padi respondió HTTP ${response.status}: ${result.code ?? 'sin código'}`);
+  }
+  return result;
 }
 ```
 
-## Manejo de errores frecuentes
+## Confirmá el retiro
 
-| HTTP | Código | Causa |
+Una transferencia nueva devuelve **201 Created** y el encabezado `Idempotency-Replayed: false`. Un reintento con la misma clave, billetera destino resuelta e importe devuelve **200 OK** con `Idempotency-Replayed: true` y la transferencia original. Si el alias cambió y apunta a otra billetera, la misma clave devuelve un conflicto.
+
+La respuesta incluye `id`, `sourceWalletId`, `destinationWalletId`, `amount`, `currency`, `status` y `createdAt`. Cuando recibas el estado `Completed`, guardá el ID de la transferencia en tu solicitud y marcala como pagada una sola vez. Si se pierde la respuesta, mantenela pendiente y reintentá con la clave y los datos que guardaste. Si no podés reconciliar el resultado, revisá la operación antes de generar otro envío.
+
+## Respuestas de error
+
+| HTTP | Código o situación | Qué revisar |
 | --- | --- | --- |
-| 400 | `SAME_WALLET` | La billetera destino no puede ser la misma que la billetera emisora. |
-| 400 | `INVALID_INPUT` | El cuerpo no contiene los campos requeridos o el monto es menor o igual a cero. |
-| 409 | `INSUFFICIENT_FUNDS` | La billetera corporativa del comercio no cuenta con saldo suficiente para cubrir la transferencia. |
-| 409 | `IDEMPOTENCY_CONFLICT` | Se intentó reutilizar una misma `Idempotency-Key` con un destinatario o importe diferente. |
-| 422 | `DESTINATION_UNAVAILABLE` | La billetera destino especificada no existe, está inactiva o bloqueada. |
+| 400 | `INVALID_INPUT` o validación del JSON | Mandá un solo destino válido, un importe y un UUID válido si enviás la clave. |
+| 400 | `INVALID_AMOUNT` | Revisá el rango y la cantidad de decimales del importe. |
+| 400 | `SAME_WALLET` | Elegí una billetera destino distinta a la emisora. |
+| 401 o 403 | Autenticación o autorización | Verificá que la API Key esté activa y pertenezca a un `ExternalClient`. |
+| 404 | `SOURCE_WALLET_NOT_FOUND` | Verificá que la integración tenga una billetera. |
+| 409 | `INSUFFICIENT_FUNDS` o `DESTINATION_BALANCE_LIMIT` | Revisá el saldo de origen o el límite de saldo del destinatario. |
+| 409 | `IDEMPOTENCY_CONFLICT` | Revisá el importe y la billetera asociados a la clave original. |
+| 409 | `CONCURRENCY_CONFLICT` | Reintentá con la misma clave. |
+| 422 | `DESTINATION_UNAVAILABLE` | Revisá que el destino exista y esté activo. |
+
+Para recibir cobros y pagar retiros desde la misma billetera B2B, usá la misma integración externa al [crear los enlaces de cobro](/api/endpoints/crear-cobro) y al enviar las transferencias.

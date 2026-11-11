@@ -470,7 +470,7 @@
         "tags": [
           "Transferencias y retiros B2B"
         ],
-        "summary": "Transferir fondos desde la billetera corporativa a un usuario/jugador",
+        "summary": "Transferir saldo B2B por alias, CVU o ID de billetera",
         "operationId": "Gateway_ProcessPayment",
         "parameters": [
           {
@@ -478,9 +478,10 @@
             "in": "header",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
-            "description": "UUID único para deduplicar la transferencia ante reintentos"
+            "description": "Guardá un UUID por transferencia y reutilizalo con el mismo importe y destino en los reintentos. Si se omite, Padi genera una clave nueva por llamada."
           }
         ],
         "requestBody": {
@@ -490,7 +491,6 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "destinationWalletId",
                   "amount"
                 ],
                 "properties": {
@@ -502,71 +502,134 @@
                   "amount": {
                     "type": "number",
                     "format": "double",
-                    "description": "Importe en ARS a transferir"
+                    "description": "Importe en ARS a transferir",
+                    "minimum": 0.01,
+                    "maximum": 780400,
+                    "multipleOf": 0.01
+                  },
+                  "alias": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 40,
+                    "description": "Alias de Padi. Admite letras, números, puntos y guiones."
+                  },
+                  "cvu": {
+                    "type": "string",
+                    "pattern": "^[0-9]{22}$",
+                    "description": "CVU de Padi. Enviá los 22 dígitos como texto."
+                  }
+                },
+                "oneOf": [
+                  {
+                    "required": [
+                      "destinationWalletId"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "alias"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "cvu"
+                    ]
+                  }
+                ]
+              },
+              "examples": {
+                "alias": {
+                  "summary": "Por alias",
+                  "value": {
+                    "alias": "jugador.padi",
+                    "amount": 2000
+                  }
+                },
+                "cvu": {
+                  "summary": "Por CVU",
+                  "value": {
+                    "cvu": "0000123400000000000123",
+                    "amount": 2000
+                  }
+                },
+                "walletId": {
+                  "summary": "Por ID de billetera",
+                  "value": {
+                    "destinationWalletId": "c7a40b93-5491-4cf1-bf50-136faad91b94",
+                    "amount": 2000
                   }
                 }
-              },
-              "example": {
-                "destinationWalletId": "c7a40b93-5491-4cf1-bf50-136faad91b94",
-                "amount": 5000
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Transferencia realizada con éxito",
+          "200": {
+            "description": "Repetición idempotente de una transferencia previa",
+            "headers": {
+              "Idempotency-Replayed": {
+                "description": "Indica si se devolvió una transferencia anterior.",
+                "schema": {
+                  "type": "boolean"
+                },
+                "example": true
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "sourceWalletId": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "destinationWalletId": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "amount": {
-                      "type": "number",
-                      "format": "double"
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "createdAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
+                  "$ref": "#/components/schemas/B2BTransferResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Transferencia realizada con éxito",
+            "headers": {
+              "Idempotency-Replayed": {
+                "description": "Indica si se devolvió una transferencia anterior.",
+                "schema": {
+                  "type": "boolean"
+                },
+                "example": false
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/B2BTransferResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Datos inválidos o billeteras idénticas"
+            "description": "Importe, clave o destino inválido, o billeteras idénticas"
+          },
+          "401": {
+            "description": "API Key ausente o inválida"
+          },
+          "403": {
+            "description": "La API Key no corresponde a un cliente externo"
+          },
+          "404": {
+            "description": "Billetera de origen inexistente"
           },
           "409": {
-            "description": "Saldo insuficiente o conflicto de idempotencia"
+            "description": "Saldo insuficiente, límite de destino o conflicto de concurrencia o idempotencia"
           },
           "422": {
             "description": "Billetera destino no disponible o inexistente"
+          },
+          "503": {
+            "description": "Almacenamiento temporalmente no disponible"
           }
         },
         "security": [
           {
             "ApiKey": []
           }
-        ]
+        ],
+        "description": "Requiere una API Key de ExternalClient. Padi debita la billetera de esa integración y acredita la billetera destino."
       }
     },
     "/api/v1/integrations/set-password": {
@@ -913,6 +976,37 @@
           "MultiUse"
         ],
         "default": "SingleUse"
+      },
+      "B2BTransferResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceWalletId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationWalletId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   }

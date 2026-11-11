@@ -151,6 +151,6 @@ Los enlaces generados por la API aparecen en **Cobros** de la misma cuenta de ve
 | Buscar pagos | `GET /api/v1/integrations/received-payments` | [Listar pagos](/api/endpoints/listar-pagos) |
 | Verificar un pago | `GET /api/v1/integrations/received-payments/{paymentId}` | [Consultar pago](/api/endpoints/consultar-pago) |
 
-La clave de vendedor no permite transferir saldo ni administrar tu perfil, tus claves o webhooks. Esas operaciones no forman parte de esta integración de cobros.
+Usá la misma API Key de Vendedor para [transferir saldo por alias o CVU](/api/endpoints/transferencias-b2b) desde la billetera que recibe estos cobros. Administrá tu perfil y tu clave desde tu sesión en Padi.
 
 Padi es un entorno académico sin dinero real. Los identificadores y fechas de las respuestas de ejemplo de la referencia son ficticios. El contrato se contrastó con la API publicada el 9 de noviembre de 2026.

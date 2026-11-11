@@ -6,7 +6,7 @@ keywords: [transferencias, retiros, alias, CVU, B2B, billetera]
 openapi: "openapi-comercios.json POST /api/v1/integrations/transfers"
 ---
 
-Usá esta operación desde tu servidor para debitar la billetera de tu integración B2B y acreditar una billetera Padi. En la demo se mueve saldo de prueba. La operación requiere la API Key de un cliente externo (`ExternalClient`). La clave que genera un usuario Vendedor desde **Integraciones** está habilitada para crear y consultar cobros.
+Usá esta operación desde tu servidor para transferir saldo de prueba a otra billetera Padi. Podés usar la **misma API Key de Vendedor** que generaste en [Integraciones](/integraciones) para crear enlaces y consultar cobros. Padi identifica la billetera de origen a partir de la clave y debita el saldo de la billetera donde recibís tus cobros. Las claves activas de clientes externos también son válidas.
 
 ## Enviá la transferencia
 
@@ -85,11 +85,12 @@ La respuesta incluye `id`, `sourceWalletId`, `destinationWalletId`, `amount`, `c
 | 400 | `INVALID_INPUT` o validación del JSON | Mandá un solo destino válido, un importe y un UUID válido si enviás la clave. |
 | 400 | `INVALID_AMOUNT` | Revisá el rango y la cantidad de decimales del importe. |
 | 400 | `SAME_WALLET` | Elegí una billetera destino distinta a la emisora. |
-| 401 o 403 | Autenticación o autorización | Verificá que la API Key esté activa y pertenezca a un `ExternalClient`. |
+| 401 | API Key ausente, inválida o revocada | Revisá el encabezado `X-Api-Key` y el estado de tu clave. |
+| 403 | Permiso insuficiente para transferir | Usá una API Key activa de Vendedor o de cliente externo con acceso a la operación. |
 | 404 | `SOURCE_WALLET_NOT_FOUND` | Verificá que la integración tenga una billetera. |
 | 409 | `INSUFFICIENT_FUNDS` o `DESTINATION_BALANCE_LIMIT` | Revisá el saldo de origen o el límite de saldo del destinatario. |
 | 409 | `IDEMPOTENCY_CONFLICT` | Revisá el importe y la billetera asociados a la clave original. |
 | 409 | `CONCURRENCY_CONFLICT` | Reintentá con la misma clave. |
 | 422 | `DESTINATION_UNAVAILABLE` | Revisá que el destino exista y esté activo. |
 
-Para recibir cobros y pagar retiros desde la misma billetera B2B, usá la misma integración externa al [crear los enlaces de cobro](/api/endpoints/crear-cobro) y al enviar las transferencias.
+Guardá una sola API Key en el servidor de tu comercio para [crear enlaces de cobro](/api/endpoints/crear-cobro) y enviar los retiros desde la billetera asociada.

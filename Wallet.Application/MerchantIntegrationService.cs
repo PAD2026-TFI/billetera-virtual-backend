@@ -32,7 +32,7 @@ public sealed class MerchantIntegrationService(
         user.IntegrationKeyHash is not null ? "Active" : user.IntegrationCreatedAt.HasValue ? "Revoked" : "NotConfigured",
         user.IntegrationName, user.IntegrationKeyPrefix, walletId,
         user.IntegrationCreatedAt, user.IntegrationRotatedAt, user.IntegrationRevokedAt,
-        ["payments:read", "payments:write"]);
+        ["payments:read", "payments:write", "transfers:write"]);
 
     public async Task<MerchantIntegrationResponse> GetAsync(CancellationToken ct)
     {

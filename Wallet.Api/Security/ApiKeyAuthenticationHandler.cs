@@ -52,7 +52,7 @@ public sealed class ApiKeyAuthenticationHandler(
                     new Claim("sub", user.Id.ToString()),
                     new Claim(ClaimTypes.Role, "MerchantIntegration"),
                     new Claim("role", "MerchantIntegration"),
-                    new Claim("scope", "payments:read payments:write")
+                    new Claim("scope", "payments:read payments:write transfers:write")
                 };
                 var seller = new ClaimsPrincipal(new ClaimsIdentity(sellerClaims, SchemeName));
                 return AuthenticateResult.Success(new AuthenticationTicket(seller, SchemeName));

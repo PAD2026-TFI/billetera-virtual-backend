@@ -219,7 +219,7 @@ public sealed class GatewayController(
 
     [HttpPost("/api/v1/integrations/transfers", Order = -1)]
     [HttpPost("payments")]
-    [Authorize(Policy = "ExternalClient")]
+    [Authorize(Policy = "PaymentIntegration")]
     [ProducesResponseType<TransferResponse>(201)]
     [ProducesResponseType<TransferResponse>(200)]
     [ProducesResponseType<ProblemDetails>(400)]

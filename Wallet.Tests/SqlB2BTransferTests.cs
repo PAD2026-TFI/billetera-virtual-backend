@@ -16,6 +16,73 @@ public sealed class SqlB2BTransferTests
     private const string Endpoint = "/api/v1/integrations/transfers";
 
     [AzureSqlFact]
+    public async Task Seller_key_transfers_from_the_same_wallet_used_for_collections()
+    {
+        var connection = Environment.GetEnvironmentVariable("WALLET_TEST_CONNECTION")!;
+        var options = new DbContextOptionsBuilder<WalletDbContext>().UseSqlServer(connection).Options;
+        await using var host = new IdentityTestHost(connection);
+        using var sellerSession = host.Client();
+        using var integration = host.Client();
+        var suffix = Guid.NewGuid().ToString("N");
+        var now = DateTimeOffset.UtcNow;
+        var seller = User.Create("Vendedor", "Prueba", $"seller-{suffix}@example.com", now);
+        seller.SetAccountType("merchant");
+        var recipient = User.Create("Cliente", "Prueba", $"recipient-{suffix}@example.com", now);
+        var origin = DomainWallet.Create(seller.Id, now);
+        var destination = DomainWallet.Create(recipient.Id, now);
+        seller.LinkWallet(origin.Id);
+        origin.Credit(25m);
+
+        await using var db = new WalletDbContext(options);
+        db.Users.AddRange(seller, recipient);
+        db.Wallets.AddRange(origin, destination);
+        await db.SaveChangesAsync();
+
+        try
+        {
+            const string integrationEndpoint = "/api/v1/me/merchant/integration";
+            sellerSession.DefaultRequestHeaders.Authorization = new("Bearer", host.Token(seller));
+            using var issue = await sellerSession.PostAsJsonAsync(integrationEndpoint, new { name = "Comercio QA" });
+            Assert.Equal(HttpStatusCode.OK, issue.StatusCode);
+            var key = (await issue.Content.ReadFromJsonAsync<MerchantIntegrationKeyResponse>())!;
+            Assert.Equal(origin.Id, key.Integration.WalletId);
+            integration.DefaultRequestHeaders.Add("X-Api-Key", key.ApiKey);
+
+            integration.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
+            using var byAlias = await integration.PostAsJsonAsync(Endpoint, new { destination.Alias, amount = 10m });
+            Assert.Equal(HttpStatusCode.Created, byAlias.StatusCode);
+            var aliasTransfer = (await byAlias.Content.ReadFromJsonAsync<TransferResponse>())!;
+            Assert.Equal(origin.Id, aliasTransfer.SourceWalletId);
+            Assert.Equal(destination.Id, aliasTransfer.DestinationWalletId);
+
+            integration.DefaultRequestHeaders.Remove("Idempotency-Key");
+            integration.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
+            using var byCvu = await integration.PostAsJsonAsync(Endpoint, new { destination.Cvu, amount = 15m });
+            Assert.Equal(HttpStatusCode.Created, byCvu.StatusCode);
+            var cvuTransfer = (await byCvu.Content.ReadFromJsonAsync<TransferResponse>())!;
+            Assert.Equal(origin.Id, cvuTransfer.SourceWalletId);
+            Assert.Equal(destination.Id, cvuTransfer.DestinationWalletId);
+            Assert.Equal(0m, (await db.Wallets.AsNoTracking().SingleAsync(w => w.Id == origin.Id)).Balance);
+            Assert.Equal(25m, (await db.Wallets.AsNoTracking().SingleAsync(w => w.Id == destination.Id)).Balance);
+
+            using var revoke = await sellerSession.DeleteAsync(integrationEndpoint);
+            Assert.Equal(HttpStatusCode.OK, revoke.StatusCode);
+            using var revoked = await integration.PostAsJsonAsync(Endpoint, new { destination.Cvu, amount = 15m });
+            Assert.Equal(HttpStatusCode.Unauthorized, revoked.StatusCode);
+        }
+        finally
+        {
+            await using var cleanup = new WalletDbContext(options);
+            var ids = new[] { origin.Id, destination.Id };
+            await cleanup.Movements.Where(m => ids.Contains(m.WalletId)).ExecuteDeleteAsync();
+            await cleanup.Transfers.Where(t => t.SourceWalletId == origin.Id).ExecuteDeleteAsync();
+            await cleanup.Wallets.Where(w => ids.Contains(w.Id)).ExecuteDeleteAsync();
+            cleanup.Users.RemoveRange(await cleanup.Users.Where(u => u.Id == seller.Id || u.Id == recipient.Id).ToListAsync());
+            await cleanup.SaveChangesAsync();
+        }
+    }
+
+    [AzureSqlFact]
     public async Task External_client_can_transfer_by_alias_or_cvu_and_retry_by_wallet_id()
     {
         var connection = Environment.GetEnvironmentVariable("WALLET_TEST_CONNECTION")!;

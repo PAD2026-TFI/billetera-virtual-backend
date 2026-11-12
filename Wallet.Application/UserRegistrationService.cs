@@ -25,6 +25,9 @@ public sealed class UserRegistrationService(
 {
     public const decimal WelcomeBonusAmount = 50_000m;
 
+    /// <summary>Interruptor en código: false deshabilita la consulta a OpenRENAPER.</summary>
+    private static readonly bool OpenRenaperVerificationEnabled = false;
+
     private static Result<UserRegistrationResult> VerificationRequired() =>
         Result<UserRegistrationResult>.Failure("EMAIL_VERIFICATION_REQUIRED", "Verificá el correo antes de crear tu cuenta.");
 
@@ -57,7 +60,8 @@ public sealed class UserRegistrationService(
             return Result<UserRegistrationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
 
         // 2. Consulta al verificador de identidad (RENAPER) fuera de transacción
-        var isVerificationEnabled = verificationOptions?.Enabled ?? false;
+        // Verificación con OpenRENAPER deshabilitada desde código.
+        var isVerificationEnabled = OpenRenaperVerificationEnabled && (verificationOptions?.Enabled ?? false);
         var isVerified = false;
 
         if (isVerificationEnabled)
@@ -219,7 +223,8 @@ public sealed class UserRegistrationService(
             return Result<IdentityValidationResult>.Failure("DNI_ALREADY_REGISTERED", "Ya existe un usuario registrado con ese DNI.");
 
         // 2. Consulta al verificador de identidad (RENAPER)
-        var isVerificationEnabled = verificationOptions?.Enabled ?? true;
+        // Verificación con OpenRENAPER deshabilitada desde código.
+        var isVerificationEnabled = OpenRenaperVerificationEnabled && (verificationOptions?.Enabled ?? false);
         if (isVerificationEnabled)
         {
             VerifiedIdentity? found;
